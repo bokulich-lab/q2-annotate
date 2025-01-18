@@ -67,7 +67,7 @@ def _report_df_to_tree(
     return most_recent_parents[0], unclassified_node
 
 
-def _filter_tree(root: TreeNode, abundance_threshold: float) -> TreeNode:
+def _trim_tree(root: TreeNode, abundance_threshold: float) -> TreeNode:
     '''
     Filters nodes beneath an abundance threshold from a tree. Filtered nodes
     are removed from the tree.
@@ -151,6 +151,13 @@ def _dump_tree_to_report(
     if unclassified_node:
         _write_node_to_report(unclassified_node, report)
 
+    # calculate denominator for perc_frags_covered_column
+    total_reads = root._kraken_data['n_frags_covered']
+    if unclassified_node:
+        total_reads += unclassified_node._kraken_data['n_frags_covered']
+
+    report._kraken_total_reads = total_reads
+
     # write tree to report
     _write_report_dfs(root, report)
 
@@ -176,9 +183,6 @@ def _write_report_dfs(node: TreeNode, report: pd.DataFrame) -> None:
     None
         Writes to the `report` dataframe.
     '''
-    # write node to report
-    row = pd.Series(node._kraken_data)
-    report = pd.concat(report, row, axis='index')
 
     children = node.children
     children.sort(
@@ -187,3 +191,23 @@ def _write_report_dfs(node: TreeNode, report: pd.DataFrame) -> None:
 
     for child in children:
         _write_report_dfs(child, report)
+
+
+def _write_node_to_report(node: TreeNode, report: pd.DataFrame) -> None:
+    '''
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    '''
+    row = pd.Series(node._kraken_data)
+
+    # calculate perc_frags_covered for node
+    row['perc_frags_covered'] = round(
+        row['n_frags_covered'] / report._kraken_total_reads, 2
+    )
+
+    # write node to report
+    report = pd.concat(report, row, axis='index')
