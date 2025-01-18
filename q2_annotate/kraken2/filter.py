@@ -9,11 +9,13 @@ from skbio import TreeNode
 import pandas as pd
 
 from q2_types.kraken2 import (
-    Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat,
-    Kraken2ReportFormat
+    Kraken2ReportDirectoryFormat,
+    Kraken2OutputDirectoryFormat,
+    Kraken2ReportFormat,
 )
 
 from q2_annotate.kraken2.select import _get_indentation
+
 
 def _report_df_to_tree(
     report: pd.DataFrame
@@ -40,8 +42,7 @@ def _report_df_to_tree(
 
         # add row data to node object
         data = {col: row[col] for col in report.columns}
-        data['name'] = data['name'].strip()
-        node.kraken_data = data
+        node._kraken_data = data
 
         # don't incorporate unclassified node into tree
         if data['name'] == 'unclassified':
@@ -49,10 +50,7 @@ def _report_df_to_tree(
             continue
 
         # find taxonomy depth
-        indented_name = row['name']
-        indent = 2
-        indentation = _get_indentation(indented_name, indent)
-        taxonomy_depth = indentation / indent
+        taxonomy_depth = _get_indentation(node._kraken_data['name'], indent=2)
 
         # update most_recent_parents
         if len(most_recent_parents) <= taxonomy_depth:
@@ -88,11 +86,11 @@ def _filter_tree(root: TreeNode, abundance_threshold: float) -> TreeNode:
     '''
     # calculate denominator for relative abundance
     total_reads = sum(
-        [node.kraken_data['n_frags_assigned'] for node in root.traverse()]
+        [node._kraken_data['n_frags_assigned'] for node in root.traverse()]
     )
 
     for node in root.traverse():
-        relative_abundance = node.kraken_data['n_frags_covered'] / total_reads
+        relative_abundance = node._kraken_data['n_frags_covered'] / total_reads
 
         if node.is_root():
             continue
@@ -104,14 +102,14 @@ def _filter_tree(root: TreeNode, abundance_threshold: float) -> TreeNode:
             node.parent.remove(node)
 
             # find the number of reads that were lost in the removed subtree
-            reads_removed = node.kraken_data['n_frags_covered']
+            reads_removed = node._kraken_data['n_frags_covered']
 
             for ancestor in ancestors:
                 # adjust the ancestor's subtree read count
-                ancestor.kraken_data['n_frags_covered'] -= reads_removed
+                ancestor._kraken_data['n_frags_covered'] -= reads_removed
 
                 # check if ancestor has fallen beneath abundance threshold
-                n_frags_covered = ancestor.kraken_data['n_frags_covered']
+                n_frags_covered = ancestor._kraken_data['n_frags_covered']
                 ancestor_relative_abundance = n_frags_covered / total_reads
                 if ancestor_relative_abundance < abundance_threshold:
                     if ancestor.is_root():
@@ -124,32 +122,68 @@ def _filter_tree(root: TreeNode, abundance_threshold: float) -> TreeNode:
 
     return root
 
-def _dump_tree_to_dataframe(
+
+def _dump_tree_to_report(
     root: TreeNode, unclassified_node: TreeNode | None
 ) ->  pd.DataFrame:
     '''
+    Recreates the kraken2 report from the filtered tree and optional
+    unlcassifed node.
 
     Parameters
     ----------
+    root : TreeNode
+        The root node of the report tree.
+    unclassified_node : TreeNode | None
+        The node represeting the unclassified row of the report, if one was
+        present.
 
     Returns
     -------
+    pd.DataFrame
+        The recreated kraken2 report.
     '''
     # create dataframe
+    columns = root._kraken_data.keys()
+    report = pd.DataFrame(data=0, columns=columns)
 
     # if unclassified exists write to dataframe
+    if unclassified_node:
+        _write_node_to_report(unclassified_node, report)
+
+    # write tree to report
+    _write_report_dfs(root, report)
+
+    return report
 
 
-    # perform DFS of tree
-        # use n_frags_covered to determine which node to recurse to
-        # (use highest first)
+def _write_report_dfs(node: TreeNode, report: pd.DataFrame) -> None:
+    '''
+    Writes nodes to the report using a depth-first search of the report tree.
 
-        # write dataframe row
+    NOTE: Children are sorted in decreasing order of n_frags_covered to be
+    consistent with the manner in which kraken2 structures its report files.
 
-def _taxonomy_dfs(node: TreeNode):
-    # at given level find siblings and sort in order of decreasing
-    # n_frags_covered
+    Parameters
+    ----------
+    node : TreeNode
+        The current node being explored.
+    report : pd.DataFrame
+        The kraken2 report dataframe.
 
-    # iterate over siblings and call dfs recursively
+    Returns
+    -------
+    None
+        Writes to the `report` dataframe.
+    '''
+    # write node to report
+    row = pd.Series(node._kraken_data)
+    report = pd.concat(report, row, axis='index')
 
-    return node
+    children = node.children
+    children.sort(
+        key=lambda n: n._kraken_data['n_frags_covered'], reverse=True
+    )
+
+    for child in children:
+        _write_report_dfs(child, report)
