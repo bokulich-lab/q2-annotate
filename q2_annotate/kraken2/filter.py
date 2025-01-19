@@ -147,8 +147,7 @@ def _dump_tree_to_report(
         The recreated kraken2 report.
     '''
     # create dataframe
-    columns = root._kraken_data.keys()
-    report = pd.DataFrame(data=0, columns=columns)
+    report = pd.DataFrame(columns=root._kraken_data.keys())
 
     # if unclassified exists write to dataframe
     if unclassified_node:
@@ -186,6 +185,8 @@ def _write_report_dfs(node: TreeNode, report: pd.DataFrame) -> None:
     None
         Writes to the `report` dataframe.
     '''
+    _write_node_to_report(node, report)
+
     children = node.children
     children.sort(
         key=lambda n: n._kraken_data['n_frags_covered'], reverse=True
@@ -195,7 +196,7 @@ def _write_report_dfs(node: TreeNode, report: pd.DataFrame) -> None:
         _write_report_dfs(child, report)
 
 
-def _write_node_to_report(node: TreeNode, report: pd.DataFrame) -> None:
+def _write_node_to_report(node: TreeNode, report: pd.DataFrame):
     '''
 
     Parameters
@@ -208,8 +209,7 @@ def _write_node_to_report(node: TreeNode, report: pd.DataFrame) -> None:
 
     # calculate perc_frags_covered for node
     row['perc_frags_covered'] = round(
-        row['n_frags_covered'] / report._kraken_total_reads, 2
+        (row['n_frags_covered'] / report._kraken_total_reads) * 100, 2
     )
 
-    # write node to report
-    report = pd.concat(report, row, axis='index')
+    report.loc[len(report)] = row

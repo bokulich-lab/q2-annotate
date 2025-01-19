@@ -6,6 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import pandas as pd
+from pandas.testing import assert_series_equal
 import unittest
 
 import qiime2
@@ -170,6 +171,7 @@ class TestFilter(TestPluginBase):
 
     def test_trim_curated_tree(self):
         '''
+        Tests that a curated report tree is properly trimmed.
         '''
         def find_by_name(name, root):
             nodes_list = list(root.find_by_func(
@@ -240,4 +242,32 @@ class TestFilter(TestPluginBase):
             self.assertEqual(
                 filtered_ancestor._kraken_data['n_frags_covered'],
                 ancestor._kraken_data['n_frags_covered'] - filtered_reads,
+            )
+
+    def test_dump_tree_to_report_round_trip(self):
+        '''
+        Test that a report tree is properly dumped to a report dataframe.
+        '''
+        root, unclassified_node = _report_df_to_tree(self.curated_report)
+        total_reads = root._kraken_data['n_frags_covered']
+
+        round_tripped_report = _dump_tree_to_report(root, unclassified_node)
+
+
+        round_tripped_report.sort_values(
+            'taxon_id', inplace=True, ascending=False
+        )
+        curated_report = self.curated_report.sort_values(
+            'taxon_id', ascending=False
+        )
+
+        columns = [
+            'n_frags_covered', 'n_frags_assigned', 'taxon_id', 'name', 'rank'
+        ]
+        for column in columns:
+            assert_series_equal(
+                round_tripped_report[column],
+                curated_report[column],
+                check_dtype=False,
+                check_index=False,
             )
