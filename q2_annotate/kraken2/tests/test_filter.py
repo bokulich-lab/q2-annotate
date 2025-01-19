@@ -11,13 +11,14 @@ import unittest
 
 import qiime2
 from qiime2.plugin.testing import TestPluginBase
-from q2_types.kraken2 import Kraken2ReportFormat
+from q2_types.kraken2 import Kraken2ReportFormat, Kraken2ReportDirectoryFormat
 
 from q2_annotate.kraken2.filter import (
     _report_df_to_tree,
     _trim_tree_dfs,
     _dump_tree_to_report,
     _write_report_dfs,
+    filter_kraken2_reports,
 )
 
 
@@ -34,6 +35,9 @@ class TestFilter(TestPluginBase):
         real_report_fp = self.get_data_path('filter/SRR17001003.report.txt')
         real_report = Kraken2ReportFormat(real_report_fp, mode='r')
         self.real_report = real_report.view(pd.DataFrame)
+
+        reports_fp = self.get_data_path('filter')
+        self.reports = Kraken2ReportDirectoryFormat(reports_fp, mode='r')
 
     def test_curated_report_to_tree(self):
         '''
@@ -271,3 +275,10 @@ class TestFilter(TestPluginBase):
                 check_dtype=False,
                 check_index=False,
             )
+
+    def test_filter_kraken2_reports(self):
+        '''
+        '''
+        filtered_reports = filter_kraken2_reports(
+            self.reports, abundance_threshold=0.01
+        )

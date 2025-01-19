@@ -121,7 +121,7 @@ def _report_df_to_tree(
 
 def _trim_tree_dfs(
     node: TreeNode, abundance_threshold: float, total_reads: int
-) -> TreeNode | None:
+) -> TreeNode | int:
     '''
     Filters nodes beneath an abundance threshold from a tree. Filtered nodes
     are removed from the tree.
@@ -151,6 +151,7 @@ def _trim_tree_dfs(
         # find the number of reads that were lost in the removed subtree
         reads_removed = node._kraken_data['n_frags_covered']
 
+        ancestors_removed = 0
         for ancestor in ancestors:
             # adjust the ancestor's subtree read count
             ancestor._kraken_data['n_frags_covered'] -= reads_removed
@@ -166,14 +167,18 @@ def _trim_tree_dfs(
                 # unlink the ancestor and increase the removed subtree
                 # read count
                 ancestor.parent.remove(ancestor)
+                ancestors_removed += 1
                 reads_removed += n_frags_covered
 
         # short circuit recursion because subtree has already been trimmed
-        return
-
+        return ancestors_removed
 
     for child in copy(node.children):
-        _trim_tree_dfs(child, abundance_threshold, total_reads)
+        status = _trim_tree_dfs(child, abundance_threshold, total_reads)
+
+        # short circuit to parent level because we are in a trimmed subtree
+        if isinstance(status, int) and status > 0:
+            return status - 1
 
     return node
 
