@@ -6,6 +6,8 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 from copy import copy
+from pathlib import Path
+
 from skbio import TreeNode
 import pandas as pd
 
@@ -16,6 +18,55 @@ from q2_types.kraken2 import (
 )
 
 from q2_annotate.kraken2.select import _get_indentation
+
+
+def filter_kraken2_reports(
+    reports: Kraken2ReportDirectoryFormat,
+    abundance_threshold: float,
+) -> Kraken2ReportDirectoryFormat:
+    '''
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    '''
+    # make output directory format
+    output_dir_format = Kraken2ReportDirectoryFormat()
+
+    # iterate over input formats
+    for report_filename, report in reports.reports.iter_views(
+        Kraken2ReportFormat
+    ):
+        report = report.view(pd.DataFrame)
+
+        # parse report into tree
+        root, unclassified_node = _report_df_to_tree(report)
+
+        # calculate total reads
+        total_reads = root._kraken_data['n_frags_covered']
+
+        # trim tree
+        root_trimmed = _trim_tree_dfs(
+            root,
+            abundance_threshold=abundance_threshold,
+            total_reads=total_reads
+        )
+
+        # dump to report
+        trimmed_report = _dump_tree_to_report(
+            root_trimmed, unclassified_node
+        )
+
+        # add report to output format
+        output_fp = Path(output_dir_format.path) / report_filename
+        trimmed_report.to_csv(
+            output_fp, sep='\t', header=None, index=None
+        )
+
+    # return directory format
+    return output_dir_format
 
 
 def _report_df_to_tree(

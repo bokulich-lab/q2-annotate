@@ -37,7 +37,7 @@ from q2_types.feature_map import FeatureMap, MAGtoContigs
 from qiime2.core.type import (
     Bool, Range, Int, Str, Float, List, Choices, Visualization
 )
-from qiime2.core.type import (Properties, TypeMap)
+from qiime2.core.type import (Properties, TypeMap, TypeMatch)
 from qiime2.plugin import (Plugin, Citations)
 import q2_annotate._examples as ex
 import q2_annotate
@@ -1802,6 +1802,30 @@ plugin.pipelines.register_function(
                 '2 has shape (N x P), the resulting table will have shape '
                 '(M x P). Note that the tables must be identical in the N '
                 'dimension.',
+    citations=[]
+)
+
+TMR = TypeMatch([
+    Kraken2Reports % Properties('reads'),
+    Kraken2Reports % Properties('contigs')
+])
+
+plugin.methods.register_function(
+    function=q2_annotate.kraken2.filter_kraken2_reports,
+    inputs={
+        "reports": SampleData[TMR],
+    },
+    parameters={
+        'abundance_threshold': Float % Range(0, 1, inclusive_end=True),
+    },
+    outputs=[
+        ('filtered_reports', SampleData[TMR]),
+    ],
+    input_descriptions={},
+    parameter_descriptions={},
+    output_descriptions={},
+    name='Filter kraken2 reports by relative abundance.',
+    description=(),
     citations=[]
 )
 
