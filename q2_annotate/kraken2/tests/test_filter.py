@@ -14,7 +14,7 @@ from q2_types.kraken2 import Kraken2ReportFormat
 
 from q2_annotate.kraken2.filter import (
     _report_df_to_tree,
-    _trim_tree,
+    _trim_tree_dfs,
     _dump_tree_to_report,
     _write_report_dfs,
 )
@@ -171,7 +171,73 @@ class TestFilter(TestPluginBase):
     def test_trim_curated_tree(self):
         '''
         '''
-        root = _report_df_to_tree(self.curated_report)
-        filtered_root = _trim_tree(root, abundance_threshold=0.01)
+        def find_by_name(name, root):
+            nodes_list = list(root.find_by_func(
+                lambda n: n._kraken_data['name'].strip() == name
+            ))
+            return nodes_list[0] if len(nodes_list) else None
 
-        #
+        root, unclassified_node = _report_df_to_tree(self.curated_report)
+
+        total_reads = root._kraken_data['n_frags_covered']
+
+        filtered_root = _trim_tree_dfs(
+            root.copy(deep=True),
+            abundance_threshold=0.003,
+            total_reads=total_reads
+        )
+
+        # number of nodes left is correct
+        self.assertEqual(filtered_root.count(), 13)
+
+        # some trimmed nodes are gone
+        self.assertIsNotNone(find_by_name('Mycobacterium marseillense', root))
+        self.assertIsNone(
+            find_by_name('Mycobacterium marseillense', filtered_root)
+        )
+
+        self.assertIsNotNone(find_by_name('Mycobacterium gordonae', root))
+        self.assertIsNone(
+            find_by_name('Mycobacterium gordonae', filtered_root)
+        )
+
+        # some trimmed node's children should be gone
+        self.assertIsNotNone(find_by_name('Mycobacterium tuberculosis', root))
+        self.assertIsNone(
+            find_by_name('Mycobacterium tuberculosis', filtered_root)
+        )
+
+        # a node with no n_frags_assigned whose children were all removed
+        # is removed
+        self.assertIsNotNone(
+            find_by_name('Mycobacterium tuberculosis complex', root)
+        )
+        self.assertIsNone(
+            find_by_name('Mycobacterium tuberculosis complex', filtered_root)
+        )
+
+        # trimmed node's ancestors have n_frags_covered updated
+        myco_avium = find_by_name('Mycobacterium avium complex (MAC)', root)
+        myco_avium_filtered = find_by_name(
+            'Mycobacterium avium complex (MAC)', filtered_root
+        )
+
+        filtered_reads = 180
+
+        self.assertEqual(
+            myco_avium_filtered._kraken_data['n_frags_covered'],
+            myco_avium._kraken_data['n_frags_covered'] - filtered_reads,
+        )
+
+        ancestors = list(myco_avium.ancestors())
+        filtered_ancestors = list(myco_avium_filtered.ancestors())
+
+        filtered_reads = 410
+
+        for ancestor_index, _ in enumerate(ancestors):
+            filtered_ancestor = filtered_ancestors[ancestor_index]
+            ancestor = ancestors[ancestor_index]
+            self.assertEqual(
+                filtered_ancestor._kraken_data['n_frags_covered'],
+                ancestor._kraken_data['n_frags_covered'] - filtered_reads,
+            )

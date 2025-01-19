@@ -5,6 +5,7 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+from copy import copy
 from skbio import TreeNode
 import pandas as pd
 
@@ -67,7 +68,9 @@ def _report_df_to_tree(
     return most_recent_parents[0], unclassified_node
 
 
-def _trim_tree(root: TreeNode, abundance_threshold: float) -> TreeNode:
+def _trim_tree_dfs(
+    node: TreeNode, abundance_threshold: float, total_reads: int
+) -> TreeNode | None:
     '''
     Filters nodes beneath an abundance threshold from a tree. Filtered nodes
     are removed from the tree.
@@ -84,44 +87,44 @@ def _trim_tree(root: TreeNode, abundance_threshold: float) -> TreeNode:
     TreeNode
         The root of the filtered tree.
     '''
-    # calculate denominator for relative abundance
-    total_reads = sum(
-        [node._kraken_data['n_frags_assigned'] for node in root.traverse()]
-    )
+    relative_abundance = node._kraken_data['n_frags_covered'] / total_reads
 
-    for node in root.traverse():
-        relative_abundance = node._kraken_data['n_frags_covered'] / total_reads
+    if relative_abundance < abundance_threshold:
+        ancestors = node.ancestors()
 
-        if node.is_root():
-            continue
+        # unlink node and its descendants from tree
+        root = list(node.ancestors())[-1]
 
-        if relative_abundance < abundance_threshold:
-            ancestors = node.ancestors()
+        node.parent.remove(node)
 
-            # unlink node and its descendants from tree
-            node.parent.remove(node)
+        # find the number of reads that were lost in the removed subtree
+        reads_removed = node._kraken_data['n_frags_covered']
 
-            # find the number of reads that were lost in the removed subtree
-            reads_removed = node._kraken_data['n_frags_covered']
+        for ancestor in ancestors:
+            # adjust the ancestor's subtree read count
+            ancestor._kraken_data['n_frags_covered'] -= reads_removed
 
-            for ancestor in ancestors:
-                # adjust the ancestor's subtree read count
-                ancestor._kraken_data['n_frags_covered'] -= reads_removed
+            # check if ancestor has fallen beneath abundance threshold
+            n_frags_covered = ancestor._kraken_data['n_frags_covered']
+            ancestor_relative_abundance = n_frags_covered / total_reads
 
-                # check if ancestor has fallen beneath abundance threshold
-                n_frags_covered = ancestor._kraken_data['n_frags_covered']
-                ancestor_relative_abundance = n_frags_covered / total_reads
-                if ancestor_relative_abundance < abundance_threshold:
-                    if ancestor.is_root():
-                        raise ValueError('Root taxon had all reads removed.')
+            if ancestor_relative_abundance < abundance_threshold:
+                if ancestor.is_root():
+                    raise ValueError('Root taxon had all reads removed.')
 
-                    # unlink the ancestor and increase the removed subtree
-                    # read count
-                    ancestor.parent.remove(ancestor)
-                    reads_removed += n_frags_covered
+                # unlink the ancestor and increase the removed subtree
+                # read count
+                ancestor.parent.remove(ancestor)
+                reads_removed += n_frags_covered
 
-    return root
+        # short circuit recursion because subtree has already been trimmed
+        return
 
+
+    for child in copy(node.children):
+        _trim_tree_dfs(child, abundance_threshold, total_reads)
+
+    return node
 
 def _dump_tree_to_report(
     root: TreeNode, unclassified_node: TreeNode | None
@@ -183,7 +186,6 @@ def _write_report_dfs(node: TreeNode, report: pd.DataFrame) -> None:
     None
         Writes to the `report` dataframe.
     '''
-
     children = node.children
     children.sort(
         key=lambda n: n._kraken_data['n_frags_covered'], reverse=True
