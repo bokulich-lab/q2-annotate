@@ -1818,15 +1818,13 @@ plugin.methods.register_function(
     parameters={
         'abundance_threshold': Float % Range(0, 1, inclusive_end=True),
     },
-    outputs=[
-        ('filtered_reports', SampleData[TMR]),
-    ],
+    outputs=[('filtered_reports', SampleData[TMR])],
     input_descriptions={},
     parameter_descriptions={},
     output_descriptions={},
     name='Filter kraken2 reports by relative abundance.',
-    description=(),
-    citations=[]
+    description='Later',
+    citations=[],
 )
 
 plugin.register_semantic_types(BUSCOResults, BuscoDB)
