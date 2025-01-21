@@ -6,5 +6,5 @@ dependencies:
   - qiime2-metagenome
   - pip
   - pip:
-    - q2-moshpit@git+https://github.com/bokulich-lab/q2-moshpit.git@main
+    - q2-annotate@git+https://github.com/bokulich-lab/q2-annotate.git@main
     

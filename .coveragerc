@@ -1,5 +1,5 @@
 [run]
-source=q2_moshpit
+source=q2_annotate
 branch = True
 omit =
     **/test_*.py

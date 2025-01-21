@@ -1,5 +1,5 @@
 [project]
-name = "q2-moshpit"
+name = "q2-annotate"
 authors = [
     { name = "Michal Ziemski, Keegan Evans", email = "ziemski.michal@gmail.com" }
 ]
@@ -9,11 +9,11 @@ license = {file = "LICENSE"}
 dynamic = ["version"]
 
 [project.urls]
-Homepage = "https://github.com/bokulich-lab/q2-moshpit"
-Repository = "https://github.com/bokulich-lab/q2-moshpit"
+Homepage = "https://github.com/bokulich-lab/q2-annotate"
+Repository = "https://github.com/bokulich-lab/q2-annotate"
 
 [project.entry-points.'qiime2.plugins']
-"q2-moshpit" = "q2_moshpit.plugin_setup:plugin"
+"q2-annotate" = "q2_annotate.plugin_setup:plugin"
 
 [build-system]
 requires = [
@@ -37,14 +37,14 @@ dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
 distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
 
 [tool.versioningit.write]
-file = "q2_moshpit/_version.py"
+file = "q2_annotate/_version.py"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["q2_moshpit*"]
+include = ["q2_annotate*"]
 
 [tool.setuptools.package-data]
-q2_moshpit = ["**/*"]
+q2_annotate = ["**/*"]
