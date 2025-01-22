@@ -5,6 +5,7 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import os
 import subprocess
 from q2_annotate._utils import colorify, run_command
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
@@ -36,6 +37,12 @@ def fetch_busco_db(
         raise Exception(
             f"Error during BUSCO database download: {e.returncode}"
         )
+
+    # There is a broken alias file in the BUSCO database that needs to be removed
+    alias_file = os.path.join(str(busco_db), "busco_downloads", "lineages",
+                                   "tetrapoda_odb10", "tetrapoda_odb10")
+    if os.path.exists(alias_file):
+        os.remove(alias_file)
 
     # Let user know that the process is complete but it still needs
     # some time to copy files over.
