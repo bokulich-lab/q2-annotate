@@ -38,11 +38,11 @@ def fetch_busco_db(
             f"Error during BUSCO database download: {e.returncode}"
         )
 
-    # There is a broken alias file in the BUSCO database that needs to be removed
-    alias_file = os.path.join(str(busco_db), "busco_downloads", "lineages",
-                                   "tetrapoda_odb10", "tetrapoda_odb10")
-    if os.path.exists(alias_file):
-        os.remove(alias_file)
+    # There is a symlink in the BUSCO database that needs to be removed
+    symlink = os.path.join(str(busco_db), "busco_downloads", "lineages",
+                           "tetrapoda_odb10", "tetrapoda_odb10")
+    if os.path.islink(symlink):
+        os.unlink(symlink)
 
     # Let user know that the process is complete but it still needs
     # some time to copy files over.
