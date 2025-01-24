@@ -39,10 +39,7 @@ def fetch_busco_db(
         )
 
     # There is a symlink in the BUSCO database that needs to be removed
-    symlink = os.path.join(str(busco_db), "busco_downloads", "lineages",
-                           "tetrapoda_odb10", "tetrapoda_odb10")
-    if os.path.islink(symlink):
-        os.unlink(symlink)
+    delete_symlinks(str(busco_db))
 
     # Let user know that the process is complete but it still needs
     # some time to copy files over.
@@ -52,3 +49,10 @@ def fetch_busco_db(
     ))
 
     return busco_db
+
+
+def delete_symlinks(root_dir):
+    for dirpath, dirnames, filenames in os.walk(root_dir, followlinks=False):
+        for file in filenames:
+            if os.path.islink(os.path.join(dirpath, file)):
+                os.unlink(os.path.join(dirpath, file))

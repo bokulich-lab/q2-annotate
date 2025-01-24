@@ -138,12 +138,12 @@ class BuscoDatabaseDirFmt(model.DirectoryFormat):
         optional=True
     )
     missing_parasitic = model.File(
-        r'busco_downloads\/lineages\/fungi_odb10\/missing_in_parasitic\.txt$',
+        r'busco_downloads\/lineages\/.+\/missing_in_parasitic\.txt$',
         format=BuscoGenericTextFileFmt,
         optional=True
     )
     no_hits = model.File(
-        r'busco_downloads\/lineages\/pectobacteriaceae_odb12\/no_hits$',
+        r'busco_downloads\/lineages\/.+\/no_hits$',
         format=BuscoGenericTextFileFmt,
         optional=True
     )
