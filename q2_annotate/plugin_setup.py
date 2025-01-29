@@ -1223,7 +1223,7 @@ plugin.methods.register_function(
     parameter_descriptions={
         'translation_table_number':
             'Translation table to be used to '
-            'translate genes into a sequence of amino '
+            'translate genes into a sequences of amino '
             'acids. See '
             'https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi '
             'for reference.'
@@ -1442,7 +1442,7 @@ plugin.methods.register_function(
 plugin.methods.register_function(
     function=q2_annotate._utils.get_feature_lengths,
     inputs={
-        "features": FeatureData[MAG],
+        "features": FeatureData[MAG | Sequence] | SampleData[MAGs | Contigs],
     },
     parameters={},
     outputs=[

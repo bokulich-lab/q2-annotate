@@ -7,6 +7,8 @@
 # ----------------------------------------------------------------------------
 import pandas as pd
 import qiime2 as q2
+from q2_types.feature_data import DNASequencesDirectoryFormat
+from q2_types.per_sample_sequences import ContigSequencesDirFmt, MultiMAGSequencesDirFmt
 from qiime2.plugin.testing import TestPluginBase
 
 from q2_types.feature_data_mag import MAGSequencesDirFmt
@@ -72,6 +74,32 @@ class TestUtils(TestPluginBase):
             'a1': [0.4667, 0.4737, 0.4783],
             'a2': [0.5333, 0.5263, 0.5217]
         }, index=['m1', 'm2', 'm3'])
+        cls.exp_contigs = pd.DataFrame({
+            'id': [
+                'NZ_00000000.1_contig1',
+                'NZ_00000000.1_contig2',
+                'NZ_CP007255.1_contig1',
+                'NZ_CP007255.1_contig2',
+                'NZ_CP007255.1_contig3',
+
+            ],
+            'length': [29, 37, 12, 32, 26]
+        })
+        cls.exp_mags = pd.DataFrame({
+            'id': [
+                '24dee6fe-9b84-45bb-8145-de7b092533a1',
+                'ca7012fc-ba65-40c3-84f5-05aa478a7585',
+                'd65a71fa-4279-4588-b937-0747ed5d604d'
+            ],
+            'length': [66, 70, 363]
+        })
+        cls.exp_sequence = pd.DataFrame({
+            'id': [
+                'NZ_00000000.1_contig1',
+                'NZ_00000000.1_contig2',
+            ],
+            'length': [29, 37]
+        })
 
     def setUp(self):
         super().setUp()
@@ -163,17 +191,25 @@ class TestUtils(TestPluginBase):
         observed_hash = _calculate_md5_from_file(path_to_file)
         self.assertNotEqual(observed_hash, "a583054a9831a6e7cc56ea5cd9cac40a")
 
-    def test_get_feature_lengths(self):
-        mags = MAGSequencesDirFmt(self.get_data_path('mags-derep'), mode='r')
+    def test_get_feature_lengths_mag(self):
+        self.get_feature_lengths_test_helper(
+            MAGSequencesDirFmt, 'mags-derep', self.exp_mags.copy())
+
+    def test_get_feature_lengths_mags(self):
+        self.get_feature_lengths_test_helper(
+            MultiMAGSequencesDirFmt, 'sample_data_mags', self.exp_mags.copy())
+
+    def test_get_feature_lengths_contigs(self):
+        self.get_feature_lengths_test_helper(
+            ContigSequencesDirFmt, 'contigs', self.exp_contigs)
+
+    def test_get_feature_lengths_sequence(self):
+        self.get_feature_lengths_test_helper(
+            DNASequencesDirectoryFormat, 'sequences', self.exp_sequence)
+
+    def get_feature_lengths_test_helper(self, dir_format, file_name, exp):
+        mags = dir_format(self.get_data_path(file_name), mode='r')
         obs = get_feature_lengths(mags)
-        exp = pd.DataFrame({
-            'id': [
-                '24dee6fe-9b84-45bb-8145-de7b092533a1',
-                'ca7012fc-ba65-40c3-84f5-05aa478a7585',
-                'd65a71fa-4279-4588-b937-0747ed5d604d'
-            ],
-            'length': [66, 70, 363]
-        })
         exp.set_index('id', inplace=True)
         pd.testing.assert_frame_equal(obs, exp)
 
