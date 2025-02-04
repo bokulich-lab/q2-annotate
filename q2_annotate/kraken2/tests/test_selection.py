@@ -86,6 +86,21 @@ class TestKrakenSelect(TestPluginBase):
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
 
+
+    def test_kraken2_to_features_infra_clade(self):
+        reports = Kraken2ReportDirectoryFormat(
+            self.get_data_path("infra-clade/"), "r"
+        )
+        obs_table, obs_taxonomy = kraken2_to_features(
+            reports, coverage_threshold=0.0)
+        # Check that expected taxons(tip of the tree) are in the taxonomy/table
+        assert '237084' in obs_taxonomy.index
+        assert '237084' in obs_table.columns
+        assert '5199' in obs_taxonomy.index
+        assert '5199' in obs_table.columns
+
+
+
     def test_kraken2_to_features_duplicated_genus(self):
         reports = Kraken2ReportDirectoryFormat(
             self.get_data_path("duplicated-genus/"), "r"
