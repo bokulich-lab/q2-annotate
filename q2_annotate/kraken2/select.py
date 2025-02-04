@@ -231,11 +231,11 @@ def _combine_ncbi_trees(trees):
             else:
                 parents = list(tip.ancestors())[:-1]  # ignore unnamed root
 
-                 # check if node is a infra-clade (infra-clades have length 0).
-                 # then adds self to ancestor list, if it is an infra-clade. 
-                 # this mimics what happens if the node isn't an infra-clade.
-                 # i.e node had an id_node and then self gets added to the 
-                 # list of ancestors if you call .parent on an id_node. 
+                # check if node is a infra-clade (infra-clades have length 0).
+                # then adds self to ancestor list, if it is an infra-clade.
+                # this mimics what happens if the node isn't an infra-clade.
+                # i.e node had an id_node and then self gets added to the
+                # list of ancestors if you call .parent on an id_node.
                 if tip.length == 0:
                     parents.insert(0, tip)
                 matching = full_tree
@@ -252,9 +252,9 @@ def _combine_ncbi_trees(trees):
                     if not ancestor_found:
                         matching.append(node)
                         # This may be overkill but this checks to make sure
-                        # that the tip is an infra clade (tip.length = 0) 
+                        # that the tip is an infra clade (tip.length = 0)
                         # and doesn't have children. If thats these are both
-                        # true then add this tip to tip cache. 
+                        # true then add this tip to tip cache.
                         if len(tip.children) == 0 and tip.length == 0:
                             tip_cache[tip.name] = tip
                         for t in node.tips():

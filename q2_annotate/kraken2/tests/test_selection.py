@@ -86,7 +86,6 @@ class TestKrakenSelect(TestPluginBase):
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
 
-
     def test_kraken2_to_features_infra_clade(self):
         reports = Kraken2ReportDirectoryFormat(
             self.get_data_path("infra-clade/"), "r"
@@ -98,8 +97,6 @@ class TestKrakenSelect(TestPluginBase):
         assert '237084' in obs_table.columns
         assert '5199' in obs_taxonomy.index
         assert '5199' in obs_table.columns
-
-
 
     def test_kraken2_to_features_duplicated_genus(self):
         reports = Kraken2ReportDirectoryFormat(
