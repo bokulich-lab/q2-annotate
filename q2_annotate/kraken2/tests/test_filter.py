@@ -12,13 +12,13 @@ import qiime2
 from q2_types.kraken2 import Kraken2ReportDirectoryFormat
 from qiime2.plugin.testing import TestPluginBase
 
-from q2_moshpit.kraken2.filter import _validate_parameters, \
+from q2_annotate.kraken2.filter import _validate_parameters, \
     _find_empty_reports, _create_filtered_results, \
     filter_kraken_reports
 
 
 class TestFilterKrakenReports(TestPluginBase):
-    package = "q2_moshpit.kraken2.tests"
+    package = "q2_annotate.kraken2.tests"
 
     @classmethod
     def setUpClass(cls):

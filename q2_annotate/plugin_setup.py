@@ -1841,7 +1841,7 @@ filter_reports_param_descriptions = {
 }
 
 plugin.methods.register_function(
-    function=q2_moshpit.kraken2.filter_kraken_reports,
+    function=q2_annotate.kraken2.filter_kraken_reports,
     inputs={"reports": T_filter_kraken_reports},
     parameters={
         "metadata": Metadata,
