@@ -1,0 +1,10 @@
+channels:
+- https://packages.qiime2.org/qiime2/2024.10/metagenome/passed
+- conda-forge
+- bioconda
+dependencies:
+  - qiime2-metagenome
+  - pip
+  - pip:
+    - q2-annotate@git+https://github.com/bokulich-lab/q2-annotate.git@main
+    

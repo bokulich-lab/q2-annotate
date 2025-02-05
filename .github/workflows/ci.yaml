@@ -5,7 +5,7 @@ on:
   push:
     branches: ["main"]
 env:
-    DISTRO: metagenome
+    DISTRO: moshpit
 
 jobs:
   test:
@@ -28,8 +28,8 @@ jobs:
       - name: Get last commit
         id: get-commit-msg
         run: |
-          echo "$(git log --pretty=%B -n 1 --skip 1)"
-          echo "commit-msg=$(git log --pretty=%B -n 1 --skip 1)" >> $GITHUB_OUTPUT
+          commit_msg=$(git log --pretty=%B -n 1 --skip 1 2>/dev/null)
+          echo "commit-msg=$commit_msg" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: python -m pip install requests yq
@@ -59,7 +59,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: "3.10"
-          mamba-version: 1.5.10
+          mamba-version: "*"
           channels: conda-forge,defaults
           channel-priority: true
           activate-environment: conda-env

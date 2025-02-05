@@ -15,7 +15,7 @@ test-cov: all
 	python -m coverage run -m pytest && coverage xml -o coverage.xml
 
 install: all
-	$(PYTHON) setup.py install
+	$(PYTHON) -m pip install -v .
 
 dev: all
 	pip install -e .

@@ -141,3 +141,6 @@ dmypy.json
 
 # Ignore parsl dir
 runinfo
+# Version file from versioningit
+_version.py
+
