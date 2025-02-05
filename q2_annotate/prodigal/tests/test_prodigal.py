@@ -24,7 +24,7 @@ class TestBUSCO(TestPluginBase):
         # Run prodigal with dummy data
         p = self.get_data_path("dir_with_1_mag")
         mags = MAGSequencesDirFmt(path=p, mode="r")
-        loci, genes, proteins = predict_genes_prodigal(mags=mags)
+        loci, genes, proteins = predict_genes_prodigal(sequences=mags)
 
         # Check that output is correct type
         self.assertIsInstance(loci, LociDirectoryFormat)
@@ -57,7 +57,7 @@ class TestBUSCO(TestPluginBase):
         # Run prodigal with dummy data
         p = self.get_data_path("dir_with_3_mag")
         mags = MAGSequencesDirFmt(path=p, mode="r")
-        loci, genes, proteins = predict_genes_prodigal(mags=mags)
+        loci, genes, proteins = predict_genes_prodigal(sequences=mags)
 
         # Check that output is correct type
         self.assertIsInstance(loci, LociDirectoryFormat)
@@ -90,7 +90,7 @@ class TestBUSCO(TestPluginBase):
     def test_run_prodigal_sample_data(self, subp_run):
         p = self.get_data_path("")
         mags = MultiMAGSequencesDirFmt(path=p, mode="r")
-        loci, genes, prot = predict_genes_prodigal(mags=mags)
+        loci, genes, prot = predict_genes_prodigal(sequences=mags)
 
         # Check that output is correct type
         self.assertIsInstance(loci, LociDirectoryFormat)
