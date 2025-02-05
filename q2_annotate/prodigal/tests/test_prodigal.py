@@ -9,7 +9,7 @@ import os
 from q2_annotate.prodigal.prodigal import predict_genes_prodigal
 from qiime2.plugin.testing import TestPluginBase
 from q2_types.feature_data_mag import MAGSequencesDirFmt
-from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
+from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequencesDirFmt
 from unittest.mock import patch, call
 from q2_types.genome_data import (
     LociDirectoryFormat, GenesDirectoryFormat, ProteinsDirectoryFormat,
@@ -22,7 +22,7 @@ class TestBUSCO(TestPluginBase):
     @patch("subprocess.run")
     def test_run_prodigal_feature_data_1_mag(self, subp_run):
         # Run prodigal with dummy data
-        p = self.get_data_path("dir_with_1_mag")
+        p = self.get_data_path("mags/dir_with_1_mag")
         mags = MAGSequencesDirFmt(path=p, mode="r")
         loci, genes, proteins = predict_genes_prodigal(sequences=mags)
 
@@ -55,7 +55,7 @@ class TestBUSCO(TestPluginBase):
     @patch("subprocess.run")
     def test_run_prodigal_feature_data_3_mag(self, subp_run):
         # Run prodigal with dummy data
-        p = self.get_data_path("dir_with_3_mag")
+        p = self.get_data_path("mags/dir_with_3_mag")
         mags = MAGSequencesDirFmt(path=p, mode="r")
         loci, genes, proteins = predict_genes_prodigal(sequences=mags)
 
@@ -88,7 +88,7 @@ class TestBUSCO(TestPluginBase):
 
     @patch("subprocess.run")
     def test_run_prodigal_sample_data(self, subp_run):
-        p = self.get_data_path("")
+        p = self.get_data_path("mags")
         mags = MultiMAGSequencesDirFmt(path=p, mode="r")
         loci, genes, prot = predict_genes_prodigal(sequences=mags)
 
@@ -117,3 +117,20 @@ class TestBUSCO(TestPluginBase):
 
         # Assert that patch was called 3 times
         subp_run.assert_has_calls(calls, any_order=True)
+
+
+    @patch("subprocess.run")
+    def test_run_prodigal_contigs(self, subp_run):
+        contigs = ContigSequencesDirFmt(self.get_data_path("contigs"), mode="r")
+        loci, genes, prot = predict_genes_prodigal(sequences=contigs)
+
+        subp_run.assert_called_once_with([
+            "prodigal",
+            "-g", "11",
+            "-f", "gff",
+            "-i", os.path.join(contigs.path, "sample1_contigs.fasta"),
+            "-o", os.path.join(loci.path, "sample1.gff"),
+            "-a", os.path.join(prot.path, "sample1.fasta"),
+            "-d", os.path.join(genes.path, "sample1.fasta")],
+            check=True
+        )
