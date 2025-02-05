@@ -118,7 +118,6 @@ class TestBUSCO(TestPluginBase):
         # Assert that patch was called 3 times
         subp_run.assert_has_calls(calls, any_order=True)
 
-
     @patch("subprocess.run")
     def test_run_prodigal_contigs(self, subp_run):
         contigs = ContigSequencesDirFmt(self.get_data_path("contigs"), mode="r")
