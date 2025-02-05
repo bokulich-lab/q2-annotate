@@ -81,9 +81,7 @@ def filter_kraken_reports(
     _validate_parameters(metadata, remove_empty, where, exclude_ids)
 
     # Create file_dict
-    file_dict = reports.file_dict(
-        suffixes=[".report"],
-    )
+    file_dict = reports.file_dict()
 
     # Create fake outer ID if there is none, to make it easier to iterate
     if not any(isinstance(value, dict) for value in file_dict.values()):

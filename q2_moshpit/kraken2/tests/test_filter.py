@@ -35,11 +35,9 @@ class TestFilterKrakenReports(TestPluginBase):
                     "reports-mags-unclassified-missing-frac"),
                 "r"))
 
-        cls.file_dict_report_mags = cls.report_mags.file_dict(
-            suffixes=[".report"])
+        cls.file_dict_report_mags = cls.report_mags.file_dict()
         cls.file_dict_report_unclassified = (
-            cls.report_mags_unclassified_missing_frac.file_dict(
-                suffixes=[".report"]))
+            cls.report_mags_unclassified_missing_frac.file_dict())
 
         cls.metadata_df = pd.read_csv(
             instance.get_data_path("metadata/metadata.tsv"),
