@@ -51,12 +51,12 @@ def predict_genes_prodigal(
         run_command(cmd)
 
     if isinstance(sequences, MAGSequencesDirFmt):
-        for _id, mag_fp in sequences.feature_dict().items():
-            _run_prodigal(mag_fp, _id)
+        for mag_id, mag_fp in sequences.feature_dict().items():
+            _run_prodigal(mag_fp, mag_id)
 
     elif isinstance(sequences, ContigSequencesDirFmt):
-        for mag_id, mag_fp in sequences.sample_dict().items():
-            _run_prodigal(mag_fp, mag_id)
+        for sample_id, contigs_fp in sequences.sample_dict().items():
+            _run_prodigal(contigs_fp, sample_id)
 
     elif isinstance(sequences, MultiMAGSequencesDirFmt):
         for sample_id, mags_dict in sequences.sample_dict().items():
