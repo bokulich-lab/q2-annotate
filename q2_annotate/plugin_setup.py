@@ -1234,12 +1234,12 @@ plugin.methods.register_function(
         ('proteins', GenomeData[Proteins])
     ],
     output_descriptions={
-        'loci': "Gene coordinates files (one per MAG or contig) listing the "
+        'loci': "Gene coordinates files (one per MAG or sample) listing the "
                 "location of each predicted gene as well as some additional "
                 "scoring information. ",
-        'genes': "Fasta files (one per MAG or contig) with the nucleotide "
+        'genes': "Fasta files (one per MAG or sample) with the nucleotide "
                  "sequences of the predicted genes.",
-        'proteins': "Fasta files (one per MAG or contig) with the protein "
+        'proteins': "Fasta files (one per MAG or sample) with the protein "
                     "translation of the predicted genes."
     },
     name='Predict gene sequences from MAGs or contigs using Prodigal.',
