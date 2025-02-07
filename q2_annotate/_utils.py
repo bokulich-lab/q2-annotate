@@ -129,7 +129,7 @@ def get_feature_lengths(
     else:
         sample_dict = {"": features.feature_dict()}
 
-    for sample_id, file_dict in sample_dict.items():
+    for _, file_dict in sample_dict.items():
         for _id, fp in file_dict.items():
             sequences = skbio.io.read(fp, format='fasta', verify=False)
 
