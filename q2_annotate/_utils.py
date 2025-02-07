@@ -127,8 +127,7 @@ def get_feature_lengths(
 
     # For FeatureData[MAG]
     else:
-        file_dict = features.feature_dict()
-        sample_dict = {"": file_dict}  # Create fake sample for sample_dict
+        sample_dict = {"": features.feature_dict()}
 
     for sample_id, file_dict in sample_dict.items():
         for _id, fp in file_dict.items():
