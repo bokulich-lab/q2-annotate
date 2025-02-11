@@ -1208,10 +1208,10 @@ plugin.pipelines.register_function(
 plugin.methods.register_function(
     function=q2_annotate.prodigal.predict_genes_prodigal,
     inputs={
-        'mags': FeatureData[MAG] | SampleData[MAGs]
+        'sequences': FeatureData[MAG] | SampleData[MAGs] | SampleData[Contigs]
     },
     input_descriptions={
-        'mags': 'MAGs for which one wishes to predict genes.'
+        'sequences': 'MAGs or contigs for which one wishes to predict genes.'
     },
     parameters={
         "translation_table_number": Str % Choices([
@@ -1234,15 +1234,15 @@ plugin.methods.register_function(
         ('proteins', GenomeData[Proteins])
     ],
     output_descriptions={
-        'loci': "Gene coordinates files (one per MAG) listing the location of "
-                "each predicted gene as well as some additional scoring "
-                "information. ",
-        'genes': "Fasta files (one per MAG) with the nucleotide sequences of "
-                 "the predicted genes.",
-        'proteins': "Fasta files (one per MAG) with the protein translation "
-                    "of the predicted genes."
+        'loci': "Gene coordinates files (one per MAG or sample) listing the "
+                "location of each predicted gene as well as some additional "
+                "scoring information. ",
+        'genes': "Fasta files (one per MAG or sample) with the nucleotide "
+                 "sequences of the predicted genes.",
+        'proteins': "Fasta files (one per MAG or sample) with the protein "
+                    "translation of the predicted genes."
     },
-    name='Predict gene sequences from MAGs using Prodigal.',
+    name='Predict gene sequences from MAGs or contigs using Prodigal.',
     description="Prodigal (PROkaryotic DYnamic programming "
                 "Gene-finding ALgorithm), a gene prediction algorithm "
                 "designed for improved gene structure prediction, translation "
