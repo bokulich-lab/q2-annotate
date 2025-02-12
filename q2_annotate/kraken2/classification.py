@@ -9,6 +9,7 @@ import os
 import subprocess
 from copy import deepcopy
 from typing import Union, Optional
+from collections.abc import Callable
 
 import pandas as pd
 from q2_types.per_sample_sequences import (
@@ -30,6 +31,7 @@ from q2_types.kraken2 import (
     Kraken2OutputDirectoryFormat,
     Kraken2DBDirectoryFormat,
 )
+import qiime2
 
 
 def _get_seq_paths(df_index, df_row, df_columns):
@@ -53,60 +55,97 @@ def _construct_output_paths(
 
 
 def classify_kraken2(
-        ctx,
-        seqs,
-        kraken2_db,
-        threads=1,
-        confidence=0.0,
-        minimum_base_quality=0,
-        memory_mapping=False,
-        minimum_hit_groups=2,
-        quick=False,
-        report_minimizer_data=False,
-        num_partitions=None
+    ctx,
+    seqs,
+    kraken2_db,
+    threads=1,
+    confidence=0.0,
+    minimum_base_quality=0,
+    memory_mapping=False,
+    minimum_hit_groups=2,
+    quick=False,
+    report_minimizer_data=False,
+    num_partitions=None
 ):
-    kwargs = {k: v for k, v in locals().items()
-              if k not in ["seqs", "kraken2_db", "ctx", "num_partitions"]}
+    '''
+    '''
+    kwargs = {
+        k: v for k, v in locals().items()
+        if k not in ["seqs", "kraken2_db", "ctx", "num_partitions"]
+    }
 
-    _classify_kraken2 = ctx.get_action("annotate", "_classify_kraken2")
-    collate_kraken2_reports = ctx.get_action("annotate",
-                                             "collate_kraken2_reports")
-    collate_kraken2_outputs = ctx.get_action("annotate",
-                                             "collate_kraken2_outputs")
-
-    if seqs.type <= SampleData[SequencesWithQuality |
-                               JoinedSequencesWithQuality]:
-        partition_method = ctx.get_action("demux", "partition_samples_single")
-    elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
-        partition_method = ctx.get_action("demux", "partition_samples_paired")
-    elif seqs.type <= SampleData[Contigs]:
-        partition_method = ctx.get_action("assembly", "partition_contigs")
-    elif seqs.type <= SampleData[MAGs]:
-        partition_method = ctx.get_action(
-            "types", "partition_sample_data_mags"
+    # classify sequences
+    reports = []
+    outputs = []
+    for seqs_artifact in seqs:
+        single_art_reports, single_art_outputs = _classify_single_artifact(
+            ctx, seqs, kraken2_db, num_partitions, kwargs
         )
+        reports.append(single_art_reports)
+        outputs.append(single_art_outputs)
+
+    # match and merge collated reports, outputs
+
+    # return matched reports, outputs
+
+
+def _classify_single_artifact(
+    ctx: qiime2.Context,
+    seqs: qiime2.Artifact,
+    kraken2_db: Kraken2DBDirectoryFormat,
+    num_partitions: int | None,
+    kwargs: dict,
+) -> tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]:
+    '''
+    '''
+    _classify_kraken2 = ctx.get_action("annotate", "_classify_kraken2")
+    collate_kraken2_reports = ctx.get_action(
+        "annotate", "collate_kraken2_reports"
+    )
+    collate_kraken2_outputs = ctx.get_action(
+        "annotate", "collate_kraken2_outputs"
+    )
+
     # FeatureData[MAG] is not parallelized
-    elif seqs.type <= FeatureData[MAG]:
-        kraken2_reports, kraken2_outputs = \
-                _classify_kraken2(seqs, kraken2_db, **kwargs)
-        return kraken2_reports, kraken2_outputs
+    if seqs.type <= FeatureData[MAG]:
+        reports, outputs = _classify_kraken2(seqs, kraken2_db, **kwargs)
+        return reports, outputs
+    else:
+        # partition sequences
+        partition_action = _get_partition_action(ctx, seqs)
+        (partitioned_seqs,) = partition_action(seqs, num_partitions)
+
+        # classify sequences
+        all_reports = []
+        all_outputs = []
+        for seq in partitioned_seqs.values():
+            reports, outputs = _classify_kraken2(seq, kraken2_db, **kwargs)
+            all_reports.append(reports)
+            all_outputs.append(outputs)
+
+        collated_reports = collate_kraken2_reports(all_reports)
+        collated_outputs = collate_kraken2_outputs(all_outputs)
+
+        return collated_reports, collated_outputs
+
+
+def _get_partition_action(
+    ctx: qiime2.Context, seqs: qiime2.Artifact
+) -> Callable:
+    '''
+    '''
+    if seqs.type <= SampleData[
+        SequencesWithQuality | JoinedSequencesWithQuality
+    ]:
+        return ctx.get_action("demux", "partition_samples_single")
+    elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
+        return ctx.get_action("demux", "partition_samples_paired")
+    elif seqs.type <= SampleData[Contigs]:
+        return ctx.get_action("assembly", "partition_contigs")
+    elif seqs.type <= SampleData[MAGs]:
+        return ctx.get_action("types", "partition_sample_data_mags")
     else:
         raise NotImplementedError()
-
-    (partitioned_seqs,) = partition_method(seqs, num_partitions)
-
-    kraken2_reports = []
-    kraken2_outputs = []
-    for seq in partitioned_seqs.values():
-        (kraken2_report, kraken2_output) = _classify_kraken2(
-                seq, kraken2_db, **kwargs)
-        kraken2_reports.append(kraken2_report)
-        kraken2_outputs.append(kraken2_output)
-
-    (collated_kraken2_reports,) = collate_kraken2_reports(kraken2_reports)
-    (collated_kraken2_outputs,) = collate_kraken2_outputs(kraken2_outputs)
-
-    return collated_kraken2_reports, collated_kraken2_outputs
 
 
 def _classify_kraken2(

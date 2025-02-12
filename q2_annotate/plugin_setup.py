@@ -167,20 +167,20 @@ plugin.methods.register_function(
 )
 
 T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
-    SampleData[SequencesWithQuality |
-               PairedEndSequencesWithQuality | JoinedSequencesWithQuality]: (
+    List[SampleData[SequencesWithQuality |
+               PairedEndSequencesWithQuality | JoinedSequencesWithQuality]]: (
         SampleData[Kraken2Reports % Properties('reads')],
         SampleData[Kraken2Outputs % Properties('reads')]
     ),
-    SampleData[Contigs]: (
+    List[SampleData[Contigs]]: (
         SampleData[Kraken2Reports % Properties('contigs')],
         SampleData[Kraken2Outputs % Properties('contigs')]
     ),
-    FeatureData[MAG]: (
+    List[FeatureData[MAG]]: (
         FeatureData[Kraken2Reports % Properties('mags')],
         FeatureData[Kraken2Outputs % Properties('mags')]
     ),
-    SampleData[MAGs]: (
+    List[SampleData[MAGs]]: (
         SampleData[Kraken2Reports % Properties('mags')],
         SampleData[Kraken2Outputs % Properties('mags')]
     )
