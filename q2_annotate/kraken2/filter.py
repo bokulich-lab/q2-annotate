@@ -104,7 +104,7 @@ def filter_kraken_reports(
         where: str = None,
         exclude_ids: bool = False,
         remove_empty: bool = False,
-) -> (Kraken2ReportDirectoryFormat,Kraken2OutputDirectoryFormat):
+) -> (Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat):
     # Validate parameters
     _validate_parameters(metadata, remove_empty, where, exclude_ids)
 

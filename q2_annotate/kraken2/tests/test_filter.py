@@ -211,7 +211,6 @@ class TestFilterKrakenReports(TestPluginBase):
                                 "8894435a-c836-4c18-b475-8b38a9ab6c6b"}
                         )
 
-
     def test_validate_ids_error(self):
         file_dict_reports = self.file_dict_report_mags
         file_dict_outputs = self.file_dict_output_mags
