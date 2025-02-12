@@ -6,6 +6,8 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import os.path
+from io import StringIO
+from unittest.mock import patch
 
 import pandas as pd
 import qiime2
@@ -96,6 +98,47 @@ class TestFilterKrakenReports(TestPluginBase):
         results = filter_kraken_reports(
             reports=self.report_mags_unclassified_missing_frac,
             metadata=self.metadata2,
+        )
+        self.assertTrue(
+            os.path.exists(
+                os.path.join(
+                    str(results),
+                    "3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa.report.txt"
+                )
+            )
+        )
+
+    def test_filter_kraken_reports_metadata_where(self):
+        results = filter_kraken_reports(
+            reports=self.report_mags_unclassified_missing_frac,
+            metadata=self.metadata1,
+            where="timepoint>10"
+        )
+        self.assertTrue(
+            os.path.exists(
+                os.path.join(
+                    str(results),
+                    "8894435a-c836-4c18-b475-8b38a9ab6c6b.report.txt"
+                )
+            )
+        )
+
+    def test_filter_kraken_reports_where_print(self):
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            filter_kraken_reports(
+                reports=self.report_mags_unclassified_missing_frac,
+                metadata=self.metadata1,
+                where="timepoint>30",
+                exclude_ids=True
+            )
+            output = mock_stdout.getvalue().strip()
+
+        self.assertIn("The filter query returned no IDs to filter out.", output)
+
+    def test_filter_kraken_reports_empty(self):
+        results = filter_kraken_reports(
+            reports=self.report_mags_unclassified_missing_frac,
+            remove_empty=True,
         )
         self.assertTrue(
             os.path.exists(
