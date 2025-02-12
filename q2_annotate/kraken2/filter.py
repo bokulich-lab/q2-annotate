@@ -69,6 +69,7 @@ def _create_filtered_results(suffix, file_dict, ids_to_keep):
                 )
     return fmt
 
+
 def _validate_ids(file_dict_reports, file_dict_outputs):
     # Extract all inner IDs of file dicts
     inner_ids_reports = {key for inner in file_dict_reports.values() for key in inner}

@@ -125,7 +125,7 @@ class TestFilterKrakenReports(TestPluginBase):
             outputs=self.output_mags,
             metadata=self.metadata2,
         )
-        for i, suffix  in zip(range(2), ["report", "output"]):
+        for i, suffix in zip(range(2), ["report", "output"]):
             self.assertTrue(
                 os.path.exists(
                     os.path.join(
@@ -142,7 +142,7 @@ class TestFilterKrakenReports(TestPluginBase):
             metadata=self.metadata1,
             where="timepoint>10"
         )
-        for i, suffix  in zip(range(2), ["report", "output"]):
+        for i, suffix in zip(range(2), ["report", "output"]):
             self.assertTrue(
                 os.path.exists(
                     os.path.join(
@@ -171,7 +171,7 @@ class TestFilterKrakenReports(TestPluginBase):
             outputs=self.output_mags,
             remove_empty=True,
         )
-        for i, suffix  in zip(range(2), ["report", "output"]):
+        for i, suffix in zip(range(2), ["report", "output"]):
             self.assertTrue(
                 os.path.exists(
                     os.path.join(
@@ -209,16 +209,16 @@ class TestFilterKrakenReports(TestPluginBase):
         )
         self.assertTrue(ids == {"3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa",
                                 "8894435a-c836-4c18-b475-8b38a9ab6c6b"}
+                        )
 
-        )
 
     def test_validate_ids_error(self):
         file_dict_reports = self.file_dict_report_mags
         file_dict_outputs = self.file_dict_output_mags
         del self.file_dict_report_mags["3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa"]
         del self.file_dict_output_mags["8894435a-c836-4c18-b475-8b38a9ab6c6b"]
-        msg =  (r"reports\: \{'3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa'\}.*\n.*outputs\: "
-                r"\{'8894435a-c836-4c18-b475-8b38a9ab6c6b'\}.*")
+        msg = (r"reports\: \{'3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa'\}.*\n.*outputs\: "
+               r"\{'8894435a-c836-4c18-b475-8b38a9ab6c6b'\}.*")
         with self.assertRaisesRegex(ValueError, msg):
             _validate_ids(
                 file_dict_reports={"": file_dict_reports},
