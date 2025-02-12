@@ -1822,6 +1822,23 @@ T_filter_kraken_reports = TypeMatch([
     FeatureData[Kraken2Reports % Properties('contigs')],
     FeatureData[Kraken2Reports % Properties('mags')],
 ])
+T_filter_kraken_outputs = TypeMatch([
+    SampleData[Kraken2Outputs % Properties('reads', 'contigs', 'mags')],
+    SampleData[Kraken2Outputs % Properties('reads', 'contigs', 'mags')],
+    SampleData[Kraken2Outputs % Properties('reads', 'contigs')],
+    SampleData[Kraken2Outputs % Properties('reads', 'mags')],
+    SampleData[Kraken2Outputs % Properties('contigs', 'mags')],
+    SampleData[Kraken2Outputs % Properties('reads')],
+    SampleData[Kraken2Outputs % Properties('contigs')],
+    SampleData[Kraken2Outputs % Properties('mags')],
+    FeatureData[Kraken2Outputs % Properties('reads', 'contigs', 'mags')],
+    FeatureData[Kraken2Outputs % Properties('reads', 'contigs')],
+    FeatureData[Kraken2Outputs % Properties('reads', 'mags')],
+    FeatureData[Kraken2Outputs % Properties('contigs', 'mags')],
+    FeatureData[Kraken2Outputs % Properties('reads')],
+    FeatureData[Kraken2Outputs % Properties('contigs')],
+    FeatureData[Kraken2Outputs % Properties('mags')],
+])
 
 filter_reports_param_descriptions = {
     "metadata": "Metadata indicating which IDs to filter. The optional "
@@ -1842,18 +1859,27 @@ filter_reports_param_descriptions = {
 
 plugin.methods.register_function(
     function=q2_annotate.kraken2.filter_kraken_reports,
-    inputs={"reports": T_filter_kraken_reports},
+    inputs={
+        "reports": T_filter_kraken_reports,
+        "outputs": T_filter_kraken_outputs,
+    },
     parameters={
         "metadata": Metadata,
         "where": Str,
         "exclude_ids": Bool,
         "remove_empty": Bool,
     },
-    outputs={"filtered_reports": T_filter_kraken_reports},
-    input_descriptions={"reports": "The reports to filter."},
+    outputs={
+        "filtered_reports": T_filter_kraken_reports,
+        "filtered_outputs": T_filter_kraken_outputs
+    },
+    input_descriptions={
+        "reports": "The Kraken reports to filter.",
+        "outputs": "The Kraken outputs to filter."
+    },
     parameter_descriptions=filter_contigs_param_descriptions,
-    name="Filter Kraken reports.",
-    description="Filter Kraken reports based on metadata or remove reports "
+    name="Filter Kraken reports and outputs.",
+    description="Filter Kraken reports and outputs based on metadata or remove reports "
                 "with 100% unclassified reads.",
 )
 

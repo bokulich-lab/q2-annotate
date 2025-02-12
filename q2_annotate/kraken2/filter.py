@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 import os
 
-from q2_types.kraken2 import Kraken2ReportDirectoryFormat
+from q2_types.kraken2 import Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat
 from qiime2 import Metadata
 from qiime2.util import duplicate
 
@@ -50,48 +50,78 @@ def _find_empty_reports(file_dict: dict) -> set:
     return empty_ids
 
 
-def _create_filtered_results(file_dict, ids_to_keep):
-    results = Kraken2ReportDirectoryFormat()
+def _create_filtered_results(suffix, file_dict, ids_to_keep):
+    if suffix == "report":
+        fmt = Kraken2ReportDirectoryFormat()
+    else:
+        fmt = Kraken2OutputDirectoryFormat()
 
     # Recreate the directory structure with only the specified ids
     for outer_id, inner_dict in file_dict.items():
         for inner_id, file_fp in inner_dict.items():
             if inner_id in ids_to_keep:
                 if outer_id:
-                    os.makedirs(os.path.join(str(results), outer_id),
+                    os.makedirs(os.path.join(str(fmt), outer_id),
                                 exist_ok=True)
                 duplicate(
                     src=file_dict[outer_id][inner_id],
-                    dst=os.path.join(str(results), outer_id,
-                                     f"{inner_id}.report.txt")
+                    dst=os.path.join(str(fmt), outer_id, f"{inner_id}.{suffix}.txt")
                 )
+    return fmt
 
-    return results
+def _validate_ids(file_dict_reports, file_dict_outputs):
+    # Extract all inner IDs of file dicts
+    inner_ids_reports = {key for inner in file_dict_reports.values() for key in inner}
+    inner_ids_outputs = {key for inner in file_dict_outputs.values() for key in inner}
+
+    # Check for ID mismatches between reports and outputs
+    missing_in_reports = inner_ids_outputs - inner_ids_reports
+    missing_in_outputs = inner_ids_reports - inner_ids_outputs
+
+    if missing_in_reports or missing_in_outputs:
+        error_message = (
+            "There is a mismatch of IDs in the provided Kraken2 outputs and reports:\n"
+        )
+        if missing_in_reports:
+            error_message += (
+                f"IDs in outputs but missing in reports: {missing_in_reports}\n"
+            )
+        if missing_in_outputs:
+            error_message += (
+                f"IDs in reports but missing in outputs: {missing_in_outputs}\n"
+            )
+
+        raise ValueError(error_message.strip())
+
+    return inner_ids_reports
 
 
 def filter_kraken_reports(
         reports: Kraken2ReportDirectoryFormat,
+        outputs: Kraken2OutputDirectoryFormat,
         metadata: Metadata = None,
         where: str = None,
         exclude_ids: bool = False,
         remove_empty: bool = False,
-) -> Kraken2ReportDirectoryFormat:
+) -> (Kraken2ReportDirectoryFormat,Kraken2OutputDirectoryFormat):
     # Validate parameters
     _validate_parameters(metadata, remove_empty, where, exclude_ids)
 
-    # Create file_dict
-    file_dict = reports.file_dict()
+    # Create file_dict for reports and outputs
+    file_dict_reports = reports.file_dict()
+    file_dict_outputs = outputs.file_dict()
 
-    # Create fake outer ID if there is none, to make it easier to iterate
-    if not any(isinstance(value, dict) for value in file_dict.values()):
-        file_dict = {"": file_dict}
+    # Create fake outer ID if there is none
+    if not any(isinstance(value, dict) for value in file_dict_reports.values()):
+        file_dict_reports = {"": file_dict_reports}
+        file_dict_outputs = {"": file_dict_outputs}
 
-    # Extract all inner IDs
-    ids_to_keep = {key for inner in file_dict.values() for key in inner}
+    # Get and validate IDs
+    ids_to_keep = _validate_ids(file_dict_reports, file_dict_outputs)
 
     # Remove IDs that are linked to an empty report
     if remove_empty:
-        ids_to_remove = _find_empty_reports(file_dict)
+        ids_to_remove = _find_empty_reports(file_dict_reports)
         ids_to_keep -= ids_to_remove
         if ids_to_remove:
             print(f"Removing empty IDs: {', '.join(sorted(ids_to_remove))}")
@@ -111,7 +141,16 @@ def filter_kraken_reports(
         else:
             ids_to_keep &= set(selected_ids)
 
+    # Error if no IDs remain after filtering
     if len(ids_to_keep) == 0:
         raise ValueError("No IDs remain after filtering.")
 
-    return _create_filtered_results(file_dict, ids_to_keep)
+    # Create filtered reports and outputs
+    filtered_reports = _create_filtered_results(
+        "report", file_dict_reports, ids_to_keep
+    )
+    filtered_outputs = _create_filtered_results(
+        "output", file_dict_outputs, ids_to_keep
+    )
+
+    return filtered_reports, filtered_outputs
