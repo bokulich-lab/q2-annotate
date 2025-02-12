@@ -51,10 +51,9 @@ def _find_empty_reports(file_dict: dict) -> set:
 
 
 def _create_filtered_results(file_dict, ids_to_keep):
-    # Specify output format and file name suffix
     results = Kraken2ReportDirectoryFormat()
-    suffix = ".report"
 
+    # Recreate the directory structure with only the specified ids
     for outer_id, inner_dict in file_dict.items():
         for inner_id, file_fp in inner_dict.items():
             if inner_id in ids_to_keep:
@@ -64,7 +63,7 @@ def _create_filtered_results(file_dict, ids_to_keep):
                 duplicate(
                     src=file_dict[outer_id][inner_id],
                     dst=os.path.join(str(results), outer_id,
-                                     f"{inner_id}{suffix}.txt")
+                                     f"{inner_id}.report.txt")
                 )
 
     return results
@@ -97,6 +96,7 @@ def filter_kraken_reports(
         if ids_to_remove:
             print(f"Removing empty IDs: {', '.join(sorted(ids_to_remove))}")
 
+    # Filter by metadata
     if metadata:
         selected_ids = metadata.get_ids(where=where)
         if not selected_ids:
