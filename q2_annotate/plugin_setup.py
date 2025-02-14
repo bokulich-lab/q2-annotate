@@ -1590,10 +1590,10 @@ M_abundance_in, P_abundance_out = TypeMap({
 })
 
 plugin.methods.register_function(
-    function=q2_annotate.abundance.estimate_mag_abundance,
+    function=q2_annotate.abundance.estimate_abundance,
     inputs={
-        "maps": FeatureData[AlignmentMap],
-        "mag_lengths":
+        "maps": FeatureData[AlignmentMap] | SampleData[AlignmentMap],
+        "feature_lengths":
             FeatureData[SequenceCharacteristics % Properties("length")],
     },
     parameters={
@@ -1608,12 +1608,13 @@ plugin.methods.register_function(
         ("abundances", FeatureTable[Frequency % P_abundance_out]),
     ],
     input_descriptions={
-        "maps": "Bowtie2 alignment maps between reads and MAGs for which "
-                "the abundance should be estimated.",
-        "mag_lengths": "Table containing length of every MAG.",
+        "maps": "Bowtie2 alignment maps between reads and features "
+                "for which the abundance should be estimated.",
+        "feature_lengths": "Table containing length of every "
+                           "feature (MAG/contig).",
     },
     parameter_descriptions={
-        "metric": "Metric to be used as a proxy of MAG abundance.",
+        "metric": "Metric to be used as a proxy of feature abundance.",
         "min_mapq": "Minimum mapping quality.",
         "min_query_len": "Minimum query length.",
         "min_base_quality": "Minimum base quality.",
@@ -1621,11 +1622,11 @@ plugin.methods.register_function(
         "threads": "Number of threads to pass to samtools."
     },
     output_descriptions={
-        "abundances": "MAG abundances.",
+        "abundances": "Feature abundances.",
     },
-    name="Estimate MAG abundance.",
-    description="This method estimates MAG abundances by mapping the "
-                "reads to MAGs and calculating respective metric values"
+    name="Estimate feature (MAG/contig) abundance.",
+    description="This method estimates MAG/contig abundances by mapping the "
+                "reads to them and calculating respective metric values"
                 "which are then used as a proxy for the frequency.",
     citations=[],
 )
