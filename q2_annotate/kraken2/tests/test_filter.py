@@ -16,7 +16,7 @@ from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.kraken2.filter import _validate_parameters, \
     _find_empty_reports, _create_filtered_results, \
-    filter_kraken_reports, _validate_ids
+    filter_kraken2_results, _validate_ids
 
 
 class TestFilterKrakenReports(TestPluginBase):
@@ -112,7 +112,7 @@ class TestFilterKrakenReports(TestPluginBase):
         with self.assertRaisesRegex(
                 ValueError, "No IDs remain after filtering."
         ):
-            filter_kraken_reports(
+            filter_kraken2_results(
                 reports=self.report_mags_unclassified_missing_frac,
                 outputs=self.output_mags,
                 metadata=self.metadata1,
@@ -120,7 +120,7 @@ class TestFilterKrakenReports(TestPluginBase):
             )
 
     def test_filter_kraken_reports_metadata(self):
-        results = filter_kraken_reports(
+        results = filter_kraken2_results(
             reports=self.report_mags_unclassified_missing_frac,
             outputs=self.output_mags,
             metadata=self.metadata2,
@@ -136,7 +136,7 @@ class TestFilterKrakenReports(TestPluginBase):
             )
 
     def test_filter_kraken_reports_metadata_where(self):
-        results = filter_kraken_reports(
+        results = filter_kraken2_results(
             reports=self.report_mags_unclassified_missing_frac,
             outputs=self.output_mags,
             metadata=self.metadata1,
@@ -154,7 +154,7 @@ class TestFilterKrakenReports(TestPluginBase):
 
     def test_filter_kraken_reports_where_print(self):
         with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
-            filter_kraken_reports(
+            filter_kraken2_results(
                 reports=self.report_mags_unclassified_missing_frac,
                 outputs=self.output_mags,
                 metadata=self.metadata1,
@@ -166,7 +166,7 @@ class TestFilterKrakenReports(TestPluginBase):
         self.assertIn("The filter query returned no IDs to filter out.", output)
 
     def test_filter_kraken_reports_empty(self):
-        results = filter_kraken_reports(
+        results = filter_kraken2_results(
             reports=self.report_mags_unclassified_missing_frac,
             outputs=self.output_mags,
             remove_empty=True,

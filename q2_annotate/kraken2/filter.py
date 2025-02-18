@@ -97,7 +97,7 @@ def _validate_ids(file_dict_reports, file_dict_outputs):
     return inner_ids_reports
 
 
-def filter_kraken_reports(
+def filter_kraken2_results(
         reports: Kraken2ReportDirectoryFormat,
         outputs: Kraken2OutputDirectoryFormat,
         metadata: Metadata = None,

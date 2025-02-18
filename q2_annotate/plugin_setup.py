@@ -1805,7 +1805,7 @@ plugin.pipelines.register_function(
     citations=[]
 )
 
-T_filter_kraken_reports = TypeMatch([
+T_filter_kraken2_reports = TypeMatch([
     SampleData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
     SampleData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
     SampleData[Kraken2Reports % Properties('reads', 'contigs')],
@@ -1822,7 +1822,7 @@ T_filter_kraken_reports = TypeMatch([
     FeatureData[Kraken2Reports % Properties('contigs')],
     FeatureData[Kraken2Reports % Properties('mags')],
 ])
-T_filter_kraken_outputs = TypeMatch([
+T_filter_kraken2_outputs = TypeMatch([
     SampleData[Kraken2Outputs % Properties('reads', 'contigs', 'mags')],
     SampleData[Kraken2Outputs % Properties('reads', 'contigs', 'mags')],
     SampleData[Kraken2Outputs % Properties('reads', 'contigs')],
@@ -1858,10 +1858,10 @@ filter_reports_param_descriptions = {
 }
 
 plugin.methods.register_function(
-    function=q2_annotate.kraken2.filter_kraken_reports,
+    function=q2_annotate.kraken2.filter_kraken2_results,
     inputs={
-        "reports": T_filter_kraken_reports,
-        "outputs": T_filter_kraken_outputs,
+        "reports": T_filter_kraken2_reports,
+        "outputs": T_filter_kraken2_outputs,
     },
     parameters={
         "metadata": Metadata,
@@ -1870,17 +1870,17 @@ plugin.methods.register_function(
         "remove_empty": Bool,
     },
     outputs={
-        "filtered_reports": T_filter_kraken_reports,
-        "filtered_outputs": T_filter_kraken_outputs
+        "filtered_reports": T_filter_kraken2_reports,
+        "filtered_outputs": T_filter_kraken2_outputs
     },
     input_descriptions={
         "reports": "The Kraken reports to filter.",
         "outputs": "The Kraken outputs to filter."
     },
     parameter_descriptions=filter_contigs_param_descriptions,
-    name="Filter Kraken reports and outputs.",
-    description="Filter Kraken reports and outputs based on metadata or remove reports "
-                "with 100% unclassified reads.",
+    name="Filter Kraken2 reports and outputs.",
+    description="Filter Kraken2 reports and outputs based on metadata or remove "
+                "reports with 100% unclassified reads.",
 )
 
 
