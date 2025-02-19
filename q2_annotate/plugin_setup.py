@@ -35,9 +35,9 @@ from q2_types.per_sample_sequences import (
 from q2_types.sample_data import SampleData
 from q2_types.feature_map import FeatureMap, MAGtoContigs
 from qiime2.core.type import (
-    Bool, Range, Int, Str, Float, List, Choices, Visualization, TypeMatch
+    Bool, Range, Int, Str, Float, List, Choices, Visualization,
+    Properties, TypeMap, TypeMatch,
 )
-from qiime2.core.type import (Properties, TypeMap, TypeMatch)
 from qiime2.plugin import (Plugin, Citations)
 import q2_annotate._examples as ex
 import q2_annotate
