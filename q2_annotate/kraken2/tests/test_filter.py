@@ -15,7 +15,6 @@ from q2_annotate.kraken2.filter import (
     _report_df_to_tree,
     _trim_tree_dfs,
     _dump_tree_to_report,
-    _write_report_dfs,
     filter_kraken2_reports,
 )
 
@@ -245,9 +244,9 @@ class TestFilter(TestPluginBase):
                 ancestor._kraken_data['n_frags_covered'] - filtered_reads,
             )
 
-    def test_dump_tree_to_report_round_trip(self):
+    def test_curated_report_round_trip(self):
         '''
-        Test that a report tree is properly dumped to a report dataframe.
+        Test that parsing and dumping a curated report results in no changes.
         '''
         root, unclassified_node = _report_df_to_tree(self.curated_report)
 
@@ -271,9 +270,44 @@ class TestFilter(TestPluginBase):
                 check_index=False,
             )
 
+    def test_real_report_round_trip(self):
+        '''
+        Test that parsing and dumping a real report results in no changes.
+        '''
+        root, unclassified_node = _report_df_to_tree(self.real_report)
+
+        round_tripped_report = _dump_tree_to_report(root, unclassified_node)
+
+        round_tripped_report.sort_values(
+            'taxon_id', inplace=True, ascending=False
+        )
+        real_report = self.real_report.sort_values('taxon_id', ascending=False)
+
+        columns = [
+            'n_frags_covered', 'n_frags_assigned', 'taxon_id', 'name', 'rank'
+        ]
+        for column in columns:
+            assert_series_equal(
+                round_tripped_report[column],
+                real_report[column],
+                check_dtype=False,
+                check_index=False,
+            )
+
     def test_filter_kraken2_reports(self):
         '''
+        Test that the main `filter_kraken2_reports` method runs, results in
+        the same number of outputted formats as inputted ones.
         '''
         filtered_reports = filter_kraken2_reports(
             self.reports, abundance_threshold=0.01
         )
+
+        num_input_reports = len(list(
+            self.reports.reports.iter_views(Kraken2ReportFormat)
+        ))
+        num_output_reports = len(list(
+            filtered_reports.reports.iter_views(Kraken2ReportFormat)
+        ))
+
+        self.assertEqual(num_input_reports, num_output_reports)

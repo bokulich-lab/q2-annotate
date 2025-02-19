@@ -210,12 +210,7 @@ def _dump_tree_to_report(
     pd.DataFrame
         The recreated kraken2 report.
     '''
-    # create dataframe
     report = pd.DataFrame(columns=root._kraken_data.keys())
-
-    # if unclassified exists write to dataframe
-    if unclassified_node:
-        _write_node_to_report(unclassified_node, report)
 
     # calculate denominator for perc_frags_covered_column
     total_reads = root._kraken_data['n_frags_covered']
@@ -224,7 +219,9 @@ def _dump_tree_to_report(
 
     report._kraken_total_reads = total_reads
 
-    # write tree to report
+    if unclassified_node is not None:
+        _write_node_to_report(unclassified_node, report)
+
     _write_report_dfs(root, report)
 
     return report
