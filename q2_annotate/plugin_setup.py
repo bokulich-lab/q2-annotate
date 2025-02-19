@@ -1819,11 +1819,25 @@ plugin.methods.register_function(
         'abundance_threshold': Float % Range(0, 1, inclusive_end=True),
     },
     outputs=[('filtered_reports', SampleData[TMR])],
-    input_descriptions={},
-    parameter_descriptions={},
-    output_descriptions={},
+    input_descriptions={
+        'reports': 'The kraken2 reports to filter by relative abundance.'
+    },
+    parameter_descriptions={
+        'abundance_threshold': (
+            'A proportion between 0 and 1 representing the minimum relative '
+            'abundance (by read count) that a taxon must have to be retained '
+            'in the filtered report.'
+        )
+    },
+    output_descriptions={
+        'filtered_reports': 'The relative abundance-filtered kraken2 reports'
+    },
     name='Filter kraken2 reports by relative abundance.',
-    description='Later',
+    description=(
+        'Filters kraken2 reports on a per-taxon basis by relative abundance '
+        '(relative frequency). Useful for removing suspected spurious '
+        'classifications.'
+    ),
     citations=[],
 )
 
