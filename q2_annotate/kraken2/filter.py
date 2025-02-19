@@ -13,7 +13,6 @@ import pandas as pd
 
 from q2_types.kraken2 import (
     Kraken2ReportDirectoryFormat,
-    Kraken2OutputDirectoryFormat,
     Kraken2ReportFormat,
 )
 
@@ -25,12 +24,22 @@ def filter_kraken2_reports(
     abundance_threshold: float,
 ) -> Kraken2ReportDirectoryFormat:
     '''
+    Filters all nodes in a kraken2 report with a relative abundance that is
+    less than `abundance_threshold`. Relative abundance is calculated as the
+    number of reads mapped to a tnode divided by the total number of classified
+    reads in the report.
 
     Parameters
     ----------
+    reports : Kraken2ReportDirectoryFormat
+        The reports to be filtered.
+    abundance_threshold : float
+        The relative abundance threshold beneath which a node will be filtered.
 
     Returns
     -------
+    Kraken2ReportDirectoryFormat
+        The filtered reports.
     '''
     # make output directory format
     output_dir_format = Kraken2ReportDirectoryFormat()
@@ -128,7 +137,7 @@ def _trim_tree_dfs(
 
     Parameters
     ----------
-    root : TreeNode
+    node : TreeNode
         The root of the report tree.
     abundance_threshold : float
         The minimum abundance threshold required for a node to be retained.
@@ -144,8 +153,6 @@ def _trim_tree_dfs(
         ancestors = node.ancestors()
 
         # unlink node and its descendants from tree
-        root = list(node.ancestors())[-1]
-
         node.parent.remove(node)
 
         # find the number of reads that were lost in the removed subtree
@@ -182,9 +189,10 @@ def _trim_tree_dfs(
 
     return node
 
+
 def _dump_tree_to_report(
     root: TreeNode, unclassified_node: TreeNode | None
-) ->  pd.DataFrame:
+) -> pd.DataFrame:
     '''
     Recreates the kraken2 report from the filtered tree and optional
     unlcassifed node.
@@ -254,12 +262,14 @@ def _write_report_dfs(node: TreeNode, report: pd.DataFrame) -> None:
 
 def _write_node_to_report(node: TreeNode, report: pd.DataFrame):
     '''
+    Writes a single node to a kraken2 report represented as a dataframe.
 
     Parameters
     ----------
-
-    Returns
-    -------
+    node : TreeNode
+        The node for which a record will be added to the report dataframe.
+    report : pd.DataFrame
+        The kraken2 report represented as a dataframe.
     '''
     row = pd.Series(node._kraken_data)
 

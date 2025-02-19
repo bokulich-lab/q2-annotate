@@ -7,9 +7,7 @@
 # ----------------------------------------------------------------------------
 import pandas as pd
 from pandas.testing import assert_series_equal
-import unittest
 
-import qiime2
 from qiime2.plugin.testing import TestPluginBase
 from q2_types.kraken2 import Kraken2ReportFormat, Kraken2ReportDirectoryFormat
 
@@ -98,7 +96,6 @@ class TestFilter(TestPluginBase):
         obs = node_1767._kraken_data
         obs['name'] = obs['name'].strip()
         self.assertEqual(obs, exp)
-
 
     def test_real_report_to_tree(self):
         '''
@@ -253,10 +250,8 @@ class TestFilter(TestPluginBase):
         Test that a report tree is properly dumped to a report dataframe.
         '''
         root, unclassified_node = _report_df_to_tree(self.curated_report)
-        total_reads = root._kraken_data['n_frags_covered']
 
         round_tripped_report = _dump_tree_to_report(root, unclassified_node)
-
 
         round_tripped_report.sort_values(
             'taxon_id', inplace=True, ascending=False
