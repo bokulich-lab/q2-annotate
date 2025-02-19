@@ -42,6 +42,7 @@ COLLECTIONS = {
     "pluspfp16": "pluspfp_16gb",
     "eupathdb": "eupathdb48",
     "nt": "nt",
+    "corent": "core_nt",
     "greengenes": "Greengenes13.5",
     "rdp": "RDP11.5",
     "silva132": "Silva132",

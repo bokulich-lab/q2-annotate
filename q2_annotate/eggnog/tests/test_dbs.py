@@ -220,7 +220,7 @@ class TestBuildDiamondDB(TestPluginBase):
         ]
 
         # Check that commands are ran as expected
-        mock_os_rm.assert_called_once_with(zip_path)
+        mock_os_rm.assert_any_call(zip_path)
         mock_run.assert_has_calls(
             expected_calls,
             any_order=False

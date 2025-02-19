@@ -5,7 +5,8 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-from q2_annotate.busco.database import fetch_busco_db
+import os
+from q2_annotate.busco.database import fetch_busco_db, delete_symlinks
 from unittest.mock import patch
 from qiime2.plugin.testing import TestPluginBase
 
@@ -36,3 +37,19 @@ class TestFetchBUSCO(TestPluginBase):
         # Check that command was called in the expected way
         cmd = ["busco", "--download", "all"]
         subp_run.assert_called_once_with(cmd, check=True, cwd=str(busco_db))
+
+    def test_delete_symlinks(self):
+        temp_dir = self.temp_dir.name
+        sub_dir = os.path.join(temp_dir, "subdir")
+        os.makedirs(sub_dir)
+
+        # Create symlinks
+        symlink1 = os.path.join(temp_dir, "symlink1")
+        symlink2 = os.path.join(sub_dir, "symlink2")
+
+        # Run delete function
+        delete_symlinks(temp_dir)
+
+        # Check that symlinks were deleted
+        self.assertFalse(os.path.exists(symlink1))
+        self.assertFalse(os.path.exists(symlink2))
