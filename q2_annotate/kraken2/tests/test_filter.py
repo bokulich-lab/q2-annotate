@@ -16,6 +16,7 @@ import qiime2
 from qiime2.plugin.testing import TestPluginBase
 from q2_types.kraken2 import (
     Kraken2ReportFormat,
+    Kraken2OutputFormat,
     Kraken2ReportDirectoryFormat,
     Kraken2OutputDirectoryFormat,
 )
@@ -30,6 +31,8 @@ from q2_annotate.kraken2.filter import (
     _trim_tree_dfs,
     _dump_tree_to_report,
     filter_kraken2_reports,
+    _align_outputs_with_reports,
+    _align_single_output_with_report,
 )
 
 
@@ -245,15 +248,19 @@ class TestAbundanceFilter(TestPluginBase):
     def setUp(self):
         super().setUp()
 
-        curated_report_fp = self.get_data_path('filter/sample-1.report.txt')
+        curated_report_fp = self.get_data_path(
+            'filter/reports/sample-1.report.txt'
+        )
         curated_report = Kraken2ReportFormat(curated_report_fp, mode='r')
         self.curated_report = curated_report.view(pd.DataFrame)
 
-        real_report_fp = self.get_data_path('filter/SRR17001003.report.txt')
+        real_report_fp = self.get_data_path(
+            'filter/reports/SRR17001003.report.txt'
+        )
         real_report = Kraken2ReportFormat(real_report_fp, mode='r')
         self.real_report = real_report.view(pd.DataFrame)
 
-        reports_fp = self.get_data_path('filter')
+        reports_fp = self.get_data_path('filter/reports')
         self.reports = Kraken2ReportDirectoryFormat(reports_fp, mode='r')
 
     def test_curated_report_to_tree(self):
@@ -519,6 +526,7 @@ class TestAbundanceFilter(TestPluginBase):
         Test that the main `filter_kraken2_reports` method runs, results in
         the same number of outputted formats as inputted ones.
         '''
+        print('self reports path', self.reports.path)
         filtered_reports = filter_kraken2_reports(
             self.reports, abundance_threshold=0.01
         )
@@ -531,3 +539,90 @@ class TestAbundanceFilter(TestPluginBase):
         ))
 
         self.assertEqual(num_input_reports, num_output_reports)
+
+
+class TestOutputReportAlignment(TestPluginBase):
+    package = "q2_annotate.kraken2.tests"
+
+    def setUp(self):
+        super().setUp()
+
+        report_fp = self.get_data_path(
+            'filter/output-report-alignment/reports/sample-1.report.txt'
+        )
+        self.report = Kraken2ReportFormat(report_fp, mode='r')
+
+        output_fp = self.get_data_path(
+            'filter/output-report-alignment/outputs/sample-1.output.txt'
+        )
+        self.output = Kraken2OutputFormat(output_fp, mode='r')
+
+        reports_fp = self.get_data_path(
+            'filter/output-report-alignment/reports/'
+        )
+        self.reports = Kraken2ReportDirectoryFormat(reports_fp, mode='r')
+
+        outputs_fp = self.get_data_path(
+            'filter/output-report-alignment/outputs/'
+        )
+        self.outputs = Kraken2OutputDirectoryFormat(outputs_fp, mode='r')
+
+    def test_align_single_output_with_report(self):
+        '''
+        Tests that a kraken2 report that has a subset of the taxon ids present
+        in a kraken2 output results in a properly filtered output when the two
+        are aligned.
+        '''
+        output_dir_fmt = Kraken2OutputDirectoryFormat()
+        sample_id = 'sample-1'
+
+        _align_single_output_with_report(
+            self.output, self.report, output_dir_fmt, sample_id
+        )
+
+        _, aligned_output = list(
+            output_dir_fmt.reports.iter_views(Kraken2OutputFormat)
+        )[0]
+
+        report_df = self.report.view(pd.DataFrame)
+        output_df = aligned_output.view(pd.DataFrame)
+
+        # filtered taxon ids have been removed
+        self.assertEqual(
+            set(report_df['taxon_id']), set(output_df['taxon_id'])
+        )
+
+        # duplicate taxon id records still present in report
+        self.assertGreater(len(output_df), len(report_df))
+
+    def test_align_outputs_with_reports(self):
+        '''
+        Tests that reports and outputs are properly paired when performing
+        alignment on entire report/output directory formats.
+        '''
+        aligned_outputs = _align_outputs_with_reports(
+            self.outputs, self.reports
+        )
+
+        sample1_report_df = Kraken2ReportFormat(
+            self.reports.path / 'sample-1.report.txt', mode='r'
+        ).view(pd.DataFrame)
+        sample2_report_df = Kraken2ReportFormat(
+            self.reports.path / 'sample-2.report.txt', mode='r'
+        ).view(pd.DataFrame)
+        sample1_output_df = Kraken2OutputFormat(
+            aligned_outputs.path / 'sample-1.output.txt', mode='r'
+        ).view(pd.DataFrame)
+        sample2_output_df = Kraken2OutputFormat(
+            aligned_outputs.path / 'sample-2.output.txt', mode='r'
+        ).view(pd.DataFrame)
+
+        # reports, outputs paired properly
+        self.assertEqual(
+            set(sample1_report_df['taxon_id']),
+            set(sample1_output_df['taxon_id'])
+        )
+        self.assertEqual(
+            set(sample2_report_df['taxon_id']),
+            set(sample2_output_df['taxon_id'])
+        )
