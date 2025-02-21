@@ -1811,7 +1811,7 @@ TMR = TypeMatch([
 ])
 
 plugin.methods.register_function(
-    function=q2_annotate.kraken2.filter_kraken2_reports,
+    function=q2_annotate.kraken2._filter_kraken2_reports,
     inputs={
         "reports": SampleData[TMR],
     },

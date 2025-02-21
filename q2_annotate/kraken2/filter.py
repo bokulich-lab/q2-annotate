@@ -169,9 +169,8 @@ def filter_kraken2_results(
     return filtered_reports, filtered_outputs
 
 
-def filter_kraken2_reports(
-    reports: Kraken2ReportDirectoryFormat,
-    abundance_threshold: float,
+def _filter_kraken2_reports(
+    reports: Kraken2ReportDirectoryFormat, abundance_threshold: float,
 ) -> Kraken2ReportDirectoryFormat:
     '''
     Filters all nodes in a kraken2 report with a relative abundance that is

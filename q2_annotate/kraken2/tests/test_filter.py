@@ -30,7 +30,7 @@ from q2_annotate.kraken2.filter import (
     _report_df_to_tree,
     _trim_tree_dfs,
     _dump_tree_to_report,
-    filter_kraken2_reports,
+    _filter_kraken2_reports,
     _align_outputs_with_reports,
     _align_single_output_with_report,
 )
@@ -523,11 +523,11 @@ class TestAbundanceFilter(TestPluginBase):
 
     def test_filter_kraken2_reports(self):
         '''
-        Test that the main `filter_kraken2_reports` method runs, results in
+        Test that the main `_filter_kraken2_reports` method runs, results in
         the same number of outputted formats as inputted ones.
         '''
         print('self reports path', self.reports.path)
-        filtered_reports = filter_kraken2_reports(
+        filtered_reports = _filter_kraken2_reports(
             self.reports, abundance_threshold=0.01
         )
 
