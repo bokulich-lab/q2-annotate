@@ -35,9 +35,9 @@ from q2_types.per_sample_sequences import (
 from q2_types.sample_data import SampleData
 from q2_types.feature_map import FeatureMap, MAGtoContigs
 from qiime2.core.type import (
-    Bool, Range, Int, Str, Float, List, Choices, Visualization, TypeMatch
+    Bool, Range, Int, Str, Float, List, Choices, Visualization,
+    Properties, TypeMap, TypeMatch,
 )
-from qiime2.core.type import (Properties, TypeMap)
 from qiime2.plugin import (Plugin, Citations)
 import q2_annotate._examples as ex
 import q2_annotate
@@ -1805,6 +1805,42 @@ plugin.pipelines.register_function(
     citations=[]
 )
 
+TMR = TypeMatch([
+    Kraken2Reports % Properties('reads'),
+    Kraken2Reports % Properties('contigs')
+])
+
+plugin.methods.register_function(
+    function=q2_annotate.kraken2._filter_kraken2_reports,
+    inputs={
+        "reports": SampleData[TMR],
+    },
+    parameters={
+        'abundance_threshold': Float % Range(0, 1, inclusive_end=True),
+    },
+    outputs=[('filtered_reports', SampleData[TMR])],
+    input_descriptions={
+        'reports': 'The kraken2 reports to filter by relative abundance.'
+    },
+    parameter_descriptions={
+        'abundance_threshold': (
+            'A proportion between 0 and 1 representing the minimum relative '
+            'abundance (by read count) that a taxon must have to be retained '
+            'in the filtered report.'
+        )
+    },
+    output_descriptions={
+        'filtered_reports': 'The relative abundance-filtered kraken2 reports'
+    },
+    name='Filter kraken2 reports by relative abundance.',
+    description=(
+        'Filters kraken2 reports on a per-taxon basis by relative abundance '
+        '(relative frequency). Useful for removing suspected spurious '
+        'classifications.'
+    ),
+    citations=[],
+)
+
 T_filter_kraken2_reports = TypeMatch([
     SampleData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
     SampleData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
@@ -1882,7 +1918,6 @@ plugin.methods.register_function(
     description="Filter Kraken2 reports and outputs based on metadata or remove "
                 "reports with 100% unclassified reads.",
 )
-
 
 plugin.register_semantic_types(BUSCOResults, BuscoDB)
 plugin.register_formats(
