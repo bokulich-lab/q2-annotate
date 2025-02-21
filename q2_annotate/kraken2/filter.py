@@ -18,6 +18,7 @@ from q2_types.kraken2 import (
     Kraken2ReportDirectoryFormat,
     Kraken2OutputDirectoryFormat,
     Kraken2ReportFormat,
+    Kraken2OutputFormat,
 )
 
 from q2_annotate.kraken2.select import _get_indentation
@@ -190,10 +191,8 @@ def filter_kraken2_reports(
     Kraken2ReportDirectoryFormat
         The filtered reports.
     '''
-    # make output directory format
-    output_dir_format = Kraken2ReportDirectoryFormat()
+    filtered_reports = Kraken2ReportDirectoryFormat()
 
-    # iterate over input formats
     for report_filename, report in reports.reports.iter_views(
         Kraken2ReportFormat
     ):
@@ -218,13 +217,13 @@ def filter_kraken2_reports(
         )
 
         # add report to output format
-        output_fp = Path(output_dir_format.path) / report_filename
+        output_fp = Path(filtered_reports.path) / report_filename
         trimmed_report.to_csv(
             output_fp, sep='\t', header=None, index=None
         )
 
     # return directory format
-    return output_dir_format
+    return filtered_reports
 
 
 def _report_df_to_tree(
@@ -425,3 +424,76 @@ def _write_node_to_report(node: TreeNode, report: pd.DataFrame):
     )
 
     report.loc[len(report)] = row
+
+
+def _align_outputs_with_reports(
+    outputs: Kraken2OutputDirectoryFormat,
+    reports: Kraken2ReportDirectoryFormat,
+) -> Kraken2OutputDirectoryFormat:
+    '''
+    Filters kraken2 outputs to align them with filtered kraken2 reports.
+    Assumes that the set of report sample IDs and output sample IDs are
+    exactly the same.
+
+    Parameters
+    ----------
+    outputs : Kraken2OutputDirectoryFormat
+        The kraken2 outputs to filter.
+    reports : Kraken2ReportDirectoryFormat
+        The filtered kraken2 reports.
+
+    Returns
+    -------
+    Kraken2OutputDirectoryFormat
+        The aligned kraken2 outputs.
+    '''
+    aligned_outputs = Kraken2OutputDirectoryFormat()
+
+    output_sample_map = outputs.file_dict()
+    report_sample_map = reports.file_dict()
+    for sample_id, output_path in output_sample_map.items():
+        report_path = report_sample_map[sample_id]
+        output = Kraken2OutputFormat(output_path, mode='r')
+        report = Kraken2ReportFormat(report_path, mode='r')
+
+        _align_single_output_with_report(
+            output, report, aligned_outputs, sample_id
+        )
+
+    return aligned_outputs
+
+
+def _align_single_output_with_report(
+    output: Kraken2OutputFormat,
+    report: Kraken2ReportFormat,
+    output_dir_fmt: Kraken2OutputDirectoryFormat,
+    sample_id: str,
+) -> None:
+    '''
+    Filters a kraken2 output to align it with a filtered kraken2 report.
+    Rows in the output that have a taxon id that is not present in the report
+    are removed.
+
+    Parameters
+    ----------
+    output : Kraken2OutputFormat
+        The kraken2 output to filter.
+    report : Kraken2ReportFormat
+        The filtered kraken2 report.
+    output_dir_fmt : Kraken2OutputDirectoryFormat
+        The directory format to which to write the filtered output.
+    sample_id : str
+        The sample ID of the the report and output.
+
+    Returns
+    -------
+    None
+        Writes the filtered output to `output_dir_fmt`.
+    '''
+    report_df = report.view(pd.DataFrame)
+    retained_ids = set(report_df['taxon_id'])
+    output_df = output.view(pd.DataFrame)
+    output_df = output_df[output_df['taxon_id'].isin(retained_ids)]
+
+    output_fp = os.path.join(output_dir_fmt.path, f"{sample_id}.output.txt")
+    output_df.to_csv(output_fp, sep='\t', header=None, index=None)
