@@ -1,0 +1,10 @@
+cc6a028afa1cdeb3539e34279cef57c7  VERSION
+55441d30b6123dd4720610809dfb839d  metadata.yaml
+0d9186268fcc3e615e0aa548de9e29ca  data/MANIFEST
+60a6a333e282f9fa9481df4a6dbd6ca4  data/sample1/7572ddec-7fef-40ee-a905-c18f3592209c.fasta
+d456d41c147cf2e09ad93a99faf93a41  data/sample1/863e171a-0ae3-4332-9e93-74f8de9e6ad7.fasta
+1d50eb011dc74615e1251fe2819a6613  data/sample2/2587caf7-592a-44ab-aa9b-c5eaf0c45e38.fasta
+cc6a028afa1cdeb3539e34279cef57c7  provenance/VERSION
+bb009bb78f3b6f63b0e2046931f89dae  provenance/citations.bib
+55441d30b6123dd4720610809dfb839d  provenance/metadata.yaml
+abe7cc7cc01bef966fffd05a2cb1c544  provenance/action/action.yaml
