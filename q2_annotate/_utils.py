@@ -118,7 +118,7 @@ def get_feature_lengths(
 
         # For SampleData[Contigs]
     elif isinstance(features, ContigSequencesDirFmt):
-        sample_dict = {"": features.sample_dict()} 
+        sample_dict = {"": features.sample_dict()}
         per_sequence = True
 
     # For SampleData[MAGs]
