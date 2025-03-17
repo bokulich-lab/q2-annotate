@@ -109,7 +109,7 @@ def _validate_ids(file_dict_reports, file_dict_outputs):
     return inner_ids_reports
 
 
-def filter_kraken2_results(
+def _filter_kraken2_results_by_metadata(
         reports: Kraken2ReportDirectoryFormat,
         outputs: Kraken2OutputDirectoryFormat,
         metadata: Metadata = None,
@@ -169,7 +169,73 @@ def filter_kraken2_results(
     return filtered_reports, filtered_outputs
 
 
-def _filter_kraken2_reports(
+def filter_kraken2_results(
+    ctx,
+    reports,
+    outputs,
+    metadata = None,
+    where = None,
+    exclude_ids = False,
+    remove_empty = False,
+    abundance_threshold = None,
+):
+    '''
+
+    Parameters
+    ----------
+    ctx : qiime2.sdk.Context
+        The pipeline context object.
+    reports : Kraken2ReportDirectoryFormat
+        The kraken2 reports to be filtered.
+    outputs : Kraken2OutputDirectoryFormat
+        The kraken2 outputs to be filtered.
+    metadata: qiime2.Metadata
+        The per-sample metadata.
+    where : str | None
+        A SQLite where clause specifying which samples to retain.
+    exlude_ids : bool
+        Whether the sample IDs selected by the where clause should be exluded,
+        instead of retained.
+    remove_empty : bool
+        Whether to remove reports that have 100% unclassified reads.
+    abundance_threshold : float | None
+        The relative abundance threshold beneath which taxa in each kraken2
+        report will be filtered.
+
+    Returns
+    -------
+    tuple[Kraken2ReportsDirectoryFormat, Kraken2OutputsDirectoryFormat]
+        The filtered sets of kraken2 reports and outputs.
+    '''
+    # get needed actions
+    _filter_kraken2_results_by_metadata = ctx.get_action(
+        'annotate', '_filter_kraken2_results_by_metadata'
+    )
+    _filter_kraken2_reports_by_abundance = ctx.get_action(
+        'annotate', '_filter_kraken2_reports_by_abundance'
+    )
+    # todo: get partition action
+    _collate_kraken2_reports = ctx.get_action(
+        'annotate', 'collate_kraken2_reports'
+    )
+    _collate_kraken2_outputs = ctx.get_action(
+        'annotate', 'collate_kraken2_outputs'
+    )
+
+    # partition
+
+    # metdata-based filtering
+
+    # abundance-based report filtering
+
+    # align outputs with reports
+
+    # collate
+
+    pass
+
+
+def _filter_kraken2_reports_by_abundance(
     reports: Kraken2ReportDirectoryFormat, abundance_threshold: float,
 ) -> Kraken2ReportDirectoryFormat:
     '''

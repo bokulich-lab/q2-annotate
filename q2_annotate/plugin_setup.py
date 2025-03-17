@@ -1811,7 +1811,7 @@ TMR = TypeMatch([
 ])
 
 plugin.methods.register_function(
-    function=q2_annotate.kraken2._filter_kraken2_reports,
+    function=q2_annotate.kraken2._filter_kraken2_reports_by_abundance,
     inputs={
         "reports": SampleData[TMR],
     },
@@ -1841,7 +1841,7 @@ plugin.methods.register_function(
     citations=[],
 )
 
-T_filter_kraken2_reports = TypeMatch([
+T_filter_kraken2_reports_by_abundance = TypeMatch([
     SampleData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
     SampleData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
     SampleData[Kraken2Reports % Properties('reads', 'contigs')],
@@ -1894,9 +1894,9 @@ filter_reports_param_descriptions = {
 }
 
 plugin.methods.register_function(
-    function=q2_annotate.kraken2.filter_kraken2_results,
+    function=q2_annotate.kraken2._filter_kraken2_results_by_metadata,
     inputs={
-        "reports": T_filter_kraken2_reports,
+        "reports": T_filter_kraken2_reports_by_abundance,
         "outputs": T_filter_kraken2_outputs,
     },
     parameters={
@@ -1906,7 +1906,7 @@ plugin.methods.register_function(
         "remove_empty": Bool,
     },
     outputs={
-        "filtered_reports": T_filter_kraken2_reports,
+        "filtered_reports": T_filter_kraken2_reports_by_abundance,
         "filtered_outputs": T_filter_kraken2_outputs
     },
     input_descriptions={

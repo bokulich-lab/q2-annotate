@@ -25,12 +25,12 @@ from q2_annotate.kraken2.filter import (
     _validate_parameters,
     _find_empty_reports,
     _create_filtered_results,
-    filter_kraken2_results,
+    _filter_kraken2_results_by_metadata,
     _validate_ids,
     _report_df_to_tree,
     _trim_tree_dfs,
     _dump_tree_to_report,
-    _filter_kraken2_reports,
+    _filter_kraken2_reports_by_abundance,
     _align_outputs_with_reports,
     _align_single_output_with_report,
 )
@@ -129,7 +129,7 @@ class TestFilterKrakenReports(TestPluginBase):
         with self.assertRaisesRegex(
                 ValueError, "No IDs remain after filtering."
         ):
-            filter_kraken2_results(
+            _filter_kraken2_results_by_metadata(
                 reports=self.report_mags_unclassified_missing_frac,
                 outputs=self.output_mags,
                 metadata=self.metadata1,
@@ -137,7 +137,7 @@ class TestFilterKrakenReports(TestPluginBase):
             )
 
     def test_filter_kraken_reports_metadata(self):
-        results = filter_kraken2_results(
+        results = _filter_kraken2_results_by_metadata(
             reports=self.report_mags_unclassified_missing_frac,
             outputs=self.output_mags,
             metadata=self.metadata2,
@@ -153,7 +153,7 @@ class TestFilterKrakenReports(TestPluginBase):
             )
 
     def test_filter_kraken_reports_metadata_where(self):
-        results = filter_kraken2_results(
+        results = _filter_kraken2_results_by_metadata(
             reports=self.report_mags_unclassified_missing_frac,
             outputs=self.output_mags,
             metadata=self.metadata1,
@@ -171,7 +171,7 @@ class TestFilterKrakenReports(TestPluginBase):
 
     def test_filter_kraken_reports_where_print(self):
         with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
-            filter_kraken2_results(
+            _filter_kraken2_results_by_metadata(
                 reports=self.report_mags_unclassified_missing_frac,
                 outputs=self.output_mags,
                 metadata=self.metadata1,
@@ -183,7 +183,7 @@ class TestFilterKrakenReports(TestPluginBase):
         self.assertIn("The filter query returned no IDs to filter out.", output)
 
     def test_filter_kraken_reports_empty(self):
-        results = filter_kraken2_results(
+        results = _filter_kraken2_results_by_metadata(
             reports=self.report_mags_unclassified_missing_frac,
             outputs=self.output_mags,
             remove_empty=True,
@@ -521,13 +521,13 @@ class TestAbundanceFilter(TestPluginBase):
                 check_index=False,
             )
 
-    def test_filter_kraken2_reports(self):
+    def test_filter_kraken2_reports_by_abundance(self):
         '''
-        Test that the main `_filter_kraken2_reports` method runs, results in
+        Test that the main `_filter_kraken2_reports_by_abundance` method runs, results in
         the same number of outputted formats as inputted ones.
         '''
         print('self reports path', self.reports.path)
-        filtered_reports = _filter_kraken2_reports(
+        filtered_reports = _filter_kraken2_reports_by_abundance(
             self.reports, abundance_threshold=0.01
         )
 
