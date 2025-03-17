@@ -89,14 +89,30 @@ def classify_kraken2(
     # return matched reports, outputs
 
 
-def _classify_single_artifact(
-    ctx: qiime2.Context,
-    seqs: qiime2.Artifact,
-    kraken2_db: Kraken2DBDirectoryFormat,
-    num_partitions: int | None,
-    kwargs: dict,
-) -> tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]:
+def _classify_single_artifact(ctx, seqs, kraken2_db, num_partitions, kwargs):
     '''
+    Runs the kraken2 software on the contents of a single artifact.
+
+    Parameters
+    ----------
+    ctx : qiime2.sdk.Context
+        The pipeline context object.
+    seqs : qiime2.Artifact
+        An artifact of type SampleData[SequencesWithQualtiy],
+        SampleData[PairedEndSequencesWithQuality],
+        SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
+        or SampleData[MAGs].
+    kraken2_db : Kraken2DBDirectoryFormat
+        The kraken2 database.
+    num_partitions : int | None
+        The number of partitions to create for parallel execution.
+    kwargs : dict
+        The remaining keyword arguments from the `classify_kraken2` pipeline.
+
+    Returns
+    -------
+    tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]
+        The kraken2 report and output files.
     '''
     _classify_kraken2 = ctx.get_action("annotate", "_classify_kraken2")
     collate_kraken2_reports = ctx.get_action(
@@ -106,16 +122,13 @@ def _classify_single_artifact(
         "annotate", "collate_kraken2_outputs"
     )
 
-    # FeatureData[MAG] is not parallelized
     if seqs.type <= FeatureData[MAG]:
-        reports, outputs = _classify_kraken2(seqs, kraken2_db, **kwargs)
-        return reports, outputs
+        # FeatureData[MAG] is not parallelized
+        return _classify_kraken2(seqs, kraken2_db, **kwargs)
     else:
-        # partition sequences
         partition_action = _get_partition_action(ctx, seqs)
         (partitioned_seqs,) = partition_action(seqs, num_partitions)
 
-        # classify sequences
         all_reports = []
         all_outputs = []
         for seq in partitioned_seqs.values():
@@ -129,10 +142,34 @@ def _classify_single_artifact(
         return collated_reports, collated_outputs
 
 
-def _get_partition_action(
-    ctx: qiime2.Context, seqs: qiime2.Artifact
-) -> Callable:
+def _merge_reports():
+    # note: use tree parsing -> merging -> dumping functionality
+    # (blocked by filter action)
+    pass
+
+
+def _merge_outputs():
+    pass
+
+
+def _get_partition_action(ctx, seqs):
     '''
+    Returns the proper partition action for the given type of `seqs`.
+
+    Parameters
+    ----------
+    ctx : qiime2.sdk.Context
+        The pipeline context object.
+    seqs : qiime2.Artifact
+        An artifact of type SampleData[SequencesWithQualtiy],
+        SampleData[PairedEndSequencesWithQuality],
+        SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
+        or SampleData[MAGs].
+
+    Returns
+    -------
+    qiime2.sdk.Action
+        The partition action.
     '''
     if seqs.type <= SampleData[
         SequencesWithQuality | JoinedSequencesWithQuality
