@@ -5,17 +5,20 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import os
 import subprocess
 import hashlib
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 import skbio
+from q2_types.feature_data import DNASequencesDirectoryFormat
 
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.feature_table import (
     FeatureTable, PresenceAbsence, RelativeFrequency
 )
+from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequencesDirFmt
 
 EXTERNAL_CMD_WARNING = (
     "Running external command line application(s). "
@@ -96,13 +99,47 @@ def _calculate_md5_from_file(file_path: str) -> str:
     return md5_hash.hexdigest()
 
 
-def get_feature_lengths(features: MAGSequencesDirFmt) -> pd.DataFrame:
+def get_feature_lengths(
+        features: Union[
+            MAGSequencesDirFmt,
+            MultiMAGSequencesDirFmt,
+            ContigSequencesDirFmt,
+            DNASequencesDirectoryFormat
+        ]
+) -> pd.DataFrame:
     """Calculate lengths of features in a feature data object."""
     ids, lengths = [], []
-    for _id, fp in features.feature_dict().items():
-        sequences = skbio.io.read(fp, format='fasta', verify=False)
-        ids.append(_id)
-        lengths.append(sum(len(seq) for seq in sequences))
+    per_sequence = False
+
+    # for FeatureData[Sequence]
+    if isinstance(features, DNASequencesDirectoryFormat):
+        sample_dict = {"": {"": os.path.join(str(features), 'dna-sequences.fasta')}}
+        per_sequence = True
+
+        # For SampleData[Contigs]
+    elif isinstance(features, ContigSequencesDirFmt):
+        sample_dict = {"": features.sample_dict()}
+        per_sequence = True
+
+    # For SampleData[MAGs]
+    elif isinstance(features, MultiMAGSequencesDirFmt):
+        sample_dict = features.sample_dict()
+
+    # For FeatureData[MAG]
+    else:
+        sample_dict = {"": features.feature_dict()}
+
+    for _, file_dict in sample_dict.items():
+        for _id, fp in file_dict.items():
+            sequences = skbio.io.read(fp, format='fasta', verify=False)
+
+            if per_sequence:
+                for seq in sequences:
+                    ids.append(seq.metadata['id'])
+                    lengths.append(len(seq))
+            else:
+                ids.append(_id)
+                lengths.append(sum(len(seq) for seq in sequences))
 
     df = pd.DataFrame({'id': ids, 'length': lengths})
     df.set_index('id', inplace=True)
