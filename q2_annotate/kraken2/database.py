@@ -43,6 +43,7 @@ COLLECTIONS = {
     "eupathdb": "eupathdb48",
     "nt": "nt",
     "corent": "core_nt",
+    "gtdb": "gtdb_genome_reps",
     "greengenes": "Greengenes13.5",
     "rdp": "RDP11.5",
     "silva132": "Silva132",
