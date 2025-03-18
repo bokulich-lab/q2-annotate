@@ -10,13 +10,13 @@ from qiime2.core.exceptions import ValidationError
 from qiime2.plugin import model
 from q2_types.feature_data import AlignedProteinFASTAFormat
 
-
+### NEW ADDED 2 COLUMNS TO THE END of BUSCOResultsFormat
 class BUSCOResultsFormat(model.TextFileFormat):
     HEADER = [
         "mag_id", "sample_id", "input_file", "dataset", "complete",
         "single", "duplicated", "fragmented", "missing", "n_markers",
         "scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds",
-        "length"
+        "length","unbinned_percentage", "unbinned_count"
     ]
 
     def _validate(self, n_records=None):

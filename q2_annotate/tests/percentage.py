@@ -5,8 +5,8 @@ from q2_types.feature_data import DNAFASTAFormat
 from q2_types.feature_data import DNAIterator
 
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequencesDirFmt
-from skbio import read
-from skbio.sequence import DNA
+# from skbio import read
+# from skbio.sequence import DNA
 
 from q2_types.feature_data import DNAIterator
 from q2_types.per_sample_sequences import MultiFASTADirectoryFormat
@@ -61,7 +61,3 @@ def calculate_unbinned_percentage(mags_qza, unbinned_qza):
 
 # Run test
 calculate_unbinned_percentage("./data/mags.qza", "./data/unbinned_contigs.qza")
-
-
-# # Run test
-# calculate_unbinned_percentage("./data/mags.qza", "./data/unbinned_contigs.qza")
