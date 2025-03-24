@@ -1823,7 +1823,7 @@ TMO = TypeMatch([
 plugin.methods.register_function(
     function=q2_annotate.kraken2._filter_kraken2_reports_by_abundance,
     inputs={
-        "reports": TMR,
+        'reports': TMR,
     },
     parameters={
         'abundance_threshold': Float % Range(0, 1, inclusive_end=True),
@@ -1851,7 +1851,7 @@ plugin.methods.register_function(
     citations=[],
 )
 
-filter_reports_param_descriptions = {
+filter_kraken2_results_param_desc = {
     "metadata": "Metadata indicating which IDs to filter. The optional "
                 "`where` parameter may be used to filter IDs based on "
                 "specified conditions in the metadata. The optional "
@@ -1888,7 +1888,7 @@ plugin.methods.register_function(
         "reports": "The Kraken reports to filter.",
         "outputs": "The Kraken outputs to filter."
     },
-    parameter_descriptions=filter_contigs_param_descriptions,
+    parameter_descriptions=filter_kraken2_results_param_desc,
     name="Filter Kraken2 reports and outputs.",
     description="Filter Kraken2 reports and outputs based on metadata or remove "
                 "reports with 100% unclassified reads.",
@@ -1912,11 +1912,55 @@ plugin.methods.register_function(
         "aligned_outputs": "The report-aligned filtered kraken2 outputs."
     },
     name="Align unfiltered kraken2 outputs with filtered kraken2 reports.",
-    description=""
+    description="",
 )
 
 plugin.pipelines.register_function(
-    function=q2_annotate.kraken2.
+    function=q2_annotate.kraken2.filter_kraken2_results,
+    inputs={
+        "reports": TMR,
+        "outputs": TMO,
+    },
+    parameters={
+        "metadata": Metadata,
+        "where": Str,
+        "exclude_ids": Bool,
+        "remove_empty": Bool,
+        "abundance_threshold": Float % Range(0, 1, inclusive_end=True),
+        "num_partitions": Int % Range(1, None),
+    },
+    outputs={
+        "filtered_reports": TMR,
+        "filtered_outputs": TMO
+    },
+    input_descriptions={
+        "reports": "The kraken2 reports to filter.",
+        "outputs": "The kraken2 outputs to filter.",
+    },
+    parameter_descriptions={
+        "metadata": filter_kraken2_results_param_desc['metadata'],
+        "where": filter_kraken2_results_param_desc['where'],
+        "exclude_ids": filter_kraken2_results_param_desc['exclude_ids'],
+        "remove_empty": filter_kraken2_results_param_desc['remove_empty'],
+        "abundance_threshold": (
+            "A proportion between 0 and 1 representing the minimum relative "
+            "abundance (by read count) that a taxon must have to be retained "
+            "in the filtered report."
+        ),
+        "num_partitions": (
+            "The number of partitions to create that may be processed in "
+            "parallel. Defaults to one partition per sample."
+        )
+    },
+    output_descriptions={
+        "filtered_reports": "The filtered kraken2 reports.",
+        "filtered_outputs": "The filtered kraken2 outputs."
+    },
+    name="Filter kraken2 reports and outputs by metadata and abundance.",
+    description=(
+        "Filter kraken2 reports and outputs by sample metadata, and/or filter "
+        "classified taxa by relative abundance."
+    )
 )
 
 plugin.register_semantic_types(BUSCOResults, BuscoDB)

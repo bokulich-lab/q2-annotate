@@ -523,8 +523,8 @@ class TestAbundanceFilter(TestPluginBase):
 
     def test_filter_kraken2_reports_by_abundance(self):
         '''
-        Test that the main `_filter_kraken2_reports_by_abundance` method runs, results in
-        the same number of outputted formats as inputted ones.
+        Test that the main `_filter_kraken2_reports_by_abundance` method runs,
+        results in the same number of outputted formats as inputted ones.
         '''
         print('self reports path', self.reports.path)
         filtered_reports = _filter_kraken2_reports_by_abundance(

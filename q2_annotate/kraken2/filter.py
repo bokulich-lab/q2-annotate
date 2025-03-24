@@ -173,14 +173,16 @@ def filter_kraken2_results(
     ctx,
     reports,
     outputs,
-    metadata = None,
-    where = None,
-    exclude_ids = False,
-    remove_empty = False,
-    abundance_threshold = None,
-    num_partitions: int = 1,
+    metadata=None,
+    where=None,
+    exclude_ids=False,
+    remove_empty=False,
+    abundance_threshold=None,
+    num_partitions=None,
 ):
     '''
+    Filters kraken2 reports and outputs by metadata and filters taxa within
+    reports by relative abundance.
 
     Parameters
     ----------
@@ -202,15 +204,22 @@ def filter_kraken2_results(
     abundance_threshold : float | None
         The relative abundance threshold beneath which taxa in each kraken2
         report will be filtered.
-    num_partitions : int
+    num_partitions : int | None
         The number of partitions into which to split the kraken2 reports
-        and outputs.
+        and outputs. If None, per-sample partitions are made.
 
     Returns
     -------
     tuple[Kraken2ReportsDirectoryFormat, Kraken2OutputsDirectoryFormat]
         The filtered sets of kraken2 reports and outputs.
     '''
+    if (set(reports.file_dict.keys()) != set(outputs.file_dict.keys())):
+        msg = (
+            'The sample IDs present in the input kraken2 reports did not '
+            'match the sample IDs present in the input kraken2 outputs.'
+        )
+        raise ValueError(msg)
+
     _filter_kraken2_results_by_metadata = ctx.get_action(
         'annotate', '_filter_kraken2_results_by_metadata'
     )
@@ -218,8 +227,8 @@ def filter_kraken2_results(
         'annotate', '_filter_kraken2_reports_by_abundance'
     )
     partition_kraken2_results = ctx.get_action(
-		'types', 'partition_kraken2_results'
-	)
+        'types', 'partition_kraken2_results'
+    )
     collate_kraken2_reports = ctx.get_action(
         'types', 'collate_kraken2_reports'
     )
