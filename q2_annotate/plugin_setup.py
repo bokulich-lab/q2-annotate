@@ -1809,6 +1809,10 @@ TMR = TypeMatch([
     Kraken2Reports % Properties('reads'),
     Kraken2Reports % Properties('contigs')
 ])
+TMO = TypeMatch([
+    Kraken2Outputs % Properties('reads'),
+    Kraken2Outputs % Properties('contigs')
+])
 
 plugin.methods.register_function(
     function=q2_annotate.kraken2._filter_kraken2_reports_by_abundance,
@@ -1917,6 +1921,27 @@ plugin.methods.register_function(
     name="Filter Kraken2 reports and outputs.",
     description="Filter Kraken2 reports and outputs based on metadata or remove "
                 "reports with 100% unclassified reads.",
+)
+
+plugin.methods.register_function(
+    function=q2_annotate.kraken2._align_outputs_with_reports,
+    inputs={
+        "reports": SampleData[TMR],
+        "outputs": SampleData[TMO],
+    },
+    parameters={},
+    outputs=[
+        ("aligned_outputs", SampleData[TMO])
+    ],
+    input_descriptions={
+        "reports": "The filtered kraken2 reports.",
+        "outputs": "The kraken2 outputs to align with the filtered reports.",
+    },
+    output_descriptions={
+        "aligned_outputs": "The report-aligned filtered kraken2 outputs."
+    },
+    name="Align unfiltered kraken2 outputs with filtered kraken2 reports.",
+    description=""
 )
 
 plugin.register_semantic_types(BUSCOResults, BuscoDB)

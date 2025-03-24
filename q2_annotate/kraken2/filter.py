@@ -116,7 +116,7 @@ def _filter_kraken2_results_by_metadata(
     where: str | None = None,
     exclude_ids: bool = False,
     remove_empty: bool = False,
-) -> tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]:
+) -> (Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat):
     # Validate parameters
     _validate_parameters(metadata, remove_empty, where, exclude_ids)
 
@@ -211,7 +211,6 @@ def filter_kraken2_results(
     tuple[Kraken2ReportsDirectoryFormat, Kraken2OutputsDirectoryFormat]
         The filtered sets of kraken2 reports and outputs.
     '''
-    # get needed actions
     _filter_kraken2_results_by_metadata = ctx.get_action(
         'annotate', '_filter_kraken2_results_by_metadata'
     )
@@ -228,7 +227,6 @@ def filter_kraken2_results(
         'types', 'collate_kraken2_outputs'
     )
 
-    # partition
     report_partitions, = partition_kraken2_results(reports, num_partitions)
     output_partitions, = partition_kraken2_results(outputs, num_partitions)
 
@@ -250,7 +248,6 @@ def filter_kraken2_results(
             md_f_reports, abundance_threshold
         )
 
-        # TODO make action
         aligned_outputs, = _align_outputs_with_reports(
             abun_f_reports, md_f_outputs
         )
