@@ -562,3 +562,114 @@ def _align_single_output_with_report(
 
     output_fp = os.path.join(output_dir_fmt.path, f"{sample_id}.output.txt")
     output_df.to_csv(output_fp, sep='\t', header=None, index=None)
+
+
+def _merge_trees(
+    first: tuple[TreeNode, TreeNode | None],
+    second: tuple[TreeNode, TreeNode | None]
+) -> tuple[TreeNode, TreeNode | None]:
+    '''
+    Merges two trees each representing a kraken2 report into a single tree.
+    The number of reads assigned to each node are summed where nodes overlap,
+    and new nodes are inserted into the tree where they don't. The proportions
+    of assigned and covered reads are then updated in a final passover.
+
+    Parameters
+    ----------
+    first : tuple[TreeNode, TreeNode | None]
+        The first report tree, where the first node in the tuple represents the
+        tree and the second node represents an optional unclassified node.
+    second : tuple[TreeNode, TreeNode | None]
+        The second report tree, where the first node in the tuple represents the
+        tree and the second node represents an optional unclassified node.
+
+    Returns
+    -------
+    tuple[TreeNode, TreeNode | None]
+        The merged tree.
+    '''
+    first_tree, first_unclassified_node = first
+    second_tree, second_unclassified_node = second
+
+    # merge trees (with respect to `n_frags_assigned`, `n_frags_covered`)
+    for node in first_tree.levelorder():
+        match = _find_node(second_tree, node)
+        if match is not None:
+            match._kraken_data.n_frags_assigned += \
+                node._kraken_data.n_frags_assigned
+        else:
+            parent = _find_node(fist_tree, node.parent)
+            new_node = TreeNode()
+            new_node._kraken_data = node._kraken_data
+            parent.append(new_node)
+            match = new_node
+
+        # keep `n_frags_covered` up to date
+        for ancestor in match.ancestors(include_self=True):
+            ancestor._kraken_data.n_frags_covered += \
+                node._kraken_data.n_frags_assigned
+
+    # merge unclassified nodes
+    match (first_unclassified_node, second_unclassified_node):
+        case (None, None):
+            unclassified_node = None
+        case (_, None):
+            unclassified_node = first_unclassified_node
+        case (None, _):
+            unclassified_node = second_unclassified_node
+        case (_, _):
+            unclassified_node = second_unclassified_node
+            unclassified_node._kraken_data.n_frags_assigned += \
+                first_unclassified_node._kraken_data.n_frags_assigned
+            unclassified_node._kraken_data.n_frags_covered += \
+                first_unclassified_node._kraken_data.n_frags_covered
+
+    # perform a final passover to update `perc_frags_covered`
+    merged_tree = second_tree
+
+    total_reads = merged_tree._kraken_data.n_frags_covered
+    if unclassified_node is not None:
+        total_reads += unclassified_node._kraken_data.n_frags_covered
+
+    for node in merged_tree.traverse():
+        node._kraken_data.perc_frags_covered = round(
+            (node._kraken_data.n_frags_covered / total_reads) * 100, 2
+        )
+
+    return merged_tree, unclassified_node
+
+
+def _find_node(tree: TreeNode, node: TreeNode) -> TreeNode | None:
+    '''
+    Searches for `node` in `tree`, returns a match if there is one, otherwise
+    None. Matches are determined based on the kraken2-assigned taxon id.
+
+    Parameters
+    ----------
+    tree : skbio.TreeNode
+        The tree in which to search.
+    node : skbio.TreeNode
+        The node for which to search.
+
+    Returns
+    -------
+    skbio.TreeNode | None
+        The matching node if one was found, otherwise None.
+
+    Raises
+    ------
+    ValueError
+        If more than one matching node is found. Taxon ids should be unique
+        within a tree.
+    '''
+    def _match_by_taxon_id(n):
+        return n._kraken_data.taxon_id == node._kraken_data.taxon_id
+
+    matches = list(tree.find_by_func(_match_by_taxon_id))
+
+    if len(matches) > 1:
+        raise ValueError('Did not expect more than one taxon id match.')
+    elif len(matches) == 1:
+        return matches[0]
+    else:
+        return None

@@ -251,6 +251,14 @@ def _condense_formats(
             else:
                 format = Format(chain[sample_id], mode='r')
                 mapping[sample_id] = [format]
+        else:
+            if mags:
+                for filename, filepath in chain[sample_id].items():
+                    format = Format(filepath, mode='r')
+                    mapping[sample_id][filename].append(format)
+            else:
+                format = Format(chain[sample_id], mode='r')
+                mapping[sample_id].append(format)
 
     report_mapping = {}
     output_mapping = {}
@@ -267,9 +275,18 @@ def _condense_formats(
 
 
 def _merge_reports(reports: list[Kraken2ReportFormat]) -> Kraken2ReportFormat:
-    # note: use tree parsing -> merging -> dumping functionality
-    # (dependent on filter action)
-    pass
+    # make dataframe for each
+    trees = []
+    for report in reports:
+        df = report.view(pd.DataFrame)
+        trees.append(_kraken_to_ncbi_tree(df))
+
+    tree = _combine_ncbi_trees(trees)
+
+    merged_report = Kraken2ReportFormat()
+
+    # dump tree to report
+
 
 
 def _merge_outputs(outputs: list[Kraken2OutputFormat]) -> Kraken2OutputFormat:

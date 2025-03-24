@@ -33,6 +33,8 @@ from q2_annotate.kraken2.filter import (
     _filter_kraken2_reports_by_abundance,
     _align_outputs_with_reports,
     _align_single_output_with_report,
+    _merge_trees,
+    _find_node
 )
 
 
@@ -626,3 +628,13 @@ class TestOutputReportAlignment(TestPluginBase):
             set(sample2_report_df['taxon_id']),
             set(sample2_output_df['taxon_id'])
         )
+
+
+class TestTreeMerging(TestPluginBase):
+    package = "q2_annotate.kraken2.tests"
+
+    def test_find_node(self):
+        pass
+
+    def test_merge_trees(self):
+        pass
