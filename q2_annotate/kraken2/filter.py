@@ -110,13 +110,13 @@ def _validate_ids(file_dict_reports, file_dict_outputs):
 
 
 def _filter_kraken2_results_by_metadata(
-        reports: Kraken2ReportDirectoryFormat,
-        outputs: Kraken2OutputDirectoryFormat,
-        metadata: Metadata = None,
-        where: str = None,
-        exclude_ids: bool = False,
-        remove_empty: bool = False,
-) -> (Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat):
+    reports: Kraken2ReportDirectoryFormat,
+    outputs: Kraken2OutputDirectoryFormat,
+    metadata: Metadata | None = None,
+    where: str | None = None,
+    exclude_ids: bool = False,
+    remove_empty: bool = False,
+) -> tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]:
     # Validate parameters
     _validate_parameters(metadata, remove_empty, where, exclude_ids)
 
@@ -178,6 +178,7 @@ def filter_kraken2_results(
     exclude_ids = False,
     remove_empty = False,
     abundance_threshold = None,
+    num_partitions: int = 1,
 ):
     '''
 
@@ -201,6 +202,9 @@ def filter_kraken2_results(
     abundance_threshold : float | None
         The relative abundance threshold beneath which taxa in each kraken2
         report will be filtered.
+    num_partitions : int
+        The number of partitions into which to split the kraken2 reports
+        and outputs.
 
     Returns
     -------
@@ -214,25 +218,50 @@ def filter_kraken2_results(
     _filter_kraken2_reports_by_abundance = ctx.get_action(
         'annotate', '_filter_kraken2_reports_by_abundance'
     )
-    # todo: get partition action
-    _collate_kraken2_reports = ctx.get_action(
-        'annotate', 'collate_kraken2_reports'
+    partition_kraken2_results = ctx.get_action(
+		'types', 'partition_kraken2_results'
+	)
+    collate_kraken2_reports = ctx.get_action(
+        'types', 'collate_kraken2_reports'
     )
-    _collate_kraken2_outputs = ctx.get_action(
-        'annotate', 'collate_kraken2_outputs'
+    collate_kraken2_outputs = ctx.get_action(
+        'types', 'collate_kraken2_outputs'
     )
 
     # partition
+    report_partitions, = partition_kraken2_results(reports, num_partitions)
+    output_partitions, = partition_kraken2_results(outputs, num_partitions)
 
-    # metdata-based filtering
+    processed_reports = []
+    processed_outputs = []
+    for report_dir_fmt, output_dir_fmt in zip(
+        report_partitions.values(), output_partitions.values()
+    ):
+        md_f_reports, md_f_outputs = _filter_kraken2_results_by_metadata(
+            report_dir_fmt,
+            output_dir_fmt,
+            metadata,
+            where,
+            exclude_ids,
+            remove_empty
+        )
 
-    # abundance-based report filtering
+        abun_f_reports, = _filter_kraken2_reports_by_abundance(
+            md_f_reports, abundance_threshold
+        )
 
-    # align outputs with reports
+        # TODO make action
+        aligned_outputs, = _align_outputs_with_reports(
+            abun_f_reports, md_f_outputs
+        )
 
-    # collate
+        processed_reports.append(abun_f_reports)
+        processed_outputs.append(aligned_outputs)
 
-    pass
+    collated_reports = collate_kraken2_reports(processed_reports)
+    collated_outputs = collate_kraken2_outputs(processed_outputs)
+
+    return collated_reports, collated_outputs
 
 
 def _filter_kraken2_reports_by_abundance(
