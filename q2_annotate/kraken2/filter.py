@@ -293,14 +293,14 @@ def filter_kraken2_results(
 
     processed_reports = []
     processed_outputs = []
-    for report_dir_fmt, output_dir_fmt in zip(
+    for report_partition, output_partition in zip(
         report_partitions.values(), output_partitions.values()
     ):
         abun_f_reports, = _filter_kraken2_reports_by_abundance(
-            report_dir_fmt, abundance_threshold
+            report_partition, abundance_threshold
         )
         abun_f_outputs, = _align_outputs_with_reports(
-            output_dir_fmt, abun_f_reports
+            output_partition, abun_f_reports
         )
         processed_reports.append(abun_f_reports)
         processed_outputs.append(abun_f_outputs)

@@ -659,9 +659,21 @@ class TestFilterKraken2ResultsPipeline(TestPluginBase):
         )
 
     def test_abundance_filter_with_mags(self):
+        pre_row_count = 0
+        pre_reports = self.mag_reports.view(Kraken2ReportDirectoryFormat)
+        for _, report in pre_reports.reports.iter_views(Kraken2ReportFormat):
+            pre_row_count += report.view(pd.DataFrame).shape[0]
+
         filtered_reports, filtered_outptus = self.filter_kraken2_results(
             self.mag_reports, self.mag_outputs, abundance_threshold=0.05
         )
+
+        post_row_count = 0
+        post_reports = filtered_reports.view(Kraken2ReportDirectoryFormat)
+        for _, report in post_reports.reports.iter_views(Kraken2ReportFormat):
+            post_row_count += report.view(pd.DataFrame).shape[0]
+
+        self.assertGreater(pre_row_count, post_row_count)
 
     def test_errors_on_no_filtering_parameters(self):
         with self.assertRaisesRegex(ValueError, "None of.*filtering"):
