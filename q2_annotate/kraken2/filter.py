@@ -192,7 +192,7 @@ def filter_kraken2_results(
         The kraken2 reports to be filtered.
     outputs : Kraken2OutputDirectoryFormat
         The kraken2 outputs to be filtered.
-    metadata: qiime2.Metadata
+    metadata: qiime2.Metadata | None
         The per-sample metadata.
     where : str | None
         A SQLite where clause specifying which samples to retain.
@@ -212,8 +212,33 @@ def filter_kraken2_results(
     -------
     tuple[Kraken2ReportsDirectoryFormat, Kraken2OutputsDirectoryFormat]
         The filtered sets of kraken2 reports and outputs.
+
+    Raises
+    ------
+    ValueError
+        If all filtering parameters were left as default and no filtering can
+        be perfomed.
+
+    ValueError
+        If the set of sample IDs in the kraken2 reports is not equal to the set
+        of sample IDs in the kraken2 outputs.
     '''
-    if (set(reports.file_dict.keys()) != set(outputs.file_dict.keys())):
+    if (
+        metadata is None and
+        remove_empty is False and
+        abundance_threshold is None
+    ):
+        msg = (
+            'None of metadata-based filtering, empty report filtering, or '
+            'abundance filtering were specified. Please specify at least one '
+            'of these.'
+        )
+        raise ValueError(msg)
+
+    if (
+        set(reports.view(Kraken2ReportDirectoryFormat).file_dict().keys()) !=
+        set(outputs.view(Kraken2OutputDirectoryFormat).file_dict().keys())
+    ):
         msg = (
             'The sample IDs present in the input kraken2 reports did not '
             'match the sample IDs present in the input kraken2 outputs.'
@@ -226,8 +251,14 @@ def filter_kraken2_results(
     _filter_kraken2_reports_by_abundance = ctx.get_action(
         'annotate', '_filter_kraken2_reports_by_abundance'
     )
-    partition_kraken2_results = ctx.get_action(
-        'types', 'partition_kraken2_results'
+    partition_kraken2_reports = ctx.get_action(
+        'types', 'partition_kraken2_reports'
+    )
+    partition_kraken2_outputs = ctx.get_action(
+        'types', 'partition_kraken2_outputs'
+    )
+    _align_outputs_with_reports = ctx.get_action(
+        'annotate', '_align_outputs_with_reports'
     )
     collate_kraken2_reports = ctx.get_action(
         'types', 'collate_kraken2_reports'
@@ -236,36 +267,46 @@ def filter_kraken2_results(
         'types', 'collate_kraken2_outputs'
     )
 
-    report_partitions, = partition_kraken2_results(reports, num_partitions)
-    output_partitions, = partition_kraken2_results(outputs, num_partitions)
+    if metadata is not None or remove_empty:
+        # not parallelizable because errors on all reports being filtered
+        post_md_reports, post_md_outputs = _filter_kraken2_results_by_metadata(
+            reports,
+            outputs,
+            metadata,
+            where,
+            exclude_ids,
+            remove_empty
+        )
+    else:
+        post_md_reports = reports
+        post_md_outputs = outputs
+
+    if abundance_threshold is None:
+        return post_md_reports, post_md_outputs
+
+    report_partitions, = partition_kraken2_reports(
+        post_md_reports, num_partitions
+    )
+    output_partitions, = partition_kraken2_outputs(
+        post_md_outputs, num_partitions
+    )
 
     processed_reports = []
     processed_outputs = []
     for report_dir_fmt, output_dir_fmt in zip(
         report_partitions.values(), output_partitions.values()
     ):
-        md_f_reports, md_f_outputs = _filter_kraken2_results_by_metadata(
-            report_dir_fmt,
-            output_dir_fmt,
-            metadata,
-            where,
-            exclude_ids,
-            remove_empty
-        )
-
         abun_f_reports, = _filter_kraken2_reports_by_abundance(
-            md_f_reports, abundance_threshold
+            report_dir_fmt, abundance_threshold
         )
-
-        aligned_outputs, = _align_outputs_with_reports(
-            abun_f_reports, md_f_outputs
+        abun_f_outputs, = _align_outputs_with_reports(
+            output_dir_fmt, abun_f_reports
         )
-
         processed_reports.append(abun_f_reports)
-        processed_outputs.append(aligned_outputs)
+        processed_outputs.append(abun_f_outputs)
 
-    collated_reports = collate_kraken2_reports(processed_reports)
-    collated_outputs = collate_kraken2_outputs(processed_outputs)
+    collated_reports, = collate_kraken2_reports(processed_reports)
+    collated_outputs, = collate_kraken2_outputs(processed_outputs)
 
     return collated_reports, collated_outputs
 
@@ -301,26 +342,22 @@ def _filter_kraken2_reports_by_abundance(
         # parse report into tree
         root, unclassified_node = _report_df_to_tree(report)
 
-        # calculate total reads
-        total_reads = root._kraken_data['n_frags_covered']
+        if root is not None:
+            total_reads = root._kraken_data['n_frags_covered']
 
-        # trim tree
-        root_trimmed = _trim_tree_dfs(
-            root,
-            abundance_threshold=abundance_threshold,
-            total_reads=total_reads
-        )
+            # trim tree
+            root = _trim_tree_dfs(
+                root,
+                abundance_threshold=abundance_threshold,
+                total_reads=total_reads
+            )
 
         # dump to report
-        trimmed_report = _dump_tree_to_report(
-            root_trimmed, unclassified_node
-        )
+        report = _dump_tree_to_report(root, unclassified_node)
 
         # add report to output format
         output_fp = Path(filtered_reports.path) / report_filename
-        trimmed_report.to_csv(
-            output_fp, sep='\t', header=None, index=None
-        )
+        report.to_csv(output_fp, sep='\t', header=None, index=None)
 
     # return directory format
     return filtered_reports
@@ -328,7 +365,7 @@ def _filter_kraken2_reports_by_abundance(
 
 def _report_df_to_tree(
     report: pd.DataFrame
-) -> tuple[TreeNode, TreeNode | None]:
+) -> tuple[TreeNode | None, TreeNode | None]:
     '''
     Parses a kraken2 report dataframe into a tree. Returns the root node of the
     tree and an unclassified node if unclassified reads are present.
@@ -340,8 +377,9 @@ def _report_df_to_tree(
 
     Returns
     -------
-    tuple[TreeNode, TreeNode | None]
-        The root of the parsed tree and a node representing the unclassified
+    tuple[TreeNode | None, TreeNode | None]
+        The root of the parsed tree, or None if the report contains only
+        unclassified reads, and a node representing the unclassified
         rows, or None if no unclassified reads exist.
     '''
     most_recent_parents = []
@@ -373,6 +411,9 @@ def _report_df_to_tree(
         parent = most_recent_parents[taxonomy_depth - 1]
         parent.append(node)
 
+    if len(most_recent_parents) == 0:
+        return None, unclassified_node
+
     return most_recent_parents[0], unclassified_node
 
 
@@ -389,6 +430,8 @@ def _trim_tree_dfs(
         The root of the report tree.
     abundance_threshold : float
         The minimum abundance threshold required for a node to be retained.
+    total_reads : int
+        The total number of reads classified to the tree that `node` is in.
 
     Returns
     -------
@@ -439,7 +482,7 @@ def _trim_tree_dfs(
 
 
 def _dump_tree_to_report(
-    root: TreeNode, unclassified_node: TreeNode | None
+    root: TreeNode | None, unclassified_node: TreeNode | None
 ) -> pd.DataFrame:
     '''
     Recreates the kraken2 report from the filtered tree and optional
@@ -447,8 +490,9 @@ def _dump_tree_to_report(
 
     Parameters
     ----------
-    root : TreeNode
-        The root node of the report tree.
+    root : TreeNode | None
+        The root node of the report tree, or None if the report is empty or
+        there is only an unclassified node.
     unclassified_node : TreeNode | None
         The node represeting the unclassified row of the report, if one was
         present.
@@ -458,11 +502,17 @@ def _dump_tree_to_report(
     pd.DataFrame
         The recreated kraken2 report.
     '''
-    report = pd.DataFrame(columns=root._kraken_data.keys())
+    if root is None and unclassified_node is None:
+        return pd.DataFrame()
 
-    # calculate denominator for perc_frags_covered_column
-    total_reads = root._kraken_data['n_frags_covered']
-    if unclassified_node:
+    total_reads = 0
+    report = None
+    if root is not None:
+        report = pd.DataFrame(columns=root._kraken_data.keys())
+        total_reads += root._kraken_data['n_frags_covered']
+    if unclassified_node is not None:
+        if report is None:
+            report = pd.DataFrame(columns=unclassified_node._kraken_data.keys())
         total_reads += unclassified_node._kraken_data['n_frags_covered']
 
     report._kraken_total_reads = total_reads
@@ -470,7 +520,8 @@ def _dump_tree_to_report(
     if unclassified_node is not None:
         _write_node_to_report(unclassified_node, report)
 
-    _write_report_dfs(root, report)
+    if root is not None:
+        _write_report_dfs(root, report)
 
     return report
 
