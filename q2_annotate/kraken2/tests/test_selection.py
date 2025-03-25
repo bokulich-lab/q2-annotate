@@ -194,9 +194,8 @@ class TestKrakenSelect(TestPluginBase):
         )
         with self.assertRaisesRegex(
                 ValueError,
-                "Unclassified line for MAG "
-                "'8894435a-c836-4c18-b475-8b38a9ab6c6b' is missing from the "
-                "Kraken 2 report."
+                "line for MAG '8894435a-c836-4c18-b475-8b38a9ab6c6b' "
+                "is missing"
         ):
             kraken2_to_mag_features(reports, hits, 0.0)
 
@@ -209,6 +208,10 @@ class TestKrakenSelect(TestPluginBase):
         )
         obs = kraken2_to_mag_features(reports, hits, 0.1)
         exp = pd.DataFrame.from_dict({
+            '3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa': [
+                'd__Bacteria;k__Bacteria;p__Firmicutes;c__Bacilli'
+            ],
+            '8894435a-c836-4c18-b475-8b38a9ab6c6b': ['d__Unclassified'],
             '36678387-c407-4fb8-bddd-6b6bfea7aa2e': ['d__Unclassified']
         }, orient='index')
         exp.columns = ['Taxon']
