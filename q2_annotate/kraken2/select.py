@@ -89,21 +89,27 @@ def _add_unclassified_mags(
 
     for mag in unclassified:
         report_fp = os.path.join(reports.path, f"{mag}.report.txt")
+
+        unclassified_fraction = 0
         with open(report_fp, "r") as f:
             line = f.readline()
             if "unclassified" in line:
-                fraction = float(line.split("\t")[0])
-                if fraction != 100.0:
-                    raise ValueError(
-                        f"Unclassified fraction for MAG '{mag}' is not "
-                        f"100.0%: {fraction:.2f}%."
-                    )
-                taxonomy.loc[mag, "Taxon"] = "d__Unclassified"
-            else:
+                unclassified_fraction += float(line.split("\t")[0])
+            if "root" in line:
+                unclassified_fraction += float(line.split("\t")[0])
+
+        if unclassified_fraction > 0:
+            taxonomy.loc[mag, "Taxon"] = "d__Unclassified"
+            if unclassified_fraction != 100.0:
                 raise ValueError(
-                    f"Unclassified line for MAG '{mag}' is missing from "
-                    f"the Kraken 2 report."
+                    f"Unclassified fraction for MAG '{mag}' is not "
+                    f"100.0%: {unclassified_fraction:.2f}%."
                 )
+        else:
+            raise ValueError(
+                f"Unclassified line for MAG '{mag}' is missing from "
+                f"the Kraken 2 report."
+            )
     return taxonomy
 
 
