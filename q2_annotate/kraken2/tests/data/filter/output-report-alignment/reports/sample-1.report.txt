@@ -1,0 +1,12 @@
+100.00	474283	0	R	1	root
+100.00	474283	0	R1	131567	  cellular organisms
+100.00	474283	0	D	2	    Bacteria
+100.00	474283	0	D1	1783272	      Terrabacteria group
+100.00	474283	0	P	201174	        Actinomycetota
+100.00	474283	0	C	1760	          Actinomycetes
+100.00	474283	0	O	85007	            Mycobacteriales
+100.00	474283	0	F	1762	              Mycobacteriaceae
+100.00	474283	0	G	1763	                Mycobacterium
+48.91	231948	0	G1	120793	                  Mycobacterium avium complex (MAC)
+48.55	230249	230249	S	1767	                    Mycobacterium intracellulare
+0.32	1526	1526	S	1138383	                    Mycobacterium paraintracellulare

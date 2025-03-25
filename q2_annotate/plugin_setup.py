@@ -35,9 +35,9 @@ from q2_types.per_sample_sequences import (
 from q2_types.sample_data import SampleData
 from q2_types.feature_map import FeatureMap, MAGtoContigs
 from qiime2.core.type import (
-    Bool, Range, Int, Str, Float, List, Choices, Visualization, TypeMatch
+    Bool, Range, Int, Str, Float, List, Choices, Visualization,
+    Properties, TypeMap, TypeMatch,
 )
-from qiime2.core.type import (Properties, TypeMap)
 from qiime2.plugin import (Plugin, Citations)
 import q2_annotate._examples as ex
 import q2_annotate
@@ -1805,42 +1805,53 @@ plugin.pipelines.register_function(
     citations=[]
 )
 
-T_filter_kraken2_reports = TypeMatch([
-    SampleData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
-    SampleData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
-    SampleData[Kraken2Reports % Properties('reads', 'contigs')],
-    SampleData[Kraken2Reports % Properties('reads', 'mags')],
-    SampleData[Kraken2Reports % Properties('contigs', 'mags')],
+
+TMR = TypeMatch([
     SampleData[Kraken2Reports % Properties('reads')],
     SampleData[Kraken2Reports % Properties('contigs')],
     SampleData[Kraken2Reports % Properties('mags')],
-    FeatureData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
-    FeatureData[Kraken2Reports % Properties('reads', 'contigs')],
-    FeatureData[Kraken2Reports % Properties('reads', 'mags')],
-    FeatureData[Kraken2Reports % Properties('contigs', 'mags')],
-    FeatureData[Kraken2Reports % Properties('reads')],
-    FeatureData[Kraken2Reports % Properties('contigs')],
     FeatureData[Kraken2Reports % Properties('mags')],
 ])
-T_filter_kraken2_outputs = TypeMatch([
-    SampleData[Kraken2Outputs % Properties('reads', 'contigs', 'mags')],
-    SampleData[Kraken2Outputs % Properties('reads', 'contigs', 'mags')],
-    SampleData[Kraken2Outputs % Properties('reads', 'contigs')],
-    SampleData[Kraken2Outputs % Properties('reads', 'mags')],
-    SampleData[Kraken2Outputs % Properties('contigs', 'mags')],
+TMO = TypeMatch([
     SampleData[Kraken2Outputs % Properties('reads')],
     SampleData[Kraken2Outputs % Properties('contigs')],
     SampleData[Kraken2Outputs % Properties('mags')],
-    FeatureData[Kraken2Outputs % Properties('reads', 'contigs', 'mags')],
-    FeatureData[Kraken2Outputs % Properties('reads', 'contigs')],
-    FeatureData[Kraken2Outputs % Properties('reads', 'mags')],
-    FeatureData[Kraken2Outputs % Properties('contigs', 'mags')],
-    FeatureData[Kraken2Outputs % Properties('reads')],
-    FeatureData[Kraken2Outputs % Properties('contigs')],
     FeatureData[Kraken2Outputs % Properties('mags')],
 ])
 
-filter_reports_param_descriptions = {
+
+plugin.methods.register_function(
+    function=q2_annotate.kraken2._filter_kraken2_reports_by_abundance,
+    inputs={
+        'reports': TMR,
+    },
+    parameters={
+        'abundance_threshold': Float % Range(0, 1, inclusive_end=True),
+    },
+    outputs=[('filtered_reports', TMR)],
+    input_descriptions={
+        'reports': 'The kraken2 reports to filter by relative abundance.'
+    },
+    parameter_descriptions={
+        'abundance_threshold': (
+            'A proportion between 0 and 1 representing the minimum relative '
+            'abundance (by read count) that a taxon must have to be retained '
+            'in the filtered report.'
+        )
+    },
+    output_descriptions={
+        'filtered_reports': 'The relative abundance-filtered kraken2 reports'
+    },
+    name='Filter kraken2 reports by relative abundance.',
+    description=(
+        'Filters kraken2 reports on a per-taxon basis by relative abundance '
+        '(relative frequency). Useful for removing suspected spurious '
+        'classifications.'
+    ),
+    citations=[],
+)
+
+filter_kraken2_results_param_desc = {
     "metadata": "Metadata indicating which IDs to filter. The optional "
                 "`where` parameter may be used to filter IDs based on "
                 "specified conditions in the metadata. The optional "
@@ -1858,10 +1869,10 @@ filter_reports_param_descriptions = {
 }
 
 plugin.methods.register_function(
-    function=q2_annotate.kraken2.filter_kraken2_results,
+    function=q2_annotate.kraken2._filter_kraken2_results_by_metadata,
     inputs={
-        "reports": T_filter_kraken2_reports,
-        "outputs": T_filter_kraken2_outputs,
+        "reports": TMR,
+        "outputs": TMO,
     },
     parameters={
         "metadata": Metadata,
@@ -1870,19 +1881,87 @@ plugin.methods.register_function(
         "remove_empty": Bool,
     },
     outputs={
-        "filtered_reports": T_filter_kraken2_reports,
-        "filtered_outputs": T_filter_kraken2_outputs
+        "filtered_reports": TMR,
+        "filtered_outputs": TMO,
     },
     input_descriptions={
         "reports": "The Kraken reports to filter.",
         "outputs": "The Kraken outputs to filter."
     },
-    parameter_descriptions=filter_contigs_param_descriptions,
+    parameter_descriptions=filter_kraken2_results_param_desc,
     name="Filter Kraken2 reports and outputs.",
     description="Filter Kraken2 reports and outputs based on metadata or remove "
                 "reports with 100% unclassified reads.",
 )
 
+plugin.methods.register_function(
+    function=q2_annotate.kraken2._align_outputs_with_reports,
+    inputs={
+        "reports": TMR,
+        "outputs": TMO,
+    },
+    parameters={},
+    outputs=[
+        ("aligned_outputs", TMO)
+    ],
+    input_descriptions={
+        "reports": "The filtered kraken2 reports.",
+        "outputs": "The kraken2 outputs to align with the filtered reports.",
+    },
+    output_descriptions={
+        "aligned_outputs": "The report-aligned filtered kraken2 outputs."
+    },
+    name="Align unfiltered kraken2 outputs with filtered kraken2 reports.",
+    description="",
+)
+
+plugin.pipelines.register_function(
+    function=q2_annotate.kraken2.filter_kraken2_results,
+    inputs={
+        "reports": TMR,
+        "outputs": TMO,
+    },
+    parameters={
+        "metadata": Metadata,
+        "where": Str,
+        "exclude_ids": Bool,
+        "remove_empty": Bool,
+        "abundance_threshold": Float % Range(0, 1, inclusive_end=True),
+        "num_partitions": Int % Range(1, None),
+    },
+    outputs={
+        "filtered_reports": TMR,
+        "filtered_outputs": TMO
+    },
+    input_descriptions={
+        "reports": "The kraken2 reports to filter.",
+        "outputs": "The kraken2 outputs to filter.",
+    },
+    parameter_descriptions={
+        "metadata": filter_kraken2_results_param_desc['metadata'],
+        "where": filter_kraken2_results_param_desc['where'],
+        "exclude_ids": filter_kraken2_results_param_desc['exclude_ids'],
+        "remove_empty": filter_kraken2_results_param_desc['remove_empty'],
+        "abundance_threshold": (
+            "A proportion between 0 and 1 representing the minimum relative "
+            "abundance (by read count) that a taxon must have to be retained "
+            "in the filtered report."
+        ),
+        "num_partitions": (
+            "The number of partitions to create that may be processed in "
+            "parallel. Defaults to one partition per sample."
+        )
+    },
+    output_descriptions={
+        "filtered_reports": "The filtered kraken2 reports.",
+        "filtered_outputs": "The filtered kraken2 outputs."
+    },
+    name="Filter kraken2 reports and outputs by metadata and abundance.",
+    description=(
+        "Filter kraken2 reports and outputs by sample metadata, and/or filter "
+        "classified taxa by relative abundance."
+    )
+)
 
 plugin.register_semantic_types(BUSCOResults, BuscoDB)
 plugin.register_formats(
