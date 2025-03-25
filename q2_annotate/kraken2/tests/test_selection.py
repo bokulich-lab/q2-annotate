@@ -194,10 +194,26 @@ class TestKrakenSelect(TestPluginBase):
         )
         with self.assertRaisesRegex(
                 ValueError,
-                "line for MAG '8894435a-c836-4c18-b475-8b38a9ab6c6b' "
-                "is missing"
+                "Unclassified line for MAG "
+                "'8894435a-c836-4c18-b475-8b38a9ab6c6b' is missing from the "
+                "Kraken 2 report."
         ):
             kraken2_to_mag_features(reports, hits, 0.0)
+
+    def test_kraken2_to_mag_features_only_root_classified(self):
+        reports = Kraken2ReportDirectoryFormat(
+            self.get_data_path("reports-mags-only-root-classified"), "r"
+        )
+        hits = Kraken2OutputDirectoryFormat(
+            self.get_data_path("outputs-mags"), "r"
+        )
+        obs = kraken2_to_mag_features(reports, hits, 0.1)
+        exp = pd.DataFrame.from_dict({
+            '36678387-c407-4fb8-bddd-6b6bfea7aa2e': ['d__Unclassified']
+        }, orient='index')
+        exp.columns = ['Taxon']
+        exp.index.name = 'Feature ID'
+        pandas.testing.assert_frame_equal(obs, exp)
 
     def test_find_lcas_mode_lca(self):
         taxa = [self.taxa_mag1, self.taxa_mag2, self.taxa_mag3, self.taxa_mag4]
