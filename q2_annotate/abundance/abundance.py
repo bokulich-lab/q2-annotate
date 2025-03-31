@@ -182,6 +182,7 @@ def estimate_abundance(
     feature_table = coverage_summed.pivot(
         index='sample-id', columns='feature-id', values='abundance'
     )
+    feature_table.fillna(0, inplace=True)
     feature_table.index.name = "sample-id"
 
     return feature_table
