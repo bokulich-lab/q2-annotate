@@ -173,13 +173,13 @@ def filter_reads_pangenome(
     construct_index = ctx.get_action("annotate", "construct_pangenome_index")
 
     if index is None:
+        print("Reference index was not provided - it will be generated.")
         index, = construct_index(n_threads)
 
     print("Filtering reads against the index...")
     filter_params = {
         k: v for k, v in locals().items() if k in
-        ['n_threads', 'mode', 'ref_gap_open_penalty',
-         'ref_gap_ext_penalty']
+        ['n_threads', 'mode', 'ref_gap_open_penalty', 'ref_gap_ext_penalty']
     }
     filtered_reads, = filter_reads(
         demultiplexed_sequences=reads,
