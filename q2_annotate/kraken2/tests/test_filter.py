@@ -10,7 +10,8 @@ import os.path
 from unittest.mock import patch
 
 import pandas as pd
-from pandas.testing import assert_series_equal
+from pandas.testing import assert_series_equal, assert_frame_equal
+from skbio import TreeNode
 
 import qiime2
 from qiime2.plugin.testing import TestPluginBase
@@ -633,8 +634,47 @@ class TestOutputReportAlignment(TestPluginBase):
 class TestTreeMerging(TestPluginBase):
     package = "q2_annotate.kraken2.tests"
 
-    def test_find_node(self):
-        pass
+    def setUp(self):
+        super().setUp()
 
-    def test_merge_trees(self):
-        pass
+        tree1_fp = self.get_data_path(
+            'report-merging/tree-1.report.txt'
+        )
+        tree1_df = Kraken2ReportFormat(tree1_fp, mode='r').view(pd.DataFrame)
+        self.tree1: tuple[TreeNode | None, TreeNode | None] = \
+            _report_df_to_tree(tree1_df)
+
+        tree2_fp = self.get_data_path(
+            'report-merging/tree-2.report.txt'
+        )
+        tree2_df = Kraken2ReportFormat(tree2_fp, mode='r').view(pd.DataFrame)
+        self.tree2: tuple[TreeNode | None, TreeNode | None] = \
+            _report_df_to_tree(tree2_df)
+
+        merged_tree_fp = self.get_data_path(
+            'report-merging/merged-tree.report.txt'
+        )
+        self.merged_tree_df = Kraken2ReportFormat(
+            merged_tree_fp, mode='r'
+        ).view(pd.DataFrame)
+
+    def test_merge_trees_no_unclassified_nodes(self):
+        '''
+        Tests that two reports are merged as expected. Tree 1 and tree 2 each
+        have some unique nodes and some shared nodes, so tests that node
+        grafting is performed properly and tests that overlapping nodes are
+        combined properly.
+
+        Note that the ordering of taxa within the expected and observed reports
+        is different, hence the `sort_values` and `reindex`. Despite different
+        taxon ordering, both reports represent the same information.
+        '''
+        obs_df = _dump_tree_to_report(*_merge_trees(self.tree1, self.tree2))
+
+        assert_frame_equal(
+            obs_df.sort_values(by='perc_frags_covered').reset_index(drop=True),
+            self.merged_tree_df.sort_values(
+                by='perc_frags_covered'
+            ).reset_index(drop=True),
+            check_dtype=False,
+        )
