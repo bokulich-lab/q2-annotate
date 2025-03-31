@@ -35,7 +35,7 @@ from q2_types.per_sample_sequences import (
 from q2_types.sample_data import SampleData
 from q2_types.feature_map import FeatureMap, MAGtoContigs
 from qiime2.core.type import (
-    Bool, Range, Int, Str, Float, List, Choices, Visualization, TypeMatch
+    Bool, Range, Int, Str, Float, List, Choices, Visualization, TypeMatch, Threads
 )
 from qiime2.core.type import (Properties, TypeMap)
 from qiime2.plugin import (Plugin, Citations)
@@ -1545,6 +1545,22 @@ I_reads, O_reads = TypeMap({
     SampleData[PairedEndSequencesWithQuality]:
         SampleData[PairedEndSequencesWithQuality],
 })
+
+plugin.pipelines.register_function(
+    function=q2_annotate.filtering.construct_pangenome_index,
+    inputs={},
+    parameters={"n_threads": Threads},
+    outputs=[("index", Bowtie2Index)],
+    input_descriptions={},
+    parameter_descriptions={
+        "n_threads": "Number of threads to use when building the index."
+    },
+    output_descriptions={"index": "Generated combined human reference index."},
+    name="Construct a human pangenome index.",
+    description="This method generates a Bowtie2 index fo the combined human "
+                "GRCh38 reference genome and the draft human pangenome.",
+    citations=[],
+)
 
 plugin.pipelines.register_function(
     function=q2_annotate.filtering.filter_reads_pangenome,
