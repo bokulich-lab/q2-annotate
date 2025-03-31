@@ -306,7 +306,6 @@ class TestMAGFiltering(TestPluginBase):
         ).return_value = (mock_build_index_result,)
         ctx.make_artifact.return_value = MagicMock()
 
-
         # prepare some files which will be used by _combined_fasta_files
         open(os.path.join(temp_dir, "pangenome.gfa"), 'w').close()
         shutil.copy(
