@@ -85,9 +85,9 @@ def classify_kraken2(
         reports.append(single_art_reports)
         outputs.append(single_art_outputs)
 
-    # match and merge collated reports, outputs
+    # merge reports, outputs
 
-    # return matched reports, outputs
+    # return
 
 
 def _classify_single_artifact(ctx, seqs, kraken2_db, num_partitions, kwargs):
@@ -141,156 +141,6 @@ def _classify_single_artifact(ctx, seqs, kraken2_db, num_partitions, kwargs):
         collated_outputs = collate_kraken2_outputs(all_outputs)
 
         return collated_reports, collated_outputs
-
-
-def _merge_kraken2_results(
-    reports: list[Kraken2ReportDirectoryFormat],
-    outputs: list[Kraken2OutputDirectoryFormat]
-) -> tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]:
-    '''
-    Merges kraken2 reports and outputs into a single report and format per
-    unique sample id.
-
-    Parameters
-    ----------
-    reports : list[Kraken2ReportDirectoryFormat]
-        The kraken2 reports.
-    outputs : list[Kraken2OutputDirectoryFromat]
-        The kraken2 outputs.
-
-    Returns
-    -------
-    tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]
-        The merged reports and formats.
-    '''
-    merged_reports = Kraken2ReportDirectoryFormat()
-    merged_outputs = Kraken2OutputDirectoryFormat()
-
-    mags = False
-    if isinstance(next(iter(reports[0].file_dict().values(), dict))):
-        mags = True
-
-    report_mapping, output_mapping = _condense_formats(reports, outputs, mags)
-
-    def _merge_formats(sample_id, merged_formats, mapping, merger, Format):
-        for sample_id in report_mapping:
-            if mags:
-                for filename, formats in mapping[sample_id].items():
-                    merged_format = merger(formats)
-                    merged_reports.write_data(
-                        merged_format,
-                        Format,
-                        sample_id=sample_id,
-                        mag_id=filename
-                    )
-            else:
-                formats = format[sample_id]
-                merged_format = merger(formats)
-                merged_formats.write_data(
-                    merged_format, Format, sample_id=sample_id
-                )
-
-    for sample_id in report_mapping:
-        _merge_formats(
-            sample_id,
-            merged_reports,
-            report_mapping,
-            _merge_reports,
-            Kraken2ReportFormat
-        )
-        _merge_formats(
-            sample_id,
-            merged_outputs,
-            output_mapping,
-            _merge_outputs,
-            Kraken2OutputFormat
-        )
-
-    return merged_reports, merged_outputs
-
-
-def _condense_formats(
-    reports: list[Kraken2ReportDirectoryFormat],
-    outputs: list[Kraken2OutputDirectoryFormat],
-    mags: bool
-) -> tuple[dict, dict]:
-    '''
-    Condenses multiple report and output directory formats into a single
-    mapping each. The structure is sample_id -> list[format] for reads/contigs
-    and sample_id -> {filename -> list[format]} for mags.
-
-    Parameters
-    ----------
-    reports : list[Kraken2ReportDirectoryFormat]
-        The kraken2 reports.
-    outputs : list[Kraken2OutputDirectoryFormat]
-        The kraken2 outputs.
-    mags : bool
-        Whether the directory formats represent MAG results or not.
-
-    Returns
-    -------
-    tuple[dict, dict]
-        A tuple of mappings as described above. The first contains the kraken2
-        reports and the second the kraken2 outputs.
-    '''
-    chained_reports = itertools.chain(
-        *[report.file_dict() for report in reports]
-    )
-    chained_outputs = itertools.chain(
-        *[output.file_dict() for output in outputs]
-    )
-
-    def _update_mapping(sample_id, chain, mapping, Format):
-        if sample_id not in mapping:
-            if mags:
-                mapping[sample_id] = {}
-                for filename, filepath in chain[sample_id].items():
-                    format = Format(filepath, mode='r')
-                    mapping[sample_id][filename] = [format]
-            else:
-                format = Format(chain[sample_id], mode='r')
-                mapping[sample_id] = [format]
-        else:
-            if mags:
-                for filename, filepath in chain[sample_id].items():
-                    format = Format(filepath, mode='r')
-                    mapping[sample_id][filename].append(format)
-            else:
-                format = Format(chain[sample_id], mode='r')
-                mapping[sample_id].append(format)
-
-    report_mapping = {}
-    output_mapping = {}
-
-    for sample_id in chained_reports:
-        _update_mapping(
-            sample_id, chained_reports, report_mapping, Kraken2ReportFormat
-        )
-        _update_mapping(
-            sample_id, chained_outputs, output_mapping, Kraken2OutputFormat
-        )
-
-    return report_mapping, output_mapping
-
-
-def _merge_reports(reports: list[Kraken2ReportFormat]) -> Kraken2ReportFormat:
-    # make dataframe for each
-    trees = []
-    for report in reports:
-        df = report.view(pd.DataFrame)
-        trees.append(_kraken_to_ncbi_tree(df))
-
-    tree = _combine_ncbi_trees(trees)
-
-    merged_report = Kraken2ReportFormat()
-
-    # dump tree to report
-
-
-
-def _merge_outputs(outputs: list[Kraken2OutputFormat]) -> Kraken2OutputFormat:
-    pass
 
 
 def _get_partition_action(ctx, seqs):
