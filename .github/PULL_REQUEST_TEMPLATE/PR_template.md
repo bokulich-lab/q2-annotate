@@ -11,7 +11,7 @@
 ### Run it locally 
 1. Checkout the PR branch.
 
-> Assuming 1) you already have a local copy of `q2-moshpit` that is installed in editable mode in your activated virtual environment and 2) the working directory is `q2-moshpit`; run the following. 
+> Assuming 1) you already have a local copy of `q2-annotate` that is installed in editable mode in your activated virtual environment and 2) the working directory is `q2-annotate`; run the following. 
 
 ```bash
 PR=<PR_number>

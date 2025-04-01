@@ -1,12 +1,12 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
 _commit: dfb0404
 _src_path: https://github.com/qiime2/q2-setup-template.git
-module_name: moshpit
-plugin_name: q2_moshpit
+module_name: annotate
+plugin_name: q2_annotate
 plugin_scripts: null
 project_author_email: ziemski.michal@gmail.com
 project_author_name: Michal Ziemski, Keegan Evans
 project_description: QIIME 2 plugin for metagenome analysis.
-project_name: q2-moshpit
-project_urls_homepage: https://github.com/bokulich-lab/q2-moshpit
-project_urls_repository: https://github.com/bokulich-lab/q2-moshpit
+project_name: q2-annotate
+project_urls_homepage: https://github.com/bokulich-lab/q2-annotate
+project_urls_repository: https://github.com/bokulich-lab/q2-annotate
