@@ -634,29 +634,12 @@ class TestOutputReportAlignment(TestPluginBase):
 class TestTreeMerging(TestPluginBase):
     package = "q2_annotate.kraken2.tests"
 
-    def setUp(self):
-        super().setUp()
+    def _get_tree_df(self, fp):
+        fp = self.get_data_path(fp)
+        return Kraken2ReportFormat(fp, mode='r').view(pd.DataFrame)
 
-        tree1_fp = self.get_data_path(
-            'report-merging/tree-1.report.txt'
-        )
-        tree1_df = Kraken2ReportFormat(tree1_fp, mode='r').view(pd.DataFrame)
-        self.tree1: tuple[TreeNode | None, TreeNode | None] = \
-            _report_df_to_tree(tree1_df)
-
-        tree2_fp = self.get_data_path(
-            'report-merging/tree-2.report.txt'
-        )
-        tree2_df = Kraken2ReportFormat(tree2_fp, mode='r').view(pd.DataFrame)
-        self.tree2: tuple[TreeNode | None, TreeNode | None] = \
-            _report_df_to_tree(tree2_df)
-
-        merged_tree_fp = self.get_data_path(
-            'report-merging/merged-tree.report.txt'
-        )
-        self.merged_tree_df = Kraken2ReportFormat(
-            merged_tree_fp, mode='r'
-        ).view(pd.DataFrame)
+    def _get_tree(self, fp):
+        return _report_df_to_tree(self._get_tree_df(fp))
 
     def test_merge_trees_no_unclassified_nodes(self):
         '''
@@ -669,12 +652,58 @@ class TestTreeMerging(TestPluginBase):
         is different, hence the `sort_values` and `reindex`. Despite different
         taxon ordering, both reports represent the same information.
         '''
-        obs_df = _dump_tree_to_report(*_merge_trees(self.tree1, self.tree2))
+        tree1 = self._get_tree(
+            'report-merging/no-unclassified/tree-1.report.txt'
+        )
+        tree2 = self._get_tree(
+            'report-merging/no-unclassified/tree-2.report.txt'
+        )
+        obs_df = _dump_tree_to_report(*_merge_trees(tree1, tree2))
+
+        exp_df = self._get_tree_df(
+            'report-merging/no-unclassified/merged-tree.report.txt'
+        )
 
         assert_frame_equal(
             obs_df.sort_values(by='perc_frags_covered').reset_index(drop=True),
-            self.merged_tree_df.sort_values(
-                by='perc_frags_covered'
-            ).reset_index(drop=True),
+            exp_df.sort_values(by='perc_frags_covered').reset_index(drop=True),
+            check_dtype=False,
+        )
+
+    def test_merge_trees_one_unclassified_nodes(self):
+        tree1 = self._get_tree(
+            'report-merging/one-unclassified/tree-1.report.txt'
+        )
+        tree2 = self._get_tree(
+            'report-merging/one-unclassified/tree-2.report.txt'
+        )
+        obs_df = _dump_tree_to_report(*_merge_trees(tree1, tree2))
+
+        exp_df = self._get_tree_df(
+            'report-merging/one-unclassified/merged-tree.report.txt'
+        )
+
+        assert_frame_equal(
+            obs_df.sort_values(by='perc_frags_covered').reset_index(drop=True),
+            exp_df.sort_values(by='perc_frags_covered').reset_index(drop=True),
+            check_dtype=False,
+        )
+
+    def test_merge_trees_two_unclassified_nodes(self):
+        tree1 = self._get_tree(
+            'report-merging/two-unclassified/tree-1.report.txt'
+        )
+        tree2 = self._get_tree(
+            'report-merging/two-unclassified/tree-2.report.txt'
+        )
+        obs_df = _dump_tree_to_report(*_merge_trees(tree1, tree2))
+
+        exp_df = self._get_tree_df(
+            'report-merging/two-unclassified/merged-tree.report.txt'
+        )
+
+        assert_frame_equal(
+            obs_df.sort_values(by='perc_frags_covered').reset_index(drop=True),
+            exp_df.sort_values(by='perc_frags_covered').reset_index(drop=True),
             check_dtype=False,
         )

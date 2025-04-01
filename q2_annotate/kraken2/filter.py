@@ -427,7 +427,7 @@ def _dump_tree_to_report(
 
     # calculate denominator for perc_frags_covered_column
     total_reads = root._kraken_data['n_frags_covered']
-    if unclassified_node:
+    if unclassified_node is not None:
         total_reads += unclassified_node._kraken_data['n_frags_covered']
 
     report._kraken_total_reads = total_reads
@@ -622,21 +622,11 @@ def _merge_trees(
 
         merged_tree = second_tree
 
-    # merge unclassified nodes
-    if first_unclassified_node is None and second_unclassified_node is None:
-        unclassified_node = None
-    elif first_unclassified_node is None:
-        unclassified_node = second_unclassified_node
-    elif second_unclassified_node is None:
-        unclassified_node = first_unclassified_node
-    else:
-        unclassified_node = second_unclassified_node
-        unclassified_node._kraken_data['n_frags_assigned'] += \
-            first_unclassified_node._kraken_data['n_frags_assigned']
-        unclassified_node._kraken_data['n_frags_covered'] += \
-            first_unclassified_node._kraken_data['n_frags_covered']
+    unclassified_node = _merge_unclassified_nodes(
+        first_unclassified_node, second_unclassified_node
+    )
 
-    # perform a final passover to update `perc_frags_covered`
+    # final passover to update `perc_frags_covered`
     if merged_tree is not None:
         total_reads = merged_tree._kraken_data['n_frags_covered']
         if unclassified_node is not None:
@@ -684,3 +674,37 @@ def _find_node(tree: TreeNode, node: TreeNode) -> TreeNode | None:
         return matches[0]
     else:
         return None
+
+
+def _merge_unclassified_nodes(
+    first: TreeNode | None, second: TreeNode | None
+) -> TreeNode | None:
+    '''
+    Merges two TreeNodes representing unclassified nodes from kraken2 reports.
+
+    Parameters
+    ----------
+    first : TreeNode | None
+        The first unclassified node, or None if no such node exists.
+    second : TreeNode | None
+        The second unclassified node, or None if no such node exists.
+
+    Returns
+    -------
+    TreeNode | None
+        The merged unclassified node, or None if both inputs are None.
+    '''
+    if first is None and second is None:
+        unclassified_node = None
+    elif first is None:
+        unclassified_node = second
+    elif second is None:
+        unclassified_node = first
+    else:
+        unclassified_node = second
+        unclassified_node._kraken_data['n_frags_assigned'] += \
+            first._kraken_data['n_frags_assigned']
+        unclassified_node._kraken_data['n_frags_covered'] += \
+            first._kraken_data['n_frags_covered']
+
+    return unclassified_node
