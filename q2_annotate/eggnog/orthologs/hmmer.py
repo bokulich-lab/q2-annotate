@@ -19,7 +19,7 @@ from q2_annotate.eggnog.orthologs.common import (
 from q2_annotate.eggnog.types import EggnogHmmerIdmapDirectoryFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.genome_data import (
-    ProteinsDirectoryFormat, SeedOrthologDirFmt
+    ProteinsDirectoryFormat, SeedOrthologDirFmt, LociDirectoryFormat
 )
 from q2_types.per_sample_sequences import (
     ContigSequencesDirFmt, MultiMAGSequencesDirFmt
@@ -38,7 +38,7 @@ def _eggnog_hmmer_search(
     seed_alignments: ProteinsDirectoryFormat,
     num_cpus: int = 1,
     db_in_memory: bool = False
-) -> (SeedOrthologDirFmt, pd.DataFrame):
+) -> (SeedOrthologDirFmt, pd.DataFrame, LociDirectoryFormat):
     with tempfile.TemporaryDirectory() as output_loc:
         taxon_id = os.listdir(idmap.path)[0].split(".")[0]
         tmp_subdir = f"{output_loc}/hmmer/{taxon_id}"
@@ -54,17 +54,18 @@ def _eggnog_hmmer_search(
                 '--genepred', 'prodigal'  # default incompatible with HMMER
             ]
         )
-        result, ft = _eggnog_search(sequences, search_runner, output_loc)
-    return result, ft
+        result, ft, loci = _eggnog_search(sequences, search_runner, output_loc)
+    return result, ft, loci
 
 
 def search_orthologs_hmmer(
     ctx, sequences, pressed_hmm_db, idmap, seed_alignments,
     num_cpus=1, db_in_memory=False, num_partitions=None
 ):
-    collated_hits, collated_tables = _run_eggnog_search_pipeline(
-        ctx, sequences, [idmap, pressed_hmm_db, seed_alignments],
-        num_cpus, db_in_memory, num_partitions,
-        "_eggnog_hmmer_search"
-    )
-    return collated_hits, collated_tables
+    collated_hits, collated_tables, collated_loci = \
+        _run_eggnog_search_pipeline(
+            ctx, sequences, [idmap, pressed_hmm_db, seed_alignments],
+            num_cpus, db_in_memory, num_partitions,
+            "_eggnog_hmmer_search"
+        )
+    return collated_hits, collated_tables, collated_loci
