@@ -1325,7 +1325,7 @@ plugin.methods.register_function(
     inputs={
         "seqs": SampleData[
             SequencesWithQuality | PairedEndSequencesWithQuality
-            ],
+            ] | SampleData[Contigs] | FeatureData[MAG] | SampleData[MAGs],
         "db": KaijuDB,
     },
     parameters=kaiju_params,

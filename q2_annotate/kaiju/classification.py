@@ -14,11 +14,12 @@ from pathlib import Path
 from typing import Union
 
 import pandas as pd
+from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import (
     SingleLanePerSamplePairedEndFastqDirFmt,
     SingleLanePerSampleSingleEndFastqDirFmt,
     SequencesWithQuality,
-    PairedEndSequencesWithQuality,
+    PairedEndSequencesWithQuality, ContigSequencesDirFmt, MultiFASTADirectoryFormat,
 )
 
 from q2_annotate._utils import run_command
@@ -259,10 +260,13 @@ def _classify_kaiju_helper(
 
 
 def _classify_kaiju(
-    seqs: Union[
-        SingleLanePerSamplePairedEndFastqDirFmt,
-        SingleLanePerSampleSingleEndFastqDirFmt,
-    ],
+        seqs: Union[
+            SingleLanePerSamplePairedEndFastqDirFmt,
+            SingleLanePerSampleSingleEndFastqDirFmt,
+            ContigSequencesDirFmt,
+            MAGSequencesDirFmt,
+            MultiFASTADirectoryFormat
+        ],
     db: KaijuDBDirectoryFormat,
     z: int = 1,
     a: str = "greedy",
