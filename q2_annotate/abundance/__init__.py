@@ -6,6 +6,6 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from .abundance import estimate_mag_abundance
+from .abundance import estimate_abundance
 
-__all__ = ["estimate_mag_abundance", ]
+__all__ = ["estimate_abundance", ]
