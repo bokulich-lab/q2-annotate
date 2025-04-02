@@ -28,7 +28,7 @@ from q2_types.reference_db import DiamondDatabaseDirFmt
 
 
 def _eggnog_diamond_search(
-    sequences: Union[
+    seqs: Union[
         ContigSequencesDirFmt,
         MultiMAGSequencesDirFmt,
         MAGSequencesDirFmt
@@ -44,16 +44,16 @@ def _eggnog_diamond_search(
             num_cpus=num_cpus, db_in_memory=db_in_memory,
             runner_args=['diamond', '--dmnd_db', str(db_fp)]
         )
-        result, ft = _eggnog_search(sequences, search_runner, str(output_loc))
+        result, ft = _eggnog_search(seqs, search_runner, str(output_loc))
     return result, ft
 
 
 def search_orthologs_diamond(
-    ctx, sequences, diamond_db,
+    ctx, seqs, diamond_db,
     num_cpus=1, db_in_memory=False, num_partitions=None
 ):
     collated_hits, collated_tables = _run_eggnog_search_pipeline(
-        ctx, sequences, [diamond_db], num_cpus, db_in_memory, num_partitions,
+        ctx, seqs, [diamond_db], num_cpus, db_in_memory, num_partitions,
         "_eggnog_diamond_search"
     )
     return collated_hits, collated_tables

@@ -109,7 +109,7 @@ def _add_unclassified_mags(
 
 def kraken2_to_mag_features(
         reports: Kraken2ReportDirectoryFormat,
-        hits: Kraken2OutputDirectoryFormat,
+        outputs: Kraken2OutputDirectoryFormat,
         coverage_threshold: float = 0.1,
         # lca_mode: str = 'lca'
 ) -> pd.DataFrame:
@@ -118,7 +118,7 @@ def kraken2_to_mag_features(
     taxa_list = []
     # convert IDs to match MAGs instead of taxids/db ids
     for mag_id in table.index:
-        kraken_table_fp = (hits.path / f'{mag_id}.output.txt')
+        kraken_table_fp = (outputs.path / f'{mag_id}.output.txt')
         hits_df = pd.read_csv(
             kraken_table_fp, sep='\t', header=None, dtype='str'
         )

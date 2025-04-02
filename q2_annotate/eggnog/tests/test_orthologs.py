@@ -80,7 +80,7 @@ class TestHMMER(TestPluginBase):
         mock_ctx = MagicMock(get_action=mock_action)
         obs = search_orthologs_hmmer(
             ctx=mock_ctx,
-            sequences=self.mags_artifact,
+            seqs=self.mags_artifact,
             pressed_hmm_db=self.pressed_hmm_artifact,
             idmap=self.idmap_artifact,
             seed_alignments=self.fastas_artifact
@@ -116,7 +116,7 @@ class TestHMMER(TestPluginBase):
         mock_tmpdir.return_value.__enter__.return_value = "tmp"
         mock_eggnog_search.return_value = (0, 1)
         result, ft = _eggnog_hmmer_search(
-            sequences=self.mags,
+            seqs=self.mags,
             idmap=self.idmap,
             pressed_hmm_db=self.pressed_hmm,
             seed_alignments=self.fastas
@@ -219,7 +219,7 @@ class TestDiamond(TestPluginBase):
         ).view(ContigSequencesDirFmt)
 
         _, obs = _eggnog_diamond_search(
-            sequences=contigs,
+            seqs=contigs,
             diamond_db=self.diamond_db
         )
         exp = pd.DataFrame({'0': [1.0, 0.0], '2': [1.0, 0.0], '8': [0.0, 3.0]},
@@ -235,7 +235,7 @@ class TestDiamond(TestPluginBase):
         ).view(MAGSequencesDirFmt)
 
         _, obs = _eggnog_diamond_search(
-            sequences=mags,
+            seqs=mags,
             diamond_db=self.diamond_db
         )
         exp = pd.DataFrame(
@@ -254,7 +254,7 @@ class TestDiamond(TestPluginBase):
         ).view(MultiMAGSequencesDirFmt)
 
         _, obs = _eggnog_diamond_search(
-            sequences=mags,
+            seqs=mags,
             diamond_db=self.diamond_db
         )
         exp = pd.DataFrame(
@@ -285,7 +285,7 @@ class TestDiamond(TestPluginBase):
             )._result()
 
         _, single = self._eggnog_diamond_search(
-            sequences=contigs,
+            seqs=contigs,
             diamond_db=self.diamond_db_artifact
         )
 
@@ -307,7 +307,7 @@ class TestDiamond(TestPluginBase):
             )._result()
 
         _, single = self._eggnog_diamond_search(
-            sequences=mags,
+            seqs=mags,
             diamond_db=self.diamond_db_artifact
         )
 
@@ -329,7 +329,7 @@ class TestDiamond(TestPluginBase):
             )._result()
 
         _, single = self._eggnog_diamond_search(
-            sequences=mags,
+            seqs=mags,
             diamond_db=self.diamond_db_artifact
         )
 
