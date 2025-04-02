@@ -265,8 +265,8 @@ plugin.methods.register_function(
     outputs={
         "collated_kraken2_reports": SampleData[Kraken2Reports % P_kraken_out]
     },
-    name="Collate kraken2 reports",
-    description="Collates kraken2 reports"
+    name="Collate kraken2 reports.",
+    description="Collates kraken2 reports."
 )
 
 plugin.methods.register_function(
@@ -281,8 +281,8 @@ plugin.methods.register_function(
         "collated_kraken2_outputs":
             SampleData[Kraken2Outputs % P_kraken_out]
     },
-    name="Collate kraken2 outputs",
-    description="Collates kraken2 outputs"
+    name="Collate kraken2 outputs.",
+    description="Collates kraken2 outputs."
 )
 
 if platform.system() != "Darwin":
@@ -496,7 +496,7 @@ plugin.methods.register_function(
                     'with the exception of k__Bacteria and k__Archaea which '
                     'match their domain\'s name.',
     },
-    name='Select downstream features from Kraken 2',
+    name='Select downstream features from Kraken 2.',
     description='Convert a Kraken 2 report, which is an annotated NCBI '
                 'taxonomy tree into generic artifacts for downstream '
                 'analyses.'
@@ -530,7 +530,7 @@ plugin.methods.register_function(
                     'with the exception of k__Bacteria and k__Archaea which '
                     'match their domain\'s name.',
     },
-    name='Select downstream MAG features from Kraken 2',
+    name='Select downstream MAG features from Kraken 2.',
     description='Convert a Kraken 2 report, which is an annotated NCBI '
                 'taxonomy tree into generic artifacts for downstream '
                 'analyses.'
@@ -640,7 +640,7 @@ plugin.methods.register_function(
     output_descriptions={
         "taxonomy": "NCBI reference taxonomy."
     },
-    name="Fetch NCBI reference taxonomy",
+    name="Fetch NCBI reference taxonomy.",
     description="Downloads NCBI reference taxonomy from the NCBI FTP server. "
                 "The resulting artifact is required by the "
                 "build-custom-diamond-db action if one wished to "
@@ -713,7 +713,7 @@ plugin.pipelines.register_function(
         ('eggnog_hits', SampleData[Orthologs]),
         ('table', FeatureTable[Frequency])
     ],
-    name='Run eggNOG search using diamond aligner',
+    name='Run eggNOG search using diamond aligner.',
     description="This method performs the steps by which we find our "
                 "possible target sequences to annotate using the diamond "
                 "search functionality from the eggnog `emapper.py` script",
@@ -757,7 +757,7 @@ plugin.pipelines.register_function(
         ('eggnog_hits', SampleData[Orthologs]),
         ('table', FeatureTable[Frequency])
     ],
-    name='Run eggNOG search using HMMER aligner',
+    name='Run eggNOG search using HMMER aligner.',
     description="This method uses HMMER to find possible target sequences "
                 "to annotate with eggNOG-mapper.",
     citations=[
@@ -798,7 +798,7 @@ plugin.methods.register_function(
                        'orthologs. One table per sample or MAG in the input.',
         'table': 'Feature table with counts of orthologs per sample/MAG.'
     },
-    name='Run eggNOG search using Diamond aligner',
+    name='Run eggNOG search using Diamond aligner.',
     description="This method performs the steps by which we find our "
                 "possible target sequences to annotate using the Diamond "
                 "search functionality from the eggnog `emapper.py` "
@@ -848,7 +848,7 @@ plugin.methods.register_function(
                        'orthologs. One table per sample or MAG in the input.',
         'table': 'Feature table with counts of orthologs per sample/MAG.'
     },
-    name='Run eggNOG search using HMMER aligner',
+    name='Run eggNOG search using HMMER aligner.',
     description='This method performs the steps by which we find our '
                 'possible target sequences to annotate using the '
                 'HMMER search functionality from the eggnog `emapper.py` '
@@ -873,8 +873,8 @@ plugin.methods.register_function(
     outputs=[
         ('table', FeatureTable[Frequency])
     ],
-    name='Create an eggnog table',
-    description='Create an eggnog table'
+    name='Create an eggnog table.',
+    description='Create an eggnog table.'
 )
 
 plugin.pipelines.register_function(
@@ -906,7 +906,7 @@ plugin.pipelines.register_function(
     output_descriptions={
         'ortholog_annotations': 'Annotated hits.'
     },
-    name='Annotate orthologs against eggNOG database',
+    name='Annotate orthologs against eggNOG database.',
     description="Apply eggnog mapper to annotate seed orthologs.",
     citations=[citations["huerta_cepas_eggnog_2019"]]
 )
@@ -930,7 +930,7 @@ plugin.methods.register_function(
                     'use all available.',
     },
     outputs=[('ortholog_annotations', GenomeData[NOG])],
-    name='Annotate orthologs against eggNOG database',
+    name='Annotate orthologs against eggNOG database.',
     description="Apply eggnog mapper to annotate seed orthologs.",
     citations=[citations["huerta_cepas_eggnog_2019"]]
 )
@@ -1556,7 +1556,7 @@ plugin.pipelines.register_function(
         "n_threads": "Number of threads to use when building the index."
     },
     output_descriptions={"index": "Generated combined human reference index."},
-    name="Construct a human pangenome index.",
+    name="Construct the human pangenome index.",
     description="This method generates a Bowtie2 index fo the combined human "
                 "GRCh38 reference genome and the draft human pangenome.",
     citations=[],
