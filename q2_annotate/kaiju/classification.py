@@ -167,8 +167,8 @@ def _process_kaiju_reports(tmpdir, all_args):
     """
     table_args = [
         "-r", all_args["r"],
-        "-t", os.path.join(str(all_args["db"].path), "nodes.dmp"),
-        "-n", os.path.join(str(all_args["db"].path), "names.dmp"),
+        "-t", os.path.join(str(all_args["kaiju_db"].path), "nodes.dmp"),
+        "-n", os.path.join(str(all_args["kaiju_db"].path), "names.dmp"),
         "-l", "superkingdom,phylum,class,order,family,genus,species",
     ]
     if all_args["exp"]:
@@ -222,9 +222,9 @@ def _classify_kaiju_helper(
         "-s", str(all_args["s"]),
         "-E", str(all_args["evalue"]),
         "-x" if all_args["x"] else "-X",
-        "-t", os.path.join(str(all_args["db"].path), "nodes.dmp"),
+        "-t", os.path.join(str(all_args["kaiju_db"].path), "nodes.dmp"),
         "-f", glob.glob(
-            os.path.join(str(all_args["db"].path), "kaiju_*.fmi")
+            os.path.join(str(all_args["kaiju_db"].path), "kaiju_*.fmi")
         )[0],
     ]
 
@@ -259,11 +259,11 @@ def _classify_kaiju_helper(
 
 
 def _classify_kaiju(
-    seqs: Union[
+    reads: Union[
         SingleLanePerSamplePairedEndFastqDirFmt,
         SingleLanePerSampleSingleEndFastqDirFmt,
     ],
-    db: KaijuDBDirectoryFormat,
+    kaiju_db: KaijuDBDirectoryFormat,
     z: int = 1,
     a: str = "greedy",
     e: int = 3,
@@ -276,14 +276,14 @@ def _classify_kaiju(
     exp: bool = False,
     u: bool = False,
 ) -> (pd.DataFrame, pd.DataFrame):
-    manifest: pd.DataFrame = seqs.manifest.view(pd.DataFrame)
+    manifest: pd.DataFrame = reads.manifest.view(pd.DataFrame)
     return _classify_kaiju_helper(manifest, dict(locals().items()))
 
 
 def classify_kaiju(
         ctx,
-        seqs,
-        db,
+        reads,
+        kaiju_db,
         z=1,
         a="greedy",
         e=3,
@@ -298,25 +298,25 @@ def classify_kaiju(
         num_partitions=None
 ):
     kwargs = {k: v for k, v in locals().items()
-              if k not in ["seqs", "db", "ctx", "num_partitions"]}
+              if k not in ["reads", "kaiju_db", "ctx", "num_partitions"]}
 
     _classify_kaiju = ctx.get_action("annotate", "_classify_kaiju")
     collate_feature_tables = ctx.get_action("feature_table", "merge")
     collate_taxonomies = ctx.get_action("feature_table", "merge_taxa")
 
-    if seqs.type <= SampleData[SequencesWithQuality]:
+    if reads.type <= SampleData[SequencesWithQuality]:
         partition_method = ctx.get_action("demux", "partition_samples_single")
-    elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
+    elif reads.type <= SampleData[PairedEndSequencesWithQuality]:
         partition_method = ctx.get_action("demux", "partition_samples_paired")
     else:
         raise NotImplementedError()
 
-    (partitioned_seqs,) = partition_method(seqs, num_partitions)
+    (partitioned_reads,) = partition_method(reads, num_partitions)
 
     tables = []
     taxonomies = []
-    for seq in partitioned_seqs.values():
-        (table, taxonomy) = _classify_kaiju(seq, db, **kwargs)
+    for seq in partitioned_reads.values():
+        (table, taxonomy) = _classify_kaiju(seq, kaiju_db, **kwargs)
         tables.append(table)
         taxonomies.append(taxonomy)
 

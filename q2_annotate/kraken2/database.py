@@ -327,10 +327,10 @@ def build_kraken_db(
 
 
 def inspect_kraken2_db(
-        db: Kraken2DBDirectoryFormat,
+        kraken2_db: Kraken2DBDirectoryFormat,
         threads: int = 1
 ) -> Kraken2DBReportDirectoryFormat:
-    cmd = ['kraken2-inspect', '--db', str(db.path), '--threads', str(threads)]
+    cmd = ['kraken2-inspect', '--db', str(kraken2_db.path), '--threads', str(threads)]
     try:
         result = run_command(cmd=cmd, pipe=True)
     except subprocess.CalledProcessError as e:

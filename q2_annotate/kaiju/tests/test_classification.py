@@ -143,7 +143,7 @@ class TestKaijuClassification(TestPluginBase):
         ).close()
         args = {
             "r": "species",
-            "db": Mock(path=self.temp_dir.name),
+            "kaiju_db": Mock(path=self.temp_dir.name),
             "exp": True,
             "u": True,
             "c": 0.6
@@ -177,7 +177,7 @@ class TestKaijuClassification(TestPluginBase):
         ).close()
         args = {
             "r": "species",
-            "db": Mock(path=self.temp_dir.name),
+            "kaiju_db": Mock(path=self.temp_dir.name),
             "exp": True,
             "u": True,
             "c": 2
@@ -212,7 +212,7 @@ class TestKaijuClassification(TestPluginBase):
 
         with patch("tempfile.TemporaryDirectory"):
             _classify_kaiju(
-                seqs=seqs, db=Mock(path=self.temp_dir.name),
+                reads=seqs, kaiju_db=Mock(path=self.temp_dir.name),
                 z=3, a="greedy", e=2, m=10, s=66, evalue=0, x=False,
                 r="class", c=0.1, exp=True, u=True
             )
@@ -246,7 +246,7 @@ class TestKaijuClassification(TestPluginBase):
 
         with patch("tempfile.TemporaryDirectory"):
             _classify_kaiju(
-                seqs=seqs, db=Mock(path=self.temp_dir.name),
+                reads=seqs, kaiju_db=Mock(path=self.temp_dir.name),
                 z=3, a="greedy", e=2, m=10, s=66, evalue=0, x=True,
                 r="class", c=0.1, exp=False, u=False
             )
@@ -282,7 +282,7 @@ class TestKaijuClassification(TestPluginBase):
                 Exception, r"\(return code 1\), please inspect"
         ):
             _classify_kaiju(
-                seqs=seqs, db=Mock(path=self.temp_dir.name),
+                reads=seqs, kaiju_db=Mock(path=self.temp_dir.name),
                 z=3, a="greedy", e=2, m=10, s=66, evalue=0, x=False,
                 r="class", c=0.1, exp=True, u=True
             )
