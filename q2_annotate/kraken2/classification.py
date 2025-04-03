@@ -204,7 +204,7 @@ def classify_kraken2_helper(
                 with open(report_fp,'a') as f:
                     print("0.0\t0\t0\tUnclassified\t0\tUnclassified",file=f)
                 with open(output_fp,'a') as f:
-                    print("U\t0\tNo_sequence\tUnclassified\tNone",file=f)
+                    print("U\tNo_sequence\t0\t0\tNone",file=f)
                 continue
 
             cmd = deepcopy(base_cmd)
