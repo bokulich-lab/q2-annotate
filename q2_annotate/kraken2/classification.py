@@ -194,6 +194,18 @@ def classify_kraken2_helper(
             output_fp, report_fp = _construct_output_paths(
                 _sample, kraken2_outputs_dir, kraken2_reports_dir
             )
+
+            try:
+                for f in fps:
+                    pd.read_csv(f,compression='gzip')
+            except pd.errors.EmptyDataError:
+                print(f"At least one of the files for sample {_sample} is empty. Classification will not be run on this sample.")
+                with open(f"{kraken2_reports_dir}/{_sample}.report.txt",'a') as f:
+                    print("0.0\t0\t0\tUnclassified\t0\tUnclassified",file=f)
+                with open(f"{kraken2_outputs_dir}/{_sample}.output.txt",'a') as f:
+                    print("U\t0\tNo_sequence\tUnclassified\tNone",file=f)
+                continue
+
             cmd = deepcopy(base_cmd)
             cmd.extend(
                 ["--report", report_fp, "--output", output_fp, *fps]
