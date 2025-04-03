@@ -200,11 +200,11 @@ def _process_kaiju_reports(tmpdir, all_args):
 
 
 def _classify_kaiju_helper(
-        manifest: pd.DataFrame, all_args: dict
+        seqs, all_args: dict
 ) -> (pd.DataFrame, pd.DataFrame):
     """
     Args:
-        manifest (pd.DataFrame): A DataFrame containing sample information.
+        seqs (pd.DataFrame): A DataFrame containing sample information.
         all_args (dict): A dictionary containing arguments for running Kaiju.
 
     Returns:
@@ -230,19 +230,45 @@ def _classify_kaiju_helper(
     ]
 
     base_cmd = ["kaiju-multi", "-v", *kaiju_args]
-    paired = "reverse" in manifest.columns
-
-    samples_fwd, samples_rev, output_fps = [], [], []
+    read_types = (
+        SingleLanePerSampleSingleEndFastqDirFmt,
+        SingleLanePerSamplePairedEndFastqDirFmt
+    )
+    files_fwd, files_rev, output_fps = [], [], []
+    paired = False
+    
     with tempfile.TemporaryDirectory() as tmpdir:
-        for index, row in manifest.iterrows():
-            sample_name, fps = _get_sample_paths(index, row, paired)
-            samples_fwd.append(fps[0])
-            samples_rev.append(fps[1])
-            output_fps.append(f"{os.path.join(tmpdir, sample_name)}.out")
+        if isinstance(seqs, read_types):
+            manifest: [pd.DataFrame] = seqs.manifest.view(pd.DataFrame)
+            paired = "reverse" in manifest.columns
+    
+            for index, row in manifest.iterrows():
+                sample_name, fps = _get_sample_paths(index, row, paired)
+                files_fwd.append(fps[0])
+                files_rev.append(fps[1])
+                output_fps.append(f"{os.path.join(tmpdir, sample_name)}.out")
+    
 
-        base_cmd.extend(["-i", ",".join(samples_fwd)])
+        elif isinstance(seqs, ContigSequencesDirFmt):
+            inner_dict = seqs.sample_dict()
+            outer_dict = {"":inner_dict}
+
+        elif isinstance(seqs, MAGSequencesDirFmt):
+            inner_dict = seqs.feature_dict()
+            outer_dict = {"": inner_dict}
+
+        elif isinstance(seqs, MultiFASTADirectoryFormat):
+            outer_dict = seqs.sample_dict()
+
+        if not isinstance(seqs, read_types):
+            for outer_id, inner_dict in outer_dict.items():
+                for inner_id, full_path in inner_dict.items():
+                    files_fwd.append(full_path)
+                    output_fps.append(f"{os.path.join(tmpdir, inner_id)}.out")
+
+        base_cmd.extend(["-i", ",".join(files_fwd)])
         if paired:
-            base_cmd.extend(["-j", ",".join(samples_rev)])
+            base_cmd.extend(["-j", ",".join(files_rev)])
         base_cmd.extend(["-o", ",".join(output_fps)])
 
         try:
@@ -280,8 +306,8 @@ def _classify_kaiju(
     exp: bool = False,
     u: bool = False,
 ) -> (pd.DataFrame, pd.DataFrame):
-    manifest: pd.DataFrame = seqs.manifest.view(pd.DataFrame)
-    return _classify_kaiju_helper(manifest, dict(locals().items()))
+    
+    return _classify_kaiju_helper(seqs, dict(locals().items()))
 
 
 def classify_kaiju(
