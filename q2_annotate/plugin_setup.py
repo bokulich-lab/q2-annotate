@@ -1324,8 +1324,9 @@ plugin.methods.register_function(
     function=q2_annotate.kaiju._classify_kaiju,
     inputs={
         "seqs": SampleData[
-            SequencesWithQuality | PairedEndSequencesWithQuality
-            ] | SampleData[Contigs] | FeatureData[MAG] | SampleData[MAGs],
+            SequencesWithQuality | PairedEndSequencesWithQuality | 
+            JoinedSequencesWithQuality] | SampleData[Contigs] | FeatureData[MAG] | 
+                SampleData[MAGs],
         "db": KaijuDB,
     },
     parameters=kaiju_params,
@@ -1342,8 +1343,7 @@ plugin.methods.register_function(
         "abundances": "Read abundances.", "taxonomy": "Linked taxonomy."
     },
     name="Classify reads using Kaiju.",
-    description="This method uses Kaiju to perform taxonomic "
-                "classification of NGS reads.",
+    description="This method uses Kaiju to perform taxonomic classification.",
     citations=[citations["menzel2016"]],
 )
 
@@ -1351,8 +1351,9 @@ plugin.pipelines.register_function(
     function=q2_annotate.kaiju.classify_kaiju,
     inputs={
         "seqs": SampleData[
-            SequencesWithQuality | PairedEndSequencesWithQuality
-            ],
+            SequencesWithQuality | PairedEndSequencesWithQuality | 
+            JoinedSequencesWithQuality] | SampleData[Contigs] | FeatureData[MAG] | 
+                SampleData[MAGs],
         "db": KaijuDB,
     },
     parameters={**kaiju_params, **partition_params},
@@ -1372,8 +1373,7 @@ plugin.pipelines.register_function(
         "abundances": "Read abundances.", "taxonomy": "Linked taxonomy."
     },
     name="Classify reads using Kaiju.",
-    description="This method uses Kaiju to perform taxonomic "
-                "classification of NGS reads.",
+    description="This method uses Kaiju to perform taxonomic classification.",
     citations=[citations["menzel2016"]],
 )
 

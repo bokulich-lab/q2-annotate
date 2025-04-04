@@ -14,12 +14,14 @@ from pathlib import Path
 from typing import Union
 
 import pandas as pd
-from q2_types.feature_data_mag import MAGSequencesDirFmt
+from q2_types.feature_data import FeatureData
+from q2_types.feature_data_mag import MAGSequencesDirFmt, MAG
 from q2_types.per_sample_sequences import (
     SingleLanePerSamplePairedEndFastqDirFmt,
     SingleLanePerSampleSingleEndFastqDirFmt,
     SequencesWithQuality,
     PairedEndSequencesWithQuality, ContigSequencesDirFmt, MultiFASTADirectoryFormat,
+    Contigs, MAGs, JoinedSequencesWithQuality,
 )
 
 from q2_annotate._utils import run_command
@@ -334,10 +336,22 @@ def classify_kaiju(
     collate_feature_tables = ctx.get_action("feature_table", "merge")
     collate_taxonomies = ctx.get_action("feature_table", "merge_taxa")
 
-    if seqs.type <= SampleData[SequencesWithQuality]:
+    if seqs.type <= SampleData[SequencesWithQuality |
+                               JoinedSequencesWithQuality]:
         partition_method = ctx.get_action("demux", "partition_samples_single")
     elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
         partition_method = ctx.get_action("demux", "partition_samples_paired")
+    elif seqs.type <= SampleData[Contigs]:
+        partition_method = ctx.get_action("assembly", "partition_contigs")
+    elif seqs.type <= SampleData[MAGs]:
+        partition_method = ctx.get_action(
+            "types", "partition_sample_data_mags"
+        )
+    
+    # FeatureData[MAG] is not parallelized
+    elif seqs.type <= FeatureData[MAG]:
+        (table, taxonomy) = _classify_kaiju(seqs, db, **kwargs)
+        return table, taxonomy
     else:
         raise NotImplementedError()
 
