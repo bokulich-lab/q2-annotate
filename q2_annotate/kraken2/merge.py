@@ -5,8 +5,7 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-import itertools
-
+import pandas as pd
 from skbio import TreeNode
 
 from q2_types.kraken2 import (
@@ -14,6 +13,11 @@ from q2_types.kraken2 import (
     Kraken2OutputDirectoryFormat,
     Kraken2ReportFormat,
     Kraken2OutputFormat,
+)
+
+from q2_annotate.kraken2.filter import (
+    _report_df_to_tree,
+    _dump_tree_to_report,
 )
 
 
@@ -40,9 +44,7 @@ def _merge_kraken2_results(
     merged_reports = Kraken2ReportDirectoryFormat()
     merged_outputs = Kraken2OutputDirectoryFormat()
 
-    mags = False
-    if isinstance(next(iter(reports[0].file_dict().values())), dict):
-        mags = True
+    mags = isinstance(next(iter(reports[0].file_dict().values())), dict)
 
     report_mapping, output_mapping = _condense_formats(reports, outputs, mags)
 
@@ -51,18 +53,32 @@ def _merge_kraken2_results(
             if mags:
                 for filename, formats in mapping[sample_id].items():
                     merged_format = merger(formats)
-                    merged_reports.write_data(
-                        merged_format,
-                        Format,
-                        sample_id=sample_id,
-                        mag_id=filename
-                    )
+                    if Format == Kraken2ReportFormat:
+                        merged_formats.reports.write_data(
+                            merged_format,
+                            Format,
+                            sample_id=sample_id,
+                            mag_id=filename
+                        )
+                    else:
+                        merged_formats.outputs.write_data(
+                            merged_format,
+                            Format,
+                            sample_id=sample_id,
+                            mag_id=filename
+                        )
+
             else:
-                formats = format[sample_id]
+                formats = mapping[sample_id]
                 merged_format = merger(formats)
-                merged_formats.write_data(
-                    merged_format, Format, sample_id=sample_id
-                )
+                if Format == Kraken2ReportFormat:
+                    merged_formats.reports.write_data(
+                        merged_format, Format, sample_id=sample_id
+                    )
+                else:
+                    merged_formats.outputs.write_data(
+                        merged_format, Format, sample_id=sample_id
+                    )
 
     for sample_id in report_mapping:
         _merge_formats(
@@ -109,60 +125,113 @@ def _condense_formats(
         A tuple of mappings as described above. The first contains the kraken2
         report mapping and the second the kraken2 output mapping.
     '''
-    chained_reports = itertools.chain(
-        *[report.file_dict() for report in reports]
-    )
-    chained_outputs = itertools.chain(
-        *[output.file_dict() for output in outputs]
-    )
+    chained_reports = []
+    for report in reports:
+        for sample_id, value in report.file_dict().items():
+            chained_reports.append((sample_id, value))
 
-    def _update_mapping(sample_id, chain, mapping, Format):
-        if sample_id not in mapping:
-            if mags:
-                mapping[sample_id] = {}
-                for filename, filepath in chain[sample_id].items():
-                    format = Format(filepath, mode='r')
-                    mapping[sample_id][filename] = [format]
-            else:
-                format = Format(chain[sample_id], mode='r')
-                mapping[sample_id] = [format]
-        else:
-            if mags:
-                for filename, filepath in chain[sample_id].items():
-                    format = Format(filepath, mode='r')
+    chained_outputs = []
+    for output in outputs:
+        for sample_id, value in output.file_dict().items():
+            chained_outputs.append((sample_id, value))
+
+    def _update_mapping(sample_id, value, mapping, Format):
+        if mags:
+            filename_to_filepath = value
+            for filename, filepath in filename_to_filepath.items():
+                format = Format(filepath, mode='r')
+                if sample_id not in mapping:
+                    mapping[sample_id] = {filename: [format]}
+                else:
                     mapping[sample_id][filename].append(format)
+        else:
+            filepath = value
+            format = Format(filepath, mode='r')
+            if sample_id not in mapping:
+                mapping[sample_id] = [format]
             else:
-                format = Format(chain[sample_id], mode='r')
                 mapping[sample_id].append(format)
 
     report_mapping = {}
-    output_mapping = {}
-
-    for sample_id in chained_reports:
+    for sample_id, value in chained_reports:
         _update_mapping(
-            sample_id, chained_reports, report_mapping, Kraken2ReportFormat
+            sample_id, value, report_mapping, Kraken2ReportFormat
         )
+
+    output_mapping = {}
+    for sample_id, value in chained_outputs:
         _update_mapping(
-            sample_id, chained_outputs, output_mapping, Kraken2OutputFormat
+            sample_id, value, output_mapping, Kraken2OutputFormat
         )
 
     return report_mapping, output_mapping
 
 
 def _merge_reports(
-    report_mapping: dict[str, Kraken2ReportFormat]
-) -> Kraken2ReportDirectoryFormat:
+    reports: list[Kraken2ReportFormat]
+) -> Kraken2ReportFormat:
     '''
+    Merges two or more kraken2 reports into a single report. See
+    `_merge_trees` for the actual merging algorithm.
+
+    Parameters
+    ----------
+    reports : list[Kraken2ReportFormat]
+        Kraken2 reports belonging to the same sample ID or mag ID.
+
+    Returns
+    -------
+    Kraken2ReportFormat
+        The merged kraken2 report format.
     '''
-    pass
+    if len(reports) == 1:
+        return reports[0]
+
+    merged: tuple[TreeNode | None, TreeNode | None] | None = None
+    while reports:
+        first = _report_df_to_tree(reports.pop().view(pd.DataFrame))
+        if merged is None:
+            second = _report_df_to_tree(reports.pop().view(pd.DataFrame))
+        else:
+            second = merged
+
+        merged = _merge_trees(first, second)
+
+    merged_report_df = _dump_tree_to_report(*merged)
+    merged_report = Kraken2ReportFormat()
+    merged_report_df.to_csv(
+        str(merged_report), sep='\t', header=False, index=False
+    )
+
+    return merged_report
 
 
 def _merge_outputs(
-    output_mapping: dict[str, Kraken2OutputFormat]
-) -> Kraken2OutputDirectoryFormat:
+    outputs: list[Kraken2OutputFormat]
+) -> Kraken2OutputFormat:
     '''
+    Merges two or more kraken2 outputs into a single output. Output files
+    are merged by concatenation.
+
+    Parameters
+    ----------
+    outputs : list[Kraken2OutputFormat]
+        Kraken2 outputs belonging to the same sample ID or mag ID.
+
+    Returns
+    -------
+        The merged kraken2 output format.
     '''
-    pass
+    merged_output = Kraken2OutputFormat()
+    while outputs:
+        with (
+            open(str(merged_output), 'a') as merged_fh,
+            open(str(outputs.pop()), 'r') as fh
+        ):
+            while buffer := fh.read(4096):
+                merged_fh.write(buffer)
+
+    return merged_output
 
 
 def _merge_trees(
