@@ -9,50 +9,80 @@ import importlib
 import platform
 
 from q2_quality_control.plugin_setup import (
-    filter_parameters, filter_parameter_descriptions
-)
-from qiime2.plugin import Metadata
-from q2_annotate.eggnog.types import (
-    EggnogHmmerIdmapDirectoryFmt, EggnogHmmerIdmapFileFmt, EggnogHmmerIdmap
-)
-from q2_annotate.busco.types import (
-    BUSCOResultsFormat, BUSCOResultsDirectoryFormat, BuscoDatabaseDirFmt,
-    BUSCOResults, BuscoDB
+    filter_parameter_descriptions,
+    filter_parameters,
 )
 from q2_types.bowtie2 import Bowtie2Index
-from q2_types.profile_hmms import ProfileHMM, MultipleProtein, PressedProtein
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.feature_data import (
-    FeatureData, Sequence, Taxonomy, ProteinSequence, SequenceCharacteristics
+    FeatureData,
+    ProteinSequence,
+    Sequence,
+    SequenceCharacteristics,
+    Taxonomy,
 )
-from q2_types.feature_table import (
-    FeatureTable, Frequency, PresenceAbsence, RelativeFrequency
-)
-from q2_types.per_sample_sequences import (
-    SequencesWithQuality, PairedEndSequencesWithQuality,
-    JoinedSequencesWithQuality, MAGs, Contigs
-)
-from q2_types.sample_data import SampleData
-from q2_types.feature_map import FeatureMap, MAGtoContigs
-from qiime2.core.type import (
-    Bool, Range, Int, Str, Float, List, Choices, Visualization, TypeMatch
-)
-from qiime2.core.type import (Properties, TypeMap)
-from qiime2.plugin import (Plugin, Citations)
-import q2_annotate._examples as ex
-import q2_annotate
 from q2_types.feature_data_mag import MAG
-from q2_types.genome_data import (
-    NOG, Orthologs, GenomeData, Loci, Genes, Proteins
+from q2_types.feature_map import FeatureMap, MAGtoContigs
+from q2_types.feature_table import (
+    FeatureTable,
+    Frequency,
+    PresenceAbsence,
+    RelativeFrequency,
 )
+from q2_types.genome_data import NOG, Genes, GenomeData, Loci, Orthologs, Proteins
 from q2_types.kaiju import KaijuDB
 from q2_types.kraken2 import (
-    Kraken2Reports, Kraken2Outputs, Kraken2DB, Kraken2DBReport
+    BrackenDB,
+    Kraken2DB,
+    Kraken2DBReport,
+    Kraken2Outputs,
+    Kraken2Reports,
 )
-from q2_types.kraken2 import BrackenDB
-from q2_types.per_sample_sequences import AlignmentMap
+from q2_types.per_sample_sequences import (
+    AlignmentMap,
+    Contigs,
+    JoinedSequencesWithQuality,
+    MAGs,
+    PairedEndSequencesWithQuality,
+    SequencesWithQuality,
+)
+from q2_types.profile_hmms import MultipleProtein, PressedProtein, ProfileHMM
 from q2_types.reference_db import (
-    ReferenceDB, Diamond, Eggnog, NCBITaxonomy, EggnogProteinSequences,
+    Diamond,
+    Eggnog,
+    EggnogProteinSequences,
+    NCBITaxonomy,
+    ReferenceDB,
+)
+from q2_types.sample_data import SampleData
+from qiime2.core.type import (
+    Bool,
+    Choices,
+    Float,
+    Int,
+    List,
+    Properties,
+    Range,
+    Str,
+    TypeMap,
+    TypeMatch,
+    Visualization,
+)
+from qiime2.plugin import Citations, Metadata, Plugin
+
+import q2_annotate
+import q2_annotate._examples as ex
+from q2_annotate.busco.types import (
+    BuscoDatabaseDirFmt,
+    BuscoDB,
+    BUSCOResults,
+    BUSCOResultsDirectoryFormat,
+    BUSCOResultsFormat,
+)
+from q2_annotate.eggnog.types import (
+    EggnogHmmerIdmap,
+    EggnogHmmerIdmapDirectoryFmt,
+    EggnogHmmerIdmapFileFmt,
 )
 
 citations = Citations.load('citations.bib', package='q2_annotate')
@@ -1323,10 +1353,9 @@ kaiju_param_descriptions = {
 plugin.methods.register_function(
     function=q2_annotate.kaiju._classify_kaiju,
     inputs={
-        "seqs": SampleData[
-            SequencesWithQuality | PairedEndSequencesWithQuality | 
-            JoinedSequencesWithQuality] | SampleData[Contigs] | FeatureData[MAG] | 
-                SampleData[MAGs],
+        "seqs": (SampleData[SequencesWithQuality | PairedEndSequencesWithQuality |
+                 JoinedSequencesWithQuality] | SampleData[Contigs] | FeatureData[MAG] |
+                 SampleData[MAGs]),
         "db": KaijuDB,
     },
     parameters=kaiju_params,
@@ -1350,10 +1379,9 @@ plugin.methods.register_function(
 plugin.pipelines.register_function(
     function=q2_annotate.kaiju.classify_kaiju,
     inputs={
-        "seqs": SampleData[
-            SequencesWithQuality | PairedEndSequencesWithQuality | 
-            JoinedSequencesWithQuality] | SampleData[Contigs] | FeatureData[MAG] | 
-                SampleData[MAGs],
+        "seqs": (SampleData[SequencesWithQuality | PairedEndSequencesWithQuality |
+                 JoinedSequencesWithQuality] | SampleData[Contigs] | FeatureData[MAG] |
+                 SampleData[MAGs]),
         "db": KaijuDB,
     },
     parameters={**kaiju_params, **partition_params},
