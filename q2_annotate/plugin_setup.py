@@ -1369,9 +1369,9 @@ plugin.methods.register_function(
     },
     parameter_descriptions=kaiju_param_descriptions,
     output_descriptions={
-        "abundances": "Read abundances.", "taxonomy": "Linked taxonomy."
+        "abundances": "Sequence abundances.", "taxonomy": "Linked taxonomy."
     },
-    name="Classify reads using Kaiju.",
+    name="Classify sequences using Kaiju.",
     description="This method uses Kaiju to perform taxonomic classification.",
     citations=[citations["menzel2016"]],
 )
@@ -1398,9 +1398,9 @@ plugin.pipelines.register_function(
         **partition_param_descriptions
     },
     output_descriptions={
-        "abundances": "Read abundances.", "taxonomy": "Linked taxonomy."
+        "abundances": "Sequence abundances.", "taxonomy": "Linked taxonomy."
     },
-    name="Classify reads using Kaiju.",
+    name="Classify sequences using Kaiju.",
     description="This method uses Kaiju to perform taxonomic classification.",
     citations=[citations["menzel2016"]],
 )
