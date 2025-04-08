@@ -24,11 +24,11 @@ requirements:
   - metabat2
   - pandas
   - parameterized
-  - qiime2 {{ qiime2_epoch }}.*
-  - q2-types {{ qiime2_epoch }}.*
-  - q2templates {{ qiime2_epoch }}.*
-  - q2-assembly {{ qiime2_epoch }}.*
-  - q2-quality-control {{ qiime2_epoch }}.*
+  - qiime2 >={{ qiime2 }}
+  - q2-types >={{ q2_types }}
+  - q2templates >={{ q2templates }}
+  - q2-assembly >={{ q2_assembly }}
+  - q2-quality-control >={{ q2_quality_control }}
   - samtools
   - seqtk
   - tqdm

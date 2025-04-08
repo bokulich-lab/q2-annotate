@@ -9,7 +9,7 @@ import pandas as pd
 import qiime2
 from qiime2.plugin.testing import TestPluginBase
 
-from q2_annotate.abundance.abundance import rpkm, tpm, estimate_mag_abundance
+from q2_annotate.abundance.abundance import rpkm, tpm, estimate_abundance
 from q2_types.per_sample_sequences import BAMDirFmt
 
 
@@ -57,9 +57,9 @@ class TestAbundance(TestPluginBase):
         pd.testing.assert_series_equal(obs, exp)
 
     def test_estimate_mag_abundance(self):
-        obs = estimate_mag_abundance(
+        obs = estimate_abundance(
             maps=self.mapped_reads.view(BAMDirFmt),
-            mag_lengths=self.mag_length_df,
+            feature_lengths=self.mag_length_df,
             metric='rpkm'
         )
         exp = pd.DataFrame({
@@ -73,7 +73,7 @@ class TestAbundance(TestPluginBase):
                 name="sample-id"
             )
         )
-        exp.columns.name = "mag-id"
+        exp.columns.name = "feature-id"
         pd.testing.assert_frame_equal(obs, exp, check_exact=False, rtol=0.1)
 
         # just double-check that we have what we expect:
@@ -96,7 +96,7 @@ class TestAbundance(TestPluginBase):
                 name="sample-id"
             )
         )
-        exp_rel.columns.name = "mag-id"
+        exp_rel.columns.name = "feature-id"
         pd.testing.assert_frame_equal(
             obs_rel, exp_rel, check_exact=False, rtol=0.1
         )

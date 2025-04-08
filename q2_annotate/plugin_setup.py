@@ -716,7 +716,8 @@ plugin.pipelines.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci])
     ],
     name='Run eggNOG search using diamond aligner',
     description="This method performs the steps by which we find our "
@@ -760,7 +761,8 @@ plugin.pipelines.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci]),
     ],
     name='Run eggNOG search using HMMER aligner',
     description="This method uses HMMER to find possible target sequences "
@@ -780,11 +782,11 @@ plugin.methods.register_function(
     },
     parameters={
         'num_cpus': Int,
-        'db_in_memory': Bool,
+        'db_in_memory': Bool
     },
     input_descriptions={
         'sequences': 'Sequences to be searched for ortholog hits.',
-        'diamond_db': 'Diamond database.',
+        'diamond_db': 'Diamond database.'
     },
     parameter_descriptions={
         'num_cpus': 'Number of CPUs to utilize. \'0\' will '
@@ -796,12 +798,14 @@ plugin.methods.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci])
     ],
     output_descriptions={
         'eggnog_hits': 'BLAST6-like table(s) describing the identified '
                        'orthologs. One table per sample or MAG in the input.',
-        'table': 'Feature table with counts of orthologs per sample/MAG.'
+        'table': 'Feature table with counts of orthologs per sample/MAG.',
+        'loci': 'Loci of the identified orthologs.'
     },
     name='Run eggNOG search using Diamond aligner',
     description="This method performs the steps by which we find our "
@@ -846,12 +850,14 @@ plugin.methods.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci])
     ],
     output_descriptions={
         'eggnog_hits': 'BLAST6-like table(s) describing the identified '
                        'orthologs. One table per sample or MAG in the input.',
-        'table': 'Feature table with counts of orthologs per sample/MAG.'
+        'table': 'Feature table with counts of orthologs per sample/MAG.',
+        'loci': 'Loci of the identified orthologs.'
     },
     name='Run eggNOG search using HMMER aligner',
     description='This method performs the steps by which we find our '
@@ -1595,10 +1601,10 @@ M_abundance_in, P_abundance_out = TypeMap({
 })
 
 plugin.methods.register_function(
-    function=q2_annotate.abundance.estimate_mag_abundance,
+    function=q2_annotate.abundance.estimate_abundance,
     inputs={
-        "maps": FeatureData[AlignmentMap],
-        "mag_lengths":
+        "maps": FeatureData[AlignmentMap] | SampleData[AlignmentMap],
+        "feature_lengths":
             FeatureData[SequenceCharacteristics % Properties("length")],
     },
     parameters={
@@ -1613,12 +1619,13 @@ plugin.methods.register_function(
         ("abundances", FeatureTable[Frequency % P_abundance_out]),
     ],
     input_descriptions={
-        "maps": "Bowtie2 alignment maps between reads and MAGs for which "
-                "the abundance should be estimated.",
-        "mag_lengths": "Table containing length of every MAG.",
+        "maps": "Bowtie2 alignment maps between reads and features "
+                "for which the abundance should be estimated.",
+        "feature_lengths": "Table containing length of every "
+                           "feature (MAG/contig).",
     },
     parameter_descriptions={
-        "metric": "Metric to be used as a proxy of MAG abundance.",
+        "metric": "Metric to be used as a proxy of feature abundance.",
         "min_mapq": "Minimum mapping quality.",
         "min_query_len": "Minimum query length.",
         "min_base_quality": "Minimum base quality.",
@@ -1626,11 +1633,11 @@ plugin.methods.register_function(
         "threads": "Number of threads to pass to samtools."
     },
     output_descriptions={
-        "abundances": "MAG abundances.",
+        "abundances": "Feature abundances.",
     },
-    name="Estimate MAG abundance.",
-    description="This method estimates MAG abundances by mapping the "
-                "reads to MAGs and calculating respective metric values"
+    name="Estimate feature (MAG/contig) abundance.",
+    description="This method estimates MAG/contig abundances by mapping the "
+                "reads to them and calculating respective metric values"
                 "which are then used as a proxy for the frequency.",
     citations=[],
 )
