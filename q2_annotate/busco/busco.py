@@ -24,7 +24,7 @@ from q2_annotate.busco.utils import (
     _parse_busco_params, _collect_summaries, _rename_columns,
     _parse_df_columns, _partition_dataframe, _calculate_summary_stats,
     _get_feature_table, _cleanup_bootstrap, _get_mag_lengths,
-    _validate_lineage_dataset_input
+    _validate_lineage_dataset_input, _calculate_completeness_contamination
 )
 from q2_annotate._utils import _process_common_input_params, run_command
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
@@ -305,6 +305,9 @@ def evaluate_busco(
         results.append(busco_result)
 
     collated_results, = collate_busco_results(results)
+
+    collated_results = _calculate_completeness_contamination(collated_results)
+
     visualization, = _visualize_busco(collated_results)
 
     return collated_results, visualization

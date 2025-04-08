@@ -268,3 +268,9 @@ def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
             seq = skbio.io.read(mag_fp, format="fasta")
             lengths[mag_id] = sum([len(s) for s in seq])
         return pd.Series(lengths, name="length")
+
+def _calculate_completeness_contamination(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate completeness and contamination columns from BUSCO results."""
+    df["completeness"] = 100 - df["missing"]
+    df["contamination"] = 100 * (df["duplicated"] / df["complete"])
+    return df

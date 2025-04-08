@@ -16,7 +16,7 @@ class BUSCOResultsFormat(model.TextFileFormat):
         "mag_id", "sample_id", "input_file", "dataset", "complete",
         "single", "duplicated", "fragmented", "missing", "n_markers",
         "scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds",
-        "length"
+        "length", "completeness", "contamination"
     ]
 
     def _validate(self, n_records=None):

@@ -12,7 +12,8 @@ from qiime2.plugin.testing import TestPluginBase
 from q2_annotate.busco.utils import (
     _parse_busco_params, _collect_summaries, _parse_df_columns,
     _partition_dataframe, _get_feature_table, _calculate_summary_stats,
-    _get_mag_lengths, _validate_lineage_dataset_input
+    _get_mag_lengths, _validate_lineage_dataset_input,
+    _calculate_completeness_contamination
 )
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
@@ -365,3 +366,21 @@ class TestBUSCOUtils(TestPluginBase):
                 "auto_lineage_prok": False
             }
         )
+
+    def test_calculate_completeness_contamination(self):
+        data = {
+            "complete": [87.9],
+            "duplicated": [1.6],
+            "missing": [7.3]
+        }
+        df = pd.DataFrame(data)
+
+        result = _calculate_completeness_contamination(df)
+
+        expected_completeness = 100 - 7.3  # 92.7
+        expected_contamination = 100 * (1.6 / 87.9)  # ≈ 1.82
+
+        self.assertAlmostEqual(result.loc[0, "completeness"], expected_completeness,
+                               places=2)
+        self.assertAlmostEqual(result.loc[0, "contamination"], expected_contamination,
+                               places=2)
