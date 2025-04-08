@@ -53,21 +53,20 @@ def _merge_kraken2_results(
         else:
             file_collection = merged_formats.outputs
 
-        for sample_id in mapping:
-            if mags:
-                for filename, format in mapping[sample_id].items():
-                    file_collection.write_data(
-                        view=format,
-                        view_type=Format,
-                        sample_id=sample_id,
-                        mag_id=filename
-                    )
-            else:
-                formats = mapping[sample_id]
-                merged_format = merger(formats)
+        if mags:
+            for filename, format in mapping[sample_id].items():
                 file_collection.write_data(
-                    view=merged_format, view_type=Format, sample_id=sample_id
+                    view=format,
+                    view_type=Format,
+                    sample_id=sample_id,
+                    mag_id=filename
                 )
+        else:
+            formats = mapping[sample_id]
+            merged_format = merger(formats)
+            file_collection.write_data(
+                view=merged_format, view_type=Format, sample_id=sample_id
+            )
 
     for sample_id in report_mapping:
         _merge_formats(
@@ -121,7 +120,12 @@ def _condense_formats(
     ------
     ValueError
         If two MAGs with the same uuid are detected.
+    ValueError
+        If two reports with the same sample ID are to be merged but the
+        minimizers columns are present in the reports.
     '''
+    minimizers_present = _check_for_minimizers(reports[0])
+
     chained_reports = []
     for report in reports:
         for sample_id, value in report.file_dict().items():
@@ -153,6 +157,14 @@ def _condense_formats(
             format = Format(filepath, mode='r')
             if sample_id not in mapping:
                 mapping[sample_id] = [format]
+            elif minimizers_present:
+                msg = (
+                    'Two or more reports with the same sample ID were '
+                    'attempted to be merged but the option to capture minimzer '
+                    'data was enabled. It is not possible to merge kraken2 '
+                    'reports that contain minimizer information.'
+                )
+                raise ValueError(msg)
             else:
                 mapping[sample_id].append(format)
 
@@ -169,6 +181,28 @@ def _condense_formats(
         )
 
     return report_mapping, output_mapping
+
+
+def _check_for_minimizers(reports: Kraken2ReportDirectoryFormat) -> bool:
+    '''
+    Checks whether the reports being processed include the optional minimizer
+    columns. This determines whether reports with a shared sample ID can be
+    merged.
+
+    Parameters
+    ----------
+    reports : Kraken2ReportDirectoryFormat
+        The kraken2 reports to examine for minimzer columns.
+
+    Returns
+    -------
+    bool
+        Wether minimizer columns are present in the reports.
+    '''
+    _, report = list(reports.reports.iter_views(Kraken2ReportFormat))[0]
+
+    return 'n_read_minimizers' in report.view(pd.DataFrame)
+
 
 
 def _merge_reports(
@@ -226,6 +260,9 @@ def _merge_outputs(
     -------
         The merged kraken2 output format.
     '''
+    if len(outputs) == 1:
+        return outputs[0]
+
     merged_output = Kraken2OutputFormat()
     while outputs:
         with (

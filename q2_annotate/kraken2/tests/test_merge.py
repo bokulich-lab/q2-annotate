@@ -281,3 +281,69 @@ class TestResultMerging(TestPluginBase):
             _merge_kraken2_results(
                 [first_reports, second_reports], [first_outputs, second_outputs]
             )
+
+    def test_merging_with_minimizers_and_sample_id_overlap_errors(self):
+        reports_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'minimizers' / 'reports'
+        )
+        outputs_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'minimizers' / 'outputs'
+        )
+        first_reports = Kraken2ReportDirectoryFormat(
+            Path(reports_dir) / 'artifact-1', mode='r'
+        )
+        second_reports = Kraken2ReportDirectoryFormat(
+            Path(reports_dir) / 'artifact-2', mode='r'
+        )
+        first_outputs = Kraken2OutputDirectoryFormat(
+            Path(outputs_dir) / 'artifact-1', mode='r'
+        )
+        second_outputs = Kraken2OutputDirectoryFormat(
+            Path(outputs_dir) / 'artifact-2', mode='r'
+        )
+
+        with self.assertRaisesRegex(ValueError, 'option to capture minimzer'):
+            _merge_kraken2_results(
+                [first_reports, second_reports], [first_outputs, second_outputs]
+            )
+
+    def test_merging_with_minimzer_and_no_sample_id_overlap_succeeds(self):
+        reports_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'minimizers' / 'reports'
+        )
+        outputs_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'minimizers' / 'outputs'
+        )
+        first_reports = Kraken2ReportDirectoryFormat(
+            Path(reports_dir) / 'artifact-1', mode='r'
+        )
+        second_reports = Kraken2ReportDirectoryFormat(
+            Path(reports_dir) / 'artifact-3', mode='r'
+        )
+        first_outputs = Kraken2OutputDirectoryFormat(
+            Path(outputs_dir) / 'artifact-1', mode='r'
+        )
+        second_outputs = Kraken2OutputDirectoryFormat(
+            Path(outputs_dir) / 'artifact-3', mode='r'
+        )
+
+        expected_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'minimizers' / 'expected'
+        )
+        exp_reports = Kraken2ReportDirectoryFormat(
+            Path(expected_dir) / 'reports', mode='r'
+        )
+        exp_outputs = Kraken2OutputDirectoryFormat(
+            Path(expected_dir) / 'outputs', mode='r'
+        )
+
+        obs_reports, obs_outputs = _merge_kraken2_results(
+            [first_reports, second_reports], [first_outputs, second_outputs]
+        )
+
+        self._assert_directory_formats_equal(
+            obs_reports, exp_reports, type='reports'
+        )
+        self._assert_directory_formats_equal(
+            obs_outputs, exp_outputs, type='outputs'
+        )

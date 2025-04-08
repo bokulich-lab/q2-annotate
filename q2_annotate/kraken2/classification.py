@@ -81,28 +81,9 @@ def classify_kraken2(
         SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
         FeatureData[MAGs], SampleData[MAGs]. Note that the list may contain
         only one of these types.
-    kraken2_db : Kraken2DBReportDirectoryFormat
-        The kraken2 database.
-    threads : int
-        The number of threads to request.
-    confidence : float
-        The confidence constraint to use in the classification algorithm. See
-        the kraken2 documentation for more details.
-    minimum_base_quality : int
-        Base calls beneath this value cause any minimizers containing it to
-        become unclassified due to low quality.
-    memory_mapping : bool
-        Whether to memory map the database.
-    minimum_hit_groups : int
-        See the kraken2 documentation.
-    quick : bool
-        If enabled, for each query sequence, classifiction is cut short after
-        the first minimizer is classified.
-    report_minimizer_data : bool
-        Whether to include the number of minimizers and the number of unique
-        minimizers mapped to each taxon in the report.
-    num_partitions : int
-        The number of partitions to use when using qiime2 action parallelism.
+    ...
+        See plugin_setup.py for an expalanation of the remainder of the
+        parameters.
 
     Returns
     -------
@@ -114,13 +95,13 @@ def classify_kraken2(
     ValueError
         If more than one type of input occurs in the input list.
     '''
-    input_types = [str(seq.type) for seq in seqs]
-    if len(set(input_types)) != 1:
+    input_types = set( [str(seq.type) for seq in seqs] )
+    if len(input_types) != 1:
         msg = (
             "When providing multiple input artifacts to merge on a "
             "per-sample ID basis, please ensure that all artifacts are of "
             "the same type. The multiple types encountered were: "
-            f"{set(input_types)}."
+            f"{input_types}."
         )
         raise ValueError(msg)
 
