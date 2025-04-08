@@ -181,7 +181,7 @@ def _merge_reports(
     Parameters
     ----------
     reports : list[Kraken2ReportFormat]
-        Kraken2 reports belonging to the same sample ID or mag ID.
+        Kraken2 reports belonging to the same sample ID.
 
     Returns
     -------
@@ -220,7 +220,7 @@ def _merge_outputs(
     Parameters
     ----------
     outputs : list[Kraken2OutputFormat]
-        Kraken2 outputs belonging to the same sample ID or mag ID.
+        Kraken2 outputs belonging to the same sample ID.
 
     Returns
     -------
