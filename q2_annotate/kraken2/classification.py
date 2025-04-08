@@ -198,8 +198,9 @@ def classify_kraken2_helper(
             # check for empty fastq file
             try:
                 for f in fps:
-                    pd.read_csv(f,compression='gzip')
-            except pd.errors.EmptyDataError:
+                    #empty gzipped files have a size of 20 bytes
+                    assert os.path.getsize(f)>20
+            except AssertionError:
                 print(f"At least one of the files for sample {_sample} is empty. Classification will not be run on this sample.")
                 with open(report_fp,'a') as f:
                     print("0.0\t0\t0\tUnclassified\t0\tUnclassified",file=f)
