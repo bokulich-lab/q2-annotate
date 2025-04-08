@@ -26,8 +26,7 @@ def _merge_kraken2_results(
     outputs: list[Kraken2OutputDirectoryFormat]
 ) -> tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]:
     '''
-    Merges kraken2 reports and outputs into a single report and format per
-    unique sample id.
+    Merges kraken2 reports and outputs on a per-sample-id basis.
 
     Parameters
     ----------
@@ -49,36 +48,26 @@ def _merge_kraken2_results(
     report_mapping, output_mapping = _condense_formats(reports, outputs, mags)
 
     def _merge_formats(sample_id, merged_formats, mapping, merger, Format):
-        for sample_id in report_mapping:
-            if mags:
-                for filename, formats in mapping[sample_id].items():
-                    merged_format = merger(formats)
-                    if Format == Kraken2ReportFormat:
-                        merged_formats.reports.write_data(
-                            merged_format,
-                            Format,
-                            sample_id=sample_id,
-                            mag_id=filename
-                        )
-                    else:
-                        merged_formats.outputs.write_data(
-                            merged_format,
-                            Format,
-                            sample_id=sample_id,
-                            mag_id=filename
-                        )
+        if Format == Kraken2ReportFormat:
+            file_collection = merged_formats.reports
+        else:
+            file_collection = merged_formats.outputs
 
+        for sample_id in mapping:
+            if mags:
+                for filename, format in mapping[sample_id].items():
+                    file_collection.write_data(
+                        view=format,
+                        view_type=Format,
+                        sample_id=sample_id,
+                        mag_id=filename
+                    )
             else:
                 formats = mapping[sample_id]
                 merged_format = merger(formats)
-                if Format == Kraken2ReportFormat:
-                    merged_formats.reports.write_data(
-                        merged_format, Format, sample_id=sample_id
-                    )
-                else:
-                    merged_formats.outputs.write_data(
-                        merged_format, Format, sample_id=sample_id
-                    )
+                file_collection.write_data(
+                    view=merged_format, view_type=Format, sample_id=sample_id
+                )
 
     for sample_id in report_mapping:
         _merge_formats(
@@ -108,7 +97,10 @@ def _condense_formats(
     Condenses multiple report and output directory formats into a single
     output mapping and a single report mapping. The structure is
     sample_id -> list[format] for reads/contigs and
-    sample_id -> {filename -> list[format]} for mags.
+    sample_id -> {filename -> format} for mags.
+
+    Note that MAGs will never be merged on a per-MAG basis, only on a
+    per-sample-id basis.
 
     Parameters
     ----------
@@ -124,6 +116,11 @@ def _condense_formats(
     tuple[dict, dict]
         A tuple of mappings as described above. The first contains the kraken2
         report mapping and the second the kraken2 output mapping.
+
+    Raises
+    ------
+    ValueError
+        If two MAGs with the same uuid are detected.
     '''
     chained_reports = []
     for report in reports:
@@ -141,9 +138,16 @@ def _condense_formats(
             for filename, filepath in filename_to_filepath.items():
                 format = Format(filepath, mode='r')
                 if sample_id not in mapping:
-                    mapping[sample_id] = {filename: [format]}
+                    mapping[sample_id] = {filename: format}
                 else:
-                    mapping[sample_id][filename].append(format)
+                    if filename in mapping[sample_id]:
+                        msg = (
+                            'Two MAGs with the same uuid were detected '
+                            f'Duplicated uuid: {filename}.'
+                        )
+                        raise ValueError(msg)
+
+                    mapping[sample_id][filename] = format
         else:
             filepath = value
             format = Format(filepath, mode='r')

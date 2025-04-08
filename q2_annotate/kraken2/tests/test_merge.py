@@ -111,39 +111,6 @@ class TestTreeMerging(TestPluginBase):
 class TestResultMerging(TestPluginBase):
     package = "q2_annotate.kraken2.tests"
 
-    def setUp(self):
-        super().setUp()
-
-        reports_fp = self.get_data_path(
-            Path('merge') / 'result-merging' / 'reports'
-        )
-        outputs_fp = self.get_data_path(
-            Path('merge') / 'result-merging' / 'outputs'
-        )
-        self.first_reports = Kraken2ReportDirectoryFormat(
-            Path(reports_fp) / 'artifact-1', mode='r'
-        )
-        self.second_reports = Kraken2ReportDirectoryFormat(
-            Path(reports_fp) / 'artifact-2', mode='r'
-        )
-
-        self.first_outputs = Kraken2OutputDirectoryFormat(
-            Path(outputs_fp) / 'artifact-1', mode='r'
-        )
-        self.second_outputs = Kraken2OutputDirectoryFormat(
-            Path(outputs_fp) / 'artifact-2', mode='r'
-        )
-
-        expected_fp = self.get_data_path(
-            Path('merge') / 'result-merging' / 'expected'
-        )
-        self.expected_reports = Kraken2ReportDirectoryFormat(
-            Path(expected_fp) / 'reports', mode='r'
-        )
-        self.expected_outputs = Kraken2OutputDirectoryFormat(
-            Path(expected_fp) / 'outputs', mode='r'
-        )
-
     def _assert_reports_equal(
         self, first: Kraken2ReportFormat, second: Kraken2ReportFormat
     ):
@@ -207,15 +174,110 @@ class TestResultMerging(TestPluginBase):
                 second_fp = second_file_dict[sample_id]
                 self._assert_formats_equal(first_fp, second_fp, type)
 
-    def test_result_merging(self):
+    def test_result_merging_reads(self):
+        reports_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'reads' / 'reports'
+        )
+        outputs_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'reads' / 'outputs'
+        )
+        first_reports = Kraken2ReportDirectoryFormat(
+            Path(reports_dir) / 'artifact-1', mode='r'
+        )
+        second_reports = Kraken2ReportDirectoryFormat(
+            Path(reports_dir) / 'artifact-2', mode='r'
+        )
+
+        first_outputs = Kraken2OutputDirectoryFormat(
+            Path(outputs_dir) / 'artifact-1', mode='r'
+        )
+        second_outputs = Kraken2OutputDirectoryFormat(
+            Path(outputs_dir) / 'artifact-2', mode='r'
+        )
+
+        expected_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'reads' / 'expected'
+        )
+        exp_reports = Kraken2ReportDirectoryFormat(
+            Path(expected_dir) / 'reports', mode='r'
+        )
+        exp_outputs = Kraken2OutputDirectoryFormat(
+            Path(expected_dir) / 'outputs', mode='r'
+        )
+
         obs_reports, obs_outputs = _merge_kraken2_results(
-            [self.first_reports, self.second_reports],
-            [self.first_outputs, self.second_outputs]
+            [first_reports, second_reports], [first_outputs, second_outputs]
         )
 
         self._assert_directory_formats_equal(
-            obs_reports, self.expected_reports, type='reports'
+            obs_reports, exp_reports, type='reports'
         )
         self._assert_directory_formats_equal(
-            obs_outputs, self.expected_outputs, type='outputs'
+            obs_outputs, exp_outputs, type='outputs'
         )
+
+    def test_result_merging_mags(self):
+        reports_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'mags' / 'reports'
+        )
+        outputs_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'mags' / 'outputs'
+        )
+        first_reports = Kraken2ReportDirectoryFormat(
+            Path(reports_dir) / 'artifact-1', mode='r'
+        )
+        second_reports = Kraken2ReportDirectoryFormat(
+            Path(reports_dir) / 'artifact-2', mode='r'
+        )
+        first_outputs = Kraken2OutputDirectoryFormat(
+            Path(outputs_dir) / 'artifact-1', mode='r'
+        )
+        second_outputs = Kraken2OutputDirectoryFormat(
+            Path(outputs_dir) / 'artifact-2', mode='r'
+        )
+
+        expected_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'mags' / 'expected'
+        )
+        exp_reports = Kraken2ReportDirectoryFormat(
+            Path(expected_dir) / 'reports', mode='r'
+        )
+        exp_outputs = Kraken2OutputDirectoryFormat(
+            Path(expected_dir) / 'outputs', mode='r'
+        )
+
+        obs_reports, obs_outputs = _merge_kraken2_results(
+            [first_reports, second_reports], [first_outputs, second_outputs]
+        )
+
+        self._assert_directory_formats_equal(
+            obs_reports, exp_reports, type='reports', mags=True
+        )
+        self._assert_directory_formats_equal(
+            obs_outputs, exp_outputs, type='outputs', mags=True
+        )
+
+    def test_duplicate_mag_ids_cause_error(self):
+        reports_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'mags' / 'reports'
+        )
+        outputs_dir = self.get_data_path(
+            Path('merge') / 'result-merging' / 'mags' / 'outputs'
+        )
+        first_reports = Kraken2ReportDirectoryFormat(
+            Path(reports_dir) / 'artifact-1', mode='r'
+        )
+        second_reports = Kraken2ReportDirectoryFormat(
+            Path(reports_dir) / 'artifact-1', mode='r'
+        )
+        first_outputs = Kraken2OutputDirectoryFormat(
+            Path(outputs_dir) / 'artifact-1', mode='r'
+        )
+        second_outputs = Kraken2OutputDirectoryFormat(
+            Path(outputs_dir) / 'artifact-1', mode='r'
+        )
+
+        with self.assertRaisesRegex(ValueError, 'Two MAGs with the same uuid'):
+            _merge_kraken2_results(
+                [first_reports, second_reports], [first_outputs, second_outputs]
+            )
