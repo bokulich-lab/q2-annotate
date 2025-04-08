@@ -70,24 +70,27 @@ def classify_kraken2(
 ):
     '''
     '''
+    _merge_kraken2_results = ctx.get_action(
+        "q2_annotate", "_merge_kraken2_results"
+    )
+
     kwargs = {
         k: v for k, v in locals().items()
         if k not in ["seqs", "kraken2_db", "ctx", "num_partitions"]
     }
 
-    # classify sequences
     reports = []
     outputs = []
     for seqs_artifact in seqs:
-        single_art_reports, single_art_outputs = _classify_single_artifact(
+        artifact_reports, artifact_outputs = _classify_single_artifact(
             ctx, seqs, kraken2_db, num_partitions, kwargs
         )
-        reports.append(single_art_reports)
-        outputs.append(single_art_outputs)
+        reports.append(artifact_reports)
+        outputs.append(artifact_outputs)
 
-    # merge reports, outputs
+    (reports, outputs), = _merge_kraken2_results(reports, outputs)
 
-    # return
+    return reports, outputs
 
 
 def _classify_single_artifact(ctx, seqs, kraken2_db, num_partitions, kwargs):
@@ -113,7 +116,7 @@ def _classify_single_artifact(ctx, seqs, kraken2_db, num_partitions, kwargs):
     Returns
     -------
     tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]
-        The kraken2 report and output files.
+        The kraken2 reports and outputs directory formats.
     '''
     _classify_kraken2 = ctx.get_action("annotate", "_classify_kraken2")
     collate_kraken2_reports = ctx.get_action(

@@ -24,7 +24,7 @@ from q2_annotate.kraken2.filter import (
 def _merge_kraken2_results(
     reports: list[Kraken2ReportDirectoryFormat],
     outputs: list[Kraken2OutputDirectoryFormat]
-) -> tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]:
+) -> (Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat):
     '''
     Merges kraken2 reports and outputs on a per-sample-id basis.
 

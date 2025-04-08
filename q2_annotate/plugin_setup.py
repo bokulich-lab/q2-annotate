@@ -1924,6 +1924,51 @@ plugin.methods.register_function(
                 "reports with 100% unclassified reads.",
 )
 
+KRAKEN2_REPORTS_T = TypeMatch([
+    SampleData[Kraken2Reports % Properties('reads')],
+    SampleData[Kraken2Reports % Properties('contigs')],
+    SampleData[Kraken2Reports % Properties('mags')],
+    FeatureData[Kraken2Reports % Properties('mags')],
+])
+KRAKEN2_OUTPUTS_T = TypeMatch([
+    SampleData[Kraken2Outputs % Properties('reads')],
+    SampleData[Kraken2Outputs % Properties('contigs')],
+    SampleData[Kraken2Outputs % Properties('mags')],
+    FeatureData[Kraken2Outputs % Properties('mags')],
+])
+plugin.methods.register_function(
+    function=q2_annotate.kraken2._merge_kraken2_results,
+    inputs={
+        "reports": List[KRAKEN2_REPORTS_T],
+        "outputs": List[KRAKEN2_OUTPUTS_T]
+    },
+    parameters={},
+    outputs={
+        "merged_reports": KRAKEN2_REPORTS_T,
+        "merged_outputs": KRAKEN2_OUTPUTS_T
+    },
+    input_descriptions={
+        "reports": (
+            "Multiple kraken2 reports artifacts to merge on a per-sample ID "
+            "basis."
+        ),
+        "outputs": (
+            "Multiple kraken2 outputs artifacts to merge on a per-sample ID "
+            "basis."
+        ),
+    },
+    parameter_descriptions={},
+    output_descriptions={
+        "merged_reports": "The merged kraken2 reports.",
+        "merged_outputs": "The merged_kraken2 outputs.",
+    },
+    name="Merge kraken2 reports and outputs.",
+    description=(
+        "Merge multiple kraken2 reports and outputs artifacts on a "
+        "per-sample ID basis."
+    )
+)
+
 plugin.register_semantic_types(BUSCOResults, BuscoDB)
 plugin.register_formats(
     BUSCOResultsFormat, BUSCOResultsDirectoryFormat, BuscoDatabaseDirFmt
