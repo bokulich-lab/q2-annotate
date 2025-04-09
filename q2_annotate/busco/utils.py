@@ -269,10 +269,11 @@ def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
             lengths[mag_id] = sum([len(s) for s in seq])
         return pd.Series(lengths, name="length")
 
-def _validate_parameters(lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok):
+def _validate_parameters(lineage_dataset, auto_lineage, 
+                         auto_lineage_euk, auto_lineage_prok):
     if all(value is None for value in locals().values()):
         raise ValueError(
-            "At least one of these parameters must be provided: "
-            "`lineage-dataset`, `auto-lineage`, `auto-lineage_euk`, "
-            "`auto_lineage-prok`."
+            "At least one of these parameters must be provided/set to True: "
+            "'lineage-dataset', 'auto-lineage', 'auto-lineage_euk', "
+            "'auto_lineage-prok'."
         )
