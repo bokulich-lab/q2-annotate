@@ -711,7 +711,8 @@ plugin.pipelines.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci])
     ],
     name='Run eggNOG search using diamond aligner',
     description="This method performs the steps by which we find our "
@@ -755,7 +756,8 @@ plugin.pipelines.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci]),
     ],
     name='Run eggNOG search using HMMER aligner',
     description="This method uses HMMER to find possible target sequences "
@@ -775,11 +777,11 @@ plugin.methods.register_function(
     },
     parameters={
         'num_cpus': Int,
-        'db_in_memory': Bool,
+        'db_in_memory': Bool
     },
     input_descriptions={
         'sequences': 'Sequences to be searched for ortholog hits.',
-        'diamond_db': 'Diamond database.',
+        'diamond_db': 'Diamond database.'
     },
     parameter_descriptions={
         'num_cpus': 'Number of CPUs to utilize. \'0\' will '
@@ -791,12 +793,14 @@ plugin.methods.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci])
     ],
     output_descriptions={
         'eggnog_hits': 'BLAST6-like table(s) describing the identified '
                        'orthologs. One table per sample or MAG in the input.',
-        'table': 'Feature table with counts of orthologs per sample/MAG.'
+        'table': 'Feature table with counts of orthologs per sample/MAG.',
+        'loci': 'Loci of the identified orthologs.'
     },
     name='Run eggNOG search using Diamond aligner',
     description="This method performs the steps by which we find our "
@@ -841,12 +845,14 @@ plugin.methods.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci])
     ],
     output_descriptions={
         'eggnog_hits': 'BLAST6-like table(s) describing the identified '
                        'orthologs. One table per sample or MAG in the input.',
-        'table': 'Feature table with counts of orthologs per sample/MAG.'
+        'table': 'Feature table with counts of orthologs per sample/MAG.',
+        'loci': 'Loci of the identified orthologs.'
     },
     name='Run eggNOG search using HMMER aligner',
     description='This method performs the steps by which we find our '
