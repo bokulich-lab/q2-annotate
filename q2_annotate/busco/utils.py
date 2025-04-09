@@ -5,6 +5,7 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import glob
 import json
 import os
 import warnings
@@ -213,13 +214,15 @@ def _rename_columns(df):
         "Missing": "missing", "n_markers": "n_markers",
         "Scaffold N50": "scaffold_n50", "Contigs N50": "contigs_n50",
         "Percent gaps": "percent_gaps", "Number of scaffolds": "scaffolds",
-        "sample_id": "sample_id"
+        "sample_id": "sample_id", "completeness": "completeness",
+        "contamination": "contamination"
     }
 
     cols_reshuffled = [
         "mag_id", "sample_id", "input_file", "dataset", "complete",
         "single", "duplicated", "fragmented", "missing", "n_markers",
         "scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds",
+        "completeness", "contamination"
     ]
 
     df = df.rename(columns=cols, inplace=False)
@@ -269,8 +272,46 @@ def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
             lengths[mag_id] = sum([len(s) for s in seq])
         return pd.Series(lengths, name="length")
 
-def _calculate_completeness_contamination(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate completeness and contamination columns from BUSCO results."""
-    df["completeness"] = 100 - df["missing"]
-    df["contamination"] = 100 * (df["duplicated"] / df["complete"])
-    return df
+
+def _compute_completeness_contamination(row, base_path):
+    """
+        Compute BUSCO completeness and contamination from a JSON result file.
+
+        This function constructs the path to a BUSCO output JSON file based on
+        the sample ID and input file name provided in a DataFrame row. It reads
+        the file, extracts relevant BUSCO summary statistics, and calculates:
+
+        - Completeness: 100 * (1 - Missing / Total markers)
+        - Contamination: 100 * (Duplicated / Complete), or None if Complete == 0
+
+        Args:
+            row (pd.Series): A row from a DataFrame containing at least
+                             'sample_id' and 'Input_file' columns.
+            base_path (str): Base path to the BUSCO output directory.
+
+        Returns:
+            pd.Series: A Series with two elements:
+                - completeness (float): Percentage completeness.
+                - contamination (float or None): Percentage contamination,
+                  or None if not computable due to zero complete BUSCOs.
+        """
+    json_path = glob.glob(os.path.join(
+        base_path, "busco_output", row["sample_id"], row["Input_file"], "*.json"
+    ))[0]
+
+    with open(json_path) as f:
+        data = json.load(f)
+
+    n = data["results"]["n_markers"]
+    m = data["results"]["Missing BUSCOs"]
+    c = data["results"]["Complete BUSCOs"]
+    d = data["results"]["Multi copy BUSCOs"]
+
+    completeness = 100 * (1 - (m / n))
+
+    try:
+        contamination = 100 * d / c
+    except ZeroDivisionError:
+        contamination = None
+
+    return pd.Series([completeness, contamination])
