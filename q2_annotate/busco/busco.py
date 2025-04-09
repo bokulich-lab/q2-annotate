@@ -282,7 +282,7 @@ def evaluate_busco(
     scaffold_composition=False,
     num_partitions=None
 ):
-    _validate_parameters(lineage_dataset, auto_lineage, 
+    _validate_parameters(lineage_dataset, auto_lineage,
                          auto_lineage_euk, auto_lineage_prok)
 
     kwargs = {
