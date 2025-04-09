@@ -6,7 +6,6 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import json
-
 import os
 import tempfile
 from copy import deepcopy
@@ -24,7 +23,7 @@ from q2_annotate.busco.utils import (
     _parse_busco_params, _collect_summaries, _rename_columns,
     _parse_df_columns, _partition_dataframe, _calculate_summary_stats,
     _get_feature_table, _cleanup_bootstrap, _get_mag_lengths,
-    _validate_lineage_dataset_input
+    _validate_lineage_dataset_input, _compute_completeness_contamination
 )
 from q2_annotate._utils import _process_common_input_params, run_command
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
@@ -102,6 +101,10 @@ def _busco_helper(bins, common_args):
         all_summaries = _collect_summaries(
             run_summaries_fp_map=path_to_run_summaries,
         )
+
+        all_summaries[['completeness', 'contamination']] = all_summaries.apply(
+            lambda row: _compute_completeness_contamination(row, tmp), axis=1)
+
     all_summaries = _rename_columns(all_summaries)
 
     lengths = _get_mag_lengths(bins)

@@ -12,7 +12,8 @@ from qiime2.plugin.testing import TestPluginBase
 from q2_annotate.busco.utils import (
     _parse_busco_params, _collect_summaries, _parse_df_columns,
     _partition_dataframe, _get_feature_table, _calculate_summary_stats,
-    _get_mag_lengths, _validate_lineage_dataset_input
+    _get_mag_lengths, _validate_lineage_dataset_input,
+    _compute_completeness_contamination
 )
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
@@ -365,3 +366,16 @@ class TestBUSCOUtils(TestPluginBase):
                 "auto_lineage_prok": False
             }
         )
+
+    def test_compute(self):
+        base_path = self.get_data_path("busco_output", False)
+
+        row = pd.Series({
+            "sample_id": "sample1",
+            "Input_file": "24dee6fe-9b84-45bb-8145-de7b092533a1.fasta"
+        })
+
+        result = _compute_completeness_contamination(row, base_path.parent)
+
+        self.assertAlmostEqual(result[0], 100 * (1 - (10 / 100)))
+        self.assertAlmostEqual(result[1], 100 * 5 / 80)

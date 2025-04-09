@@ -80,7 +80,8 @@ class TestBUSCOSampleData(TestPluginBase):
 
     @patch('q2_annotate.busco.busco._run_busco')
     @patch('q2_annotate.busco.busco._get_mag_lengths')
-    def test_busco_helper(self, mock_len, mock_run):
+    @patch('q2_annotate.busco.busco._compute_completeness_contamination')
+    def test_busco_helper(self, mock_compute, mock_len, mock_run):
         self._prepare_summaries()
         mock_run.return_value = {
             'sample1': f"{self.temp_dir.name}/sample1/batch_summary.txt",
@@ -95,7 +96,13 @@ class TestBUSCOSampleData(TestPluginBase):
                 '503c2f56-3e4f-4ce7-9b61-b63bc7fe0592': 21035714
             }, name='length'
         )
-
+        mock_compute.side_effect = [
+            pd.Series([83, 0]),
+            pd.Series([100, 98.4]),
+            pd.Series([12.1, 100]),
+            pd.Series([74.2, 0]),
+            pd.Series([99.2, 95.9]),
+        ]
         obs = _busco_helper(
             self.mags, ['--lineage_dataset', 'bacteria_odb10']
         )
