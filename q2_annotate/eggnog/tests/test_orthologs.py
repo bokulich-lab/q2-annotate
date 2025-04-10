@@ -81,7 +81,7 @@ class TestHMMER(TestPluginBase):
         obs = search_orthologs_hmmer(
             ctx=mock_ctx,
             seqs=self.mags_artifact,
-            pressed_hmm_db=self.pressed_hmm_artifact,
+            db=self.pressed_hmm_artifact,
             idmap=self.idmap_artifact,
             seed_alignments=self.fastas_artifact
         )
@@ -220,7 +220,7 @@ class TestDiamond(TestPluginBase):
 
         _, obs = _eggnog_diamond_search(
             seqs=contigs,
-            diamond_db=self.diamond_db
+            db=self.diamond_db
         )
         exp = pd.DataFrame({'0': [1.0, 0.0], '2': [1.0, 0.0], '8': [0.0, 3.0]},
                            index=['s1', 's2'])
@@ -236,7 +236,7 @@ class TestDiamond(TestPluginBase):
 
         _, obs = _eggnog_diamond_search(
             seqs=mags,
-            diamond_db=self.diamond_db
+            db=self.diamond_db
         )
         exp = pd.DataFrame(
             {'8': [3.0, 0.0], '0': [0.0, 1.0], '2': [0.0, 1.0]},
@@ -255,7 +255,7 @@ class TestDiamond(TestPluginBase):
 
         _, obs = _eggnog_diamond_search(
             seqs=mags,
-            diamond_db=self.diamond_db
+            db=self.diamond_db
         )
         exp = pd.DataFrame(
             {
@@ -286,7 +286,7 @@ class TestDiamond(TestPluginBase):
 
         _, single = self._eggnog_diamond_search(
             seqs=contigs,
-            diamond_db=self.diamond_db_artifact
+            db=self.diamond_db_artifact
         )
 
         parallel = parallel.view(pd.DataFrame)
@@ -308,7 +308,7 @@ class TestDiamond(TestPluginBase):
 
         _, single = self._eggnog_diamond_search(
             seqs=mags,
-            diamond_db=self.diamond_db_artifact
+            db=self.diamond_db_artifact
         )
 
         parallel = parallel.view(pd.DataFrame)
@@ -330,7 +330,7 @@ class TestDiamond(TestPluginBase):
 
         _, single = self._eggnog_diamond_search(
             seqs=mags,
-            diamond_db=self.diamond_db_artifact
+            db=self.diamond_db_artifact
         )
 
         parallel = parallel.view(pd.DataFrame)

@@ -162,7 +162,7 @@ def _add_unclassified(
 
 def estimate_bracken(
     kraken2_reports: Kraken2ReportDirectoryFormat,
-    bracken_db: BrackenDBDirectoryFormat,
+    db: BrackenDBDirectoryFormat,
     threshold: int = 0,
     read_len: int = 100,
     level: str = 'S',
@@ -176,10 +176,10 @@ def estimate_bracken(
             "due to the unavailability of the Bracken package. Please try it on Linux."
         )
 
-    _assert_read_lens_available(bracken_db, read_len)
+    _assert_read_lens_available(db, read_len)
 
     table, reports = _estimate_bracken(
-        kraken2_reports=kraken2_reports, bracken_db=bracken_db,
+        kraken2_reports=kraken2_reports, bracken_db=db,
         threshold=threshold, read_len=read_len, level=level
     )
 

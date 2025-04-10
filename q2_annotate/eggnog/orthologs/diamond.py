@@ -33,12 +33,12 @@ def _eggnog_diamond_search(
         MultiMAGSequencesDirFmt,
         MAGSequencesDirFmt
     ],
-    diamond_db: DiamondDatabaseDirFmt,
+    db: DiamondDatabaseDirFmt,
     num_cpus: int = 1,
     db_in_memory: bool = False
 ) -> (SeedOrthologDirFmt, pd.DataFrame):
     with tempfile.TemporaryDirectory() as output_loc:
-        db_fp = os.path.join(str(diamond_db), 'ref_db.dmnd')
+        db_fp = os.path.join(str(db), 'ref_db.dmnd')
         search_runner = partial(
             _search_runner, output_loc=str(output_loc),
             num_cpus=num_cpus, db_in_memory=db_in_memory,

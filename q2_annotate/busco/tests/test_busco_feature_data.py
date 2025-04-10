@@ -142,7 +142,7 @@ class TestBUSCOFeatureData(TestPluginBase):
         obs = evaluate_busco(
             ctx=mock_ctx,
             mags=mags,
-            busco_db=busco_db,
+            db=busco_db,
             num_partitions=2
         )
         exp = ("collated_result", "visualization")

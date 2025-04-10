@@ -182,7 +182,7 @@ class TestBracken(TestPluginBase):
 
         obs_reports, obs_taxonomy, obs_table = estimate_bracken(
             kraken2_reports=kraken_reports,
-            bracken_db=bracken_db,
+            db=bracken_db,
             threshold=self.kwargs['threshold'],
             read_len=self.kwargs['read_len'],
             level=self.kwargs['level'],
