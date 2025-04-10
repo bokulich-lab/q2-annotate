@@ -175,8 +175,8 @@ def _classify_single_artifact(ctx, seqs, kraken2_db, num_partitions, kwargs):
             all_reports.append(reports)
             all_outputs.append(outputs)
 
-        collated_reports = collate_kraken2_reports(all_reports)
-        collated_outputs = collate_kraken2_outputs(all_outputs)
+        collated_reports, = collate_kraken2_reports(all_reports)
+        collated_outputs, = collate_kraken2_outputs(all_outputs)
 
         return collated_reports, collated_outputs
 
