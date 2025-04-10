@@ -668,8 +668,7 @@ plugin.methods.register_function(
     },
     outputs=[("db", ReferenceDB[Diamond])],
     output_descriptions={
-        "db": "Complete Diamond reference database for the"
-                      "specified taxon."
+        "db": "Complete Diamond reference database for the specified taxon."
     },
     name="Create a DIAMOND formatted reference database for the"
          "specified taxon.",
@@ -695,8 +694,7 @@ plugin.pipelines.register_function(
     },
     input_descriptions={
         'seqs': 'Sequences to be searched for hits using the Diamond Database',
-        'db': 'The filepath to an artifact containing the '
-                      'Diamond database',
+        'db': 'The filepath to an artifact containing the Diamond database',
     },
     parameter_descriptions={
         'num_cpus': 'Number of CPUs to utilize. \'0\' will '
@@ -1610,9 +1608,8 @@ plugin.methods.register_function(
     ],
     input_descriptions={
         "alignment_maps": "Bowtie2 alignment maps between reads and features "
-                "for which the abundance should be estimated.",
-        "feature_lengths": "Table containing length of every "
-                           "feature (MAG/contig).",
+                          "for which the abundance should be estimated.",
+        "feature_lengths": "Table containing length of every feature (MAG/contig).",
     },
     parameter_descriptions={
         "metric": "Metric to be used as a proxy of feature abundance.",
