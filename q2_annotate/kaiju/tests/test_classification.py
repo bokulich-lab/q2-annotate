@@ -251,9 +251,9 @@ class TestKaijuClassification(TestPluginBase):
             self.get_data_path("mags/sample1"), "r"
         )
         r_out = (r".*3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa.out,.*"
-                       r"8894435a-c836-4c18-b475-8b38a9ab6c6b.out")
+                 r"8894435a-c836-4c18-b475-8b38a9ab6c6b.out")
         r_in = (r".*3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa.fasta,.*"
-                      r"8894435a-c836-4c18-b475-8b38a9ab6c6b.fasta")
+                r"8894435a-c836-4c18-b475-8b38a9ab6c6b.fasta")
         self.classify_kaiju_test_helper(p1, p2, seqs, r_in, r_out)
 
     @patch("subprocess.run")
