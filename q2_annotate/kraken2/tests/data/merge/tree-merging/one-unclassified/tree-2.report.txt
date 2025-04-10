@@ -1,0 +1,7 @@
+100.00	55	0	R	1	root
+36.36	20	5	D	2	  domain1
+9.09	5	5	P	5	    phylum1
+18.18	10	10	P	7	    phylum3
+63.63	35	10	D	4	  domain3
+45.45	25	20	P	8	    phylum4
+9.09	5	5	C	9	      class1

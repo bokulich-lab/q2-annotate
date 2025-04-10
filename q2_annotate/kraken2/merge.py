@@ -1,0 +1,420 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2025, QIIME 2 development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file LICENSE, distributed with this software.
+# ----------------------------------------------------------------------------
+import pandas as pd
+from skbio import TreeNode
+
+from q2_types.kraken2 import (
+    Kraken2ReportDirectoryFormat,
+    Kraken2OutputDirectoryFormat,
+    Kraken2ReportFormat,
+    Kraken2OutputFormat,
+)
+
+from q2_annotate.kraken2.filter import (
+    _report_df_to_tree,
+    _dump_tree_to_report,
+)
+
+
+def _merge_kraken2_results(
+    reports: Kraken2ReportDirectoryFormat,
+    outputs: Kraken2OutputDirectoryFormat
+) -> (Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat):
+    '''
+    Merges kraken2 reports and outputs on a per-sample-id basis.
+
+    Parameters
+    ----------
+    reports : list[Kraken2ReportDirectoryFormat]
+        The kraken2 reports.
+    outputs : list[Kraken2OutputDirectoryFromat]
+        The kraken2 outputs.
+
+    Returns
+    -------
+    tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]
+        The merged reports and formats.
+    '''
+    merged_reports = Kraken2ReportDirectoryFormat()
+    merged_outputs = Kraken2OutputDirectoryFormat()
+
+    mags = isinstance(next(iter(reports[0].file_dict().values())), dict)
+
+    report_mapping, output_mapping = _condense_formats(reports, outputs, mags)
+
+    def _merge_formats(sample_id, merged_formats, mapping, merger, Format):
+        if Format == Kraken2ReportFormat:
+            file_collection = merged_formats.reports
+        else:
+            file_collection = merged_formats.outputs
+
+        if mags:
+            for filename, format in mapping[sample_id].items():
+                file_collection.write_data(
+                    view=format,
+                    view_type=Format,
+                    sample_id=sample_id,
+                    mag_id=filename
+                )
+        else:
+            formats = mapping[sample_id]
+            merged_format = merger(formats)
+            file_collection.write_data(
+                view=merged_format, view_type=Format, sample_id=sample_id
+            )
+
+    for sample_id in report_mapping:
+        _merge_formats(
+            sample_id,
+            merged_reports,
+            report_mapping,
+            _merge_reports,
+            Kraken2ReportFormat
+        )
+        _merge_formats(
+            sample_id,
+            merged_outputs,
+            output_mapping,
+            _merge_outputs,
+            Kraken2OutputFormat
+        )
+
+    return merged_reports, merged_outputs
+
+
+def _condense_formats(
+    reports: list[Kraken2ReportDirectoryFormat],
+    outputs: list[Kraken2OutputDirectoryFormat],
+    mags: bool
+) -> tuple[dict, dict]:
+    '''
+    Condenses multiple report and output directory formats into a single
+    output mapping and a single report mapping. The structure is
+    sample_id -> list[format] for reads/contigs and
+    sample_id -> {filename -> format} for mags.
+
+    Note that MAGs will never be merged on a per-MAG basis, only on a
+    per-sample-id basis.
+
+    Parameters
+    ----------
+    reports : list[Kraken2ReportDirectoryFormat]
+        The kraken2 reports.
+    outputs : list[Kraken2OutputDirectoryFormat]
+        The kraken2 outputs.
+    mags : bool
+        Whether the directory formats represent MAG results.
+
+    Returns
+    -------
+    tuple[dict, dict]
+        A tuple of mappings as described above. The first contains the kraken2
+        report mapping and the second the kraken2 output mapping.
+
+    Raises
+    ------
+    ValueError
+        If two MAGs with the same uuid are detected.
+    ValueError
+        If two reports with the same sample ID are to be merged but the
+        minimizers columns are present in the reports.
+    '''
+    minimizers_present = _check_for_minimizers(reports[0])
+
+    chained_reports = []
+    for report in reports:
+        for sample_id, value in report.file_dict().items():
+            chained_reports.append((sample_id, value))
+
+    chained_outputs = []
+    for output in outputs:
+        for sample_id, value in output.file_dict().items():
+            chained_outputs.append((sample_id, value))
+
+    def _update_mapping(sample_id, value, mapping, Format):
+        if mags:
+            filename_to_filepath = value
+            for filename, filepath in filename_to_filepath.items():
+                format = Format(filepath, mode='r')
+                if sample_id not in mapping:
+                    mapping[sample_id] = {filename: format}
+                else:
+                    if filename in mapping[sample_id]:
+                        msg = (
+                            'Two MAGs with the same uuid were detected '
+                            f'Duplicated uuid: {filename}.'
+                        )
+                        raise ValueError(msg)
+
+                    mapping[sample_id][filename] = format
+        else:
+            filepath = value
+            format = Format(filepath, mode='r')
+            if sample_id not in mapping:
+                mapping[sample_id] = [format]
+            elif minimizers_present:
+                msg = (
+                    'Two or more reports with the same sample ID were '
+                    'attempted to be merged but the option to capture minimzer '
+                    'data was enabled. It is not possible to merge kraken2 '
+                    'reports that contain minimizer information.'
+                )
+                raise ValueError(msg)
+            else:
+                mapping[sample_id].append(format)
+
+    report_mapping = {}
+    for sample_id, value in chained_reports:
+        _update_mapping(
+            sample_id, value, report_mapping, Kraken2ReportFormat
+        )
+
+    output_mapping = {}
+    for sample_id, value in chained_outputs:
+        _update_mapping(
+            sample_id, value, output_mapping, Kraken2OutputFormat
+        )
+
+    return report_mapping, output_mapping
+
+
+def _check_for_minimizers(reports: Kraken2ReportDirectoryFormat) -> bool:
+    '''
+    Checks whether the reports being processed include the optional minimizer
+    columns. This determines whether reports with a shared sample ID can be
+    merged.
+
+    Parameters
+    ----------
+    reports : Kraken2ReportDirectoryFormat
+        The kraken2 reports to examine for minimzer columns.
+
+    Returns
+    -------
+    bool
+        Wether minimizer columns are present in the reports.
+    '''
+    _, report = list(reports.reports.iter_views(Kraken2ReportFormat))[0]
+
+    return 'n_read_minimizers' in report.view(pd.DataFrame)
+
+
+def _merge_reports(
+    reports: list[Kraken2ReportFormat]
+) -> Kraken2ReportFormat:
+    '''
+    Merges two or more kraken2 reports into a single report. See
+    `_merge_trees` for the actual merging algorithm.
+
+    Parameters
+    ----------
+    reports : list[Kraken2ReportFormat]
+        Kraken2 reports belonging to the same sample ID.
+
+    Returns
+    -------
+    Kraken2ReportFormat
+        The merged kraken2 report format.
+    '''
+    if len(reports) == 1:
+        return reports[0]
+
+    merged: tuple[TreeNode | None, TreeNode | None] | None = None
+    while reports:
+        first = _report_df_to_tree(reports.pop().view(pd.DataFrame))
+        if merged is None:
+            second = _report_df_to_tree(reports.pop().view(pd.DataFrame))
+        else:
+            second = merged
+
+        merged = _merge_trees(first, second)
+
+    merged_report_df = _dump_tree_to_report(*merged)
+    merged_report = Kraken2ReportFormat()
+    merged_report_df.to_csv(
+        str(merged_report), sep='\t', header=False, index=False
+    )
+
+    return merged_report
+
+
+def _merge_outputs(
+    outputs: list[Kraken2OutputFormat]
+) -> Kraken2OutputFormat:
+    '''
+    Merges two or more kraken2 outputs into a single output. Output files
+    are merged by concatenation.
+
+    Parameters
+    ----------
+    outputs : list[Kraken2OutputFormat]
+        Kraken2 outputs belonging to the same sample ID.
+
+    Returns
+    -------
+        The merged kraken2 output format.
+    '''
+    if len(outputs) == 1:
+        return outputs[0]
+
+    merged_output = Kraken2OutputFormat()
+    while outputs:
+        with (
+            open(str(merged_output), 'a') as merged_fh,
+            open(str(outputs.pop()), 'r') as fh
+        ):
+            while buffer := fh.read(4096):
+                merged_fh.write(buffer)
+
+    return merged_output
+
+
+def _merge_trees(
+    first: tuple[TreeNode | None, TreeNode | None],
+    second: tuple[TreeNode | None, TreeNode | None]
+) -> tuple[TreeNode | None, TreeNode | None]:
+    '''
+    Merges two trees each representing a kraken2 report into a single tree.
+    The number of reads assigned to each node are summed where nodes overlap,
+    and new nodes are inserted into the tree where they don't. The proportions
+    of assigned and covered reads are then updated in a final passover.
+
+    Parameters
+    ----------
+    first : tuple[TreeNode | None, TreeNode | None]
+        The first report tree, where the first node in the tuple represents the
+        tree and the second node represents an optional unclassified node.
+    second : tuple[TreeNode | None, TreeNode | None]
+        The second report tree, where the first node in the tuple represents the
+        tree and the second node represents an optional unclassified node.
+
+    Returns
+    -------
+    tuple[TreeNode | None, TreeNode | None]
+        The merged tree.
+    '''
+    first_tree, first_unclassified_node = first
+    second_tree, second_unclassified_node = second
+
+    # merge trees (with respect to `n_frags_assigned`, `n_frags_covered`)
+    if first_tree is None and second_tree is None:
+        merged_tree = None
+    elif first_tree is None:
+        merged_tree = second_tree
+    elif second_tree is None:
+        merged_tree = first_tree
+    else:
+        for node in first_tree.levelorder():
+            match = _find_node(second_tree, node)
+            if match is not None:
+                match._kraken_data['n_frags_assigned'] += \
+                    node._kraken_data['n_frags_assigned']
+                match._kraken_data['n_frags_covered'] += \
+                    node._kraken_data['n_frags_assigned']
+            else:
+                parent = _find_node(second_tree, node.parent)
+                new_node = TreeNode()
+                new_node._kraken_data = node._kraken_data
+                new_node._kraken_data['n_frags_covered'] = \
+                    new_node._kraken_data['n_frags_assigned']
+                parent.append(new_node)
+                match = new_node
+
+            # keep `n_frags_covered` up to date
+            for ancestor in match.ancestors():
+                ancestor._kraken_data['n_frags_covered'] += \
+                    node._kraken_data['n_frags_assigned']
+
+        merged_tree = second_tree
+
+    unclassified_node = _merge_unclassified_nodes(
+        first_unclassified_node, second_unclassified_node
+    )
+
+    # final passover to update `perc_frags_covered`
+    if merged_tree is not None:
+        total_reads = merged_tree._kraken_data['n_frags_covered']
+        if unclassified_node is not None:
+            total_reads += unclassified_node._kraken_data['n_frags_covered']
+
+        for node in merged_tree.traverse():
+            node._kraken_data['perc_frags_covered'] = round(
+                (node._kraken_data['n_frags_covered'] / total_reads) * 100, 2
+            )
+
+    return merged_tree, unclassified_node
+
+
+def _find_node(tree: TreeNode, node: TreeNode) -> TreeNode | None:
+    '''
+    Searches for `node` in `tree`, returns a match if there is one, otherwise
+    None. Matches are determined based on the kraken2-assigned taxon id.
+
+    Parameters
+    ----------
+    tree : skbio.TreeNode
+        The tree in which to search.
+    node : skbio.TreeNode
+        The node for which to search.
+
+    Returns
+    -------
+    skbio.TreeNode | None
+        The matching node if one was found, otherwise None.
+
+    Raises
+    ------
+    ValueError
+        If more than one matching node is found. Taxon ids should be unique
+        within a tree.
+    '''
+    def _match_by_taxon_id(n):
+        return n._kraken_data['taxon_id'] == node._kraken_data['taxon_id']
+
+    matches = list(tree.find_by_func(_match_by_taxon_id))
+
+    if len(matches) > 1:
+        raise ValueError('Did not expect more than one taxon id match.')
+    elif len(matches) == 1:
+        return matches[0]
+    else:
+        return None
+
+
+def _merge_unclassified_nodes(
+    first: TreeNode | None, second: TreeNode | None
+) -> TreeNode | None:
+    '''
+    Merges two TreeNodes representing unclassified nodes from kraken2 reports.
+
+    Parameters
+    ----------
+    first : TreeNode | None
+        The first unclassified node, or None if no such node exists.
+    second : TreeNode | None
+        The second unclassified node, or None if no such node exists.
+
+    Returns
+    -------
+    TreeNode | None
+        The merged unclassified node, or None if both inputs are None.
+    '''
+    if first is None and second is None:
+        unclassified_node = None
+    elif first is None:
+        unclassified_node = second
+    elif second is None:
+        unclassified_node = first
+    else:
+        unclassified_node = second
+        unclassified_node._kraken_data['n_frags_assigned'] += \
+            first._kraken_data['n_frags_assigned']
+        unclassified_node._kraken_data['n_frags_covered'] += \
+            first._kraken_data['n_frags_covered']
+
+    return unclassified_node

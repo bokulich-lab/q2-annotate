@@ -35,9 +35,9 @@ from q2_types.per_sample_sequences import (
 from q2_types.sample_data import SampleData
 from q2_types.feature_map import FeatureMap, MAGtoContigs
 from qiime2.core.type import (
-    Bool, Range, Int, Str, Float, List, Choices, Visualization, TypeMatch
+    Bool, Range, Int, Str, Float, List, Choices, Visualization,
+    Properties, TypeMap, TypeMatch,
 )
-from qiime2.core.type import (Properties, TypeMap)
 from qiime2.plugin import (Plugin, Citations)
 import q2_annotate._examples as ex
 import q2_annotate
@@ -166,21 +166,26 @@ plugin.methods.register_function(
                citations["scikit_bio_release"]]
 )
 
-T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
-    SampleData[SequencesWithQuality |
-               PairedEndSequencesWithQuality | JoinedSequencesWithQuality]: (
+T_kraken_in_list, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
+    List[
+        SampleData[
+            SequencesWithQuality |
+            PairedEndSequencesWithQuality |
+            JoinedSequencesWithQuality
+        ]
+    ]: (
         SampleData[Kraken2Reports % Properties('reads')],
         SampleData[Kraken2Outputs % Properties('reads')]
     ),
-    SampleData[Contigs]: (
+    List[SampleData[Contigs]]: (
         SampleData[Kraken2Reports % Properties('contigs')],
         SampleData[Kraken2Outputs % Properties('contigs')]
     ),
-    FeatureData[MAG]: (
+    List[FeatureData[MAG]]: (
         FeatureData[Kraken2Reports % Properties('mags')],
         FeatureData[Kraken2Outputs % Properties('mags')]
     ),
-    SampleData[MAGs]: (
+    List[SampleData[MAGs]]: (
         SampleData[Kraken2Reports % Properties('mags')],
         SampleData[Kraken2Outputs % Properties('mags')]
     )
@@ -189,7 +194,7 @@ T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
 plugin.pipelines.register_function(
     function=q2_annotate.kraken2.classification.classify_kraken2,
     inputs={
-        "seqs": T_kraken_in,
+        "seqs": T_kraken_in_list,
         "kraken2_db": Kraken2DB,
     },
     parameters={**kraken2_params, **partition_params},
@@ -216,6 +221,28 @@ plugin.pipelines.register_function(
     citations=[citations["wood2019"]]
 )
 
+T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
+    SampleData[
+        SequencesWithQuality |
+        PairedEndSequencesWithQuality |
+        JoinedSequencesWithQuality
+    ]: (
+        SampleData[Kraken2Reports % Properties('reads')],
+        SampleData[Kraken2Outputs % Properties('reads')]
+    ),
+    SampleData[Contigs]: (
+        SampleData[Kraken2Reports % Properties('contigs')],
+        SampleData[Kraken2Outputs % Properties('contigs')]
+    ),
+    FeatureData[MAG]: (
+        FeatureData[Kraken2Reports % Properties('mags')],
+        FeatureData[Kraken2Outputs % Properties('mags')]
+    ),
+    SampleData[MAGs]: (
+        SampleData[Kraken2Reports % Properties('mags')],
+        SampleData[Kraken2Outputs % Properties('mags')]
+    )
+})
 plugin.methods.register_function(
     function=q2_annotate.kraken2.classification._classify_kraken2,
     inputs={
@@ -1812,7 +1839,43 @@ plugin.pipelines.register_function(
     citations=[]
 )
 
-T_filter_kraken2_reports = TypeMatch([
+TMR = TypeMatch([
+    Kraken2Reports % Properties('reads'),
+    Kraken2Reports % Properties('contigs')
+])
+
+plugin.methods.register_function(
+    function=q2_annotate.kraken2._filter_kraken2_reports_by_abundance,
+    inputs={
+        "reports": SampleData[TMR],
+    },
+    parameters={
+        'abundance_threshold': Float % Range(0, 1, inclusive_end=True),
+    },
+    outputs=[('filtered_reports', SampleData[TMR])],
+    input_descriptions={
+        'reports': 'The kraken2 reports to filter by relative abundance.'
+    },
+    parameter_descriptions={
+        'abundance_threshold': (
+            'A proportion between 0 and 1 representing the minimum relative '
+            'abundance (by read count) that a taxon must have to be retained '
+            'in the filtered report.'
+        )
+    },
+    output_descriptions={
+        'filtered_reports': 'The relative abundance-filtered kraken2 reports'
+    },
+    name='Filter kraken2 reports by relative abundance.',
+    description=(
+        'Filters kraken2 reports on a per-taxon basis by relative abundance '
+        '(relative frequency). Useful for removing suspected spurious '
+        'classifications.'
+    ),
+    citations=[],
+)
+
+T_filter_kraken2_reports_by_abundance = TypeMatch([
     SampleData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
     SampleData[Kraken2Reports % Properties('reads', 'contigs', 'mags')],
     SampleData[Kraken2Reports % Properties('reads', 'contigs')],
@@ -1865,9 +1928,9 @@ filter_reports_param_descriptions = {
 }
 
 plugin.methods.register_function(
-    function=q2_annotate.kraken2.filter_kraken2_results,
+    function=q2_annotate.kraken2._filter_kraken2_results_by_metadata,
     inputs={
-        "reports": T_filter_kraken2_reports,
+        "reports": T_filter_kraken2_reports_by_abundance,
         "outputs": T_filter_kraken2_outputs,
     },
     parameters={
@@ -1877,7 +1940,7 @@ plugin.methods.register_function(
         "remove_empty": Bool,
     },
     outputs={
-        "filtered_reports": T_filter_kraken2_reports,
+        "filtered_reports": T_filter_kraken2_reports_by_abundance,
         "filtered_outputs": T_filter_kraken2_outputs
     },
     input_descriptions={
@@ -1890,6 +1953,50 @@ plugin.methods.register_function(
                 "reports with 100% unclassified reads.",
 )
 
+KRAKEN2_REPORTS_T = TypeMatch([
+    SampleData[Kraken2Reports % Properties('reads')],
+    SampleData[Kraken2Reports % Properties('contigs')],
+    SampleData[Kraken2Reports % Properties('mags')],
+    FeatureData[Kraken2Reports % Properties('mags')],
+])
+KRAKEN2_OUTPUTS_T = TypeMatch([
+    SampleData[Kraken2Outputs % Properties('reads')],
+    SampleData[Kraken2Outputs % Properties('contigs')],
+    SampleData[Kraken2Outputs % Properties('mags')],
+    FeatureData[Kraken2Outputs % Properties('mags')],
+])
+plugin.methods.register_function(
+    function=q2_annotate.kraken2._merge_kraken2_results,
+    inputs={
+        "reports": List[KRAKEN2_REPORTS_T],
+        "outputs": List[KRAKEN2_OUTPUTS_T]
+    },
+    parameters={},
+    outputs={
+        "merged_reports": KRAKEN2_REPORTS_T,
+        "merged_outputs": KRAKEN2_OUTPUTS_T
+    },
+    input_descriptions={
+        "reports": (
+            "Multiple kraken2 reports artifacts to merge on a per-sample ID "
+            "basis."
+        ),
+        "outputs": (
+            "Multiple kraken2 outputs artifacts to merge on a per-sample ID "
+            "basis."
+        ),
+    },
+    parameter_descriptions={},
+    output_descriptions={
+        "merged_reports": "The merged kraken2 reports.",
+        "merged_outputs": "The merged_kraken2 outputs.",
+    },
+    name="Merge kraken2 reports and outputs.",
+    description=(
+        "Merge multiple kraken2 reports and outputs artifacts on a "
+        "per-sample ID basis."
+    )
+)
 
 plugin.register_semantic_types(BUSCOResults, BuscoDB)
 plugin.register_formats(
