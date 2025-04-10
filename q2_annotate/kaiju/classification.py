@@ -15,22 +15,18 @@ from typing import Union
 
 import pandas as pd
 from q2_types.feature_data import FeatureData
-from q2_types.feature_data_mag import MAG, MAGSequencesDirFmt
-from q2_types.kaiju import KaijuDBDirectoryFormat
+from q2_types.feature_data_mag import MAGSequencesDirFmt, MAG
 from q2_types.per_sample_sequences import (
-    Contigs,
-    ContigSequencesDirFmt,
-    JoinedSequencesWithQuality,
-    MAGs,
-    MultiFASTADirectoryFormat,
-    PairedEndSequencesWithQuality,
-    SequencesWithQuality,
     SingleLanePerSamplePairedEndFastqDirFmt,
     SingleLanePerSampleSingleEndFastqDirFmt,
+    SequencesWithQuality,
+    PairedEndSequencesWithQuality, ContigSequencesDirFmt, MultiFASTADirectoryFormat,
+    Contigs, MAGs, JoinedSequencesWithQuality,
 )
-from q2_types.sample_data import SampleData
 
 from q2_annotate._utils import run_command
+from q2_types.kaiju import KaijuDBDirectoryFormat
+from q2_types.sample_data import SampleData
 
 DEFAULT_PREFIXES = ["d__", "p__", "c__", "o__", "f__", "g__", "s__", "ssp__"]
 
@@ -242,21 +238,22 @@ def _classify_kaiju_helper(
     )
     files_fwd, files_rev, output_fps = [], [], []
     paired = False
-
+    
     with tempfile.TemporaryDirectory() as tmpdir:
         if isinstance(seqs, read_types):
             manifest: [pd.DataFrame] = seqs.manifest.view(pd.DataFrame)
             paired = "reverse" in manifest.columns
-
+    
             for index, row in manifest.iterrows():
                 sample_name, fps = _get_sample_paths(index, row, paired)
                 files_fwd.append(fps[0])
                 files_rev.append(fps[1])
                 output_fps.append(f"{os.path.join(tmpdir, sample_name)}.out")
+    
 
         elif isinstance(seqs, ContigSequencesDirFmt):
             inner_dict = seqs.sample_dict()
-            outer_dict = {"": inner_dict}
+            outer_dict = {"":inner_dict}
 
         elif isinstance(seqs, MAGSequencesDirFmt):
             inner_dict = seqs.feature_dict()
@@ -298,20 +295,20 @@ def _classify_kaiju(
             MAGSequencesDirFmt,
             MultiFASTADirectoryFormat
         ],
-        db: KaijuDBDirectoryFormat,
-        z: int = 1,
-        a: str = "greedy",
-        e: int = 3,
-        m: int = 11,
-        s: int = 65,
-        evalue: float = 0.01,
-        x: bool = True,
-        r: str = "species",
-        c: float = 0.0,
-        exp: bool = False,
-        u: bool = False,
+    db: KaijuDBDirectoryFormat,
+    z: int = 1,
+    a: str = "greedy",
+    e: int = 3,
+    m: int = 11,
+    s: int = 65,
+    evalue: float = 0.01,
+    x: bool = True,
+    r: str = "species",
+    c: float = 0.0,
+    exp: bool = False,
+    u: bool = False,
 ) -> (pd.DataFrame, pd.DataFrame):
-
+    
     return _classify_kaiju_helper(seqs, dict(locals().items()))
 
 
@@ -350,7 +347,7 @@ def classify_kaiju(
         partition_method = ctx.get_action(
             "types", "partition_sample_data_mags"
         )
-
+    
     # FeatureData[MAG] is not parallelized
     elif seqs.type <= FeatureData[MAG]:
         (table, taxonomy) = _classify_kaiju(seqs, db, **kwargs)
