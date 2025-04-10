@@ -204,7 +204,6 @@ def _check_for_minimizers(reports: Kraken2ReportDirectoryFormat) -> bool:
     return 'n_read_minimizers' in report.view(pd.DataFrame)
 
 
-
 def _merge_reports(
     reports: list[Kraken2ReportFormat]
 ) -> Kraken2ReportFormat:

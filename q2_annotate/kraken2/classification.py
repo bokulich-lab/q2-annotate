@@ -5,7 +5,6 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-import itertools
 import os
 import subprocess
 from copy import deepcopy
@@ -30,8 +29,6 @@ from q2_types.kraken2 import (
     Kraken2ReportDirectoryFormat,
     Kraken2OutputDirectoryFormat,
     Kraken2DBDirectoryFormat,
-    Kraken2ReportFormat,
-    Kraken2OutputFormat,
 )
 
 
@@ -100,7 +97,7 @@ def classify_kraken2(
         if k not in ["seqs", "kraken2_db", "ctx", "num_partitions"]
     }
 
-    input_types = set( [str(seq.type) for seq in seqs] )
+    input_types = set([str(seq.type) for seq in seqs])
     if len(input_types) != 1:
         msg = (
             "When providing multiple input artifacts to merge on a "

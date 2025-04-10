@@ -1047,8 +1047,116 @@ class TestClassifyKraken2MAGs(TestPluginBase):
             self.assertFalse(exp_missing & obs)
 
 
-class TestMultipleInputArtifacts(TestPluginBase):
+class TestClassifyMultipleInputArtifacts(TestPluginBase):
     package = "q2_annotate.kraken2.tests"
+
+    def setUp(self):
+        super().setUp()
+
+        db_fp = self.get_data_path(
+            Path('simulated-sequences') / 'kraken2-db'
+        )
+        db_format = Kraken2DBDirectoryFormat(db_fp, mode='r')
+        self.db = Artifact.import_data('Kraken2DB', db_format)
+
+        self.classify_kraken2 = self.plugin.pipelines['classify_kraken2']
+
+    def test_multiple_reads(self):
+        '''
+        Tests that sequence records with same sample ID in separate input
+        artifacts have their outputs merged into a single report and output.
+        '''
+        artifact_1_reads_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'reads' /
+            'artifact-1'
+        )
+        artifact_2_reads_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'reads' /
+            'artifact-2'
+        )
+
+        artifact_1_reads = SingleLanePerSamplePairedEndFastqDirFmt(
+            artifact_1_reads_dir, mode='r'
+        )
+        artifact_2_reads = SingleLanePerSamplePairedEndFastqDirFmt(
+            artifact_2_reads_dir, mode='r'
+        )
+
+        artifact_1 = Artifact.import_data(
+            'SampleData[PairedEndSequencesWithQuality]', artifact_1_reads
+        )
+        artifact_2 = Artifact.import_data(
+            'SampleData[PairedEndSequencesWithQuality]', artifact_2_reads
+        )
+
+        reports, outputs = self.classify_kraken2(
+            [artifact_1, artifact_2], self.db
+        )
+
+        reports_dir_format = reports.view(Kraken2ReportDirectoryFormat)
+        outputs_dir_format = outputs.view(Kraken2OutputDirectoryFormat)
+
+        self.assertEqual(
+            set(reports_dir_format.file_dict().keys()), {'ba', 'sa', 'se'}
+        )
+        self.assertEqual(
+            set(outputs_dir_format.file_dict().keys()), {'ba', 'sa', 'se'}
+        )
+
+    def test_multiple_mags(self):
+        '''
+        Tests that mag directories with the same sample ID in separate input
+        artifacts have their constituent mags joined into the same output
+        sample ID directory.
+        '''
+        artifact_1_mags_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'mags' /
+            'artifact-1'
+        )
+        artifact_2_mags_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'mags' /
+            'artifact-2'
+        )
+
+        artifact_1_mags = MultiFASTADirectoryFormat(
+            artifact_1_mags_dir, mode='r'
+        )
+        artifact_2_mags = MultiFASTADirectoryFormat(
+            artifact_2_mags_dir, mode='r'
+        )
+
+        artifact_1 = Artifact.import_data('SampleData[MAGs]', artifact_1_mags)
+        artifact_2 = Artifact.import_data('SampleData[MAGs]', artifact_2_mags)
+
+        reports, outputs = self.classify_kraken2(
+            [artifact_1, artifact_2], self.db
+        )
+
+        reports_dir_format = reports.view(Kraken2ReportDirectoryFormat)
+        outputs_dir_format = outputs.view(Kraken2OutputDirectoryFormat)
+
+        self.assertEqual(
+            set(reports_dir_format.file_dict().keys()),
+            {'sample-1', 'sample-2', 'sample-3'}
+        )
+        self.assertEqual(
+            set(outputs_dir_format.file_dict().keys()),
+            {'sample-1', 'sample-2', 'sample-3'}
+        )
+
+        self.assertEqual(
+            len(reports_dir_format.file_dict()['sample-1']), 2
+        )
+        self.assertEqual(
+            len(outputs_dir_format.file_dict()['sample-1']), 2
+        )
+
+        self.assertEqual(
+            len(reports_dir_format.file_dict()['sample-2']), 1
+        )
+        self.assertEqual(
+            len(outputs_dir_format.file_dict()['sample-2']), 1
+        )
 
 
 if __name__ == "__main__":
