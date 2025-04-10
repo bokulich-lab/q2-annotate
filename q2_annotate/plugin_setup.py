@@ -694,8 +694,7 @@ plugin.pipelines.register_function(
         **partition_params
     },
     input_descriptions={
-        'seqs': 'Sequence data of the contigs we want to '
-                'search for hits using the Diamond Database',
+        'seqs': 'Sequences to be searched for hits using the Diamond Database',
         'db': 'The filepath to an artifact containing the '
                       'Diamond database',
     },
@@ -825,7 +824,7 @@ plugin.methods.register_function(
         'db_in_memory': Bool,
     },
     input_descriptions={
-        'seqs': 'Sequence data of the sequences we want to search for hits.',
+        'seqs': 'Sequences to be searched for hits.',
         'idmap': 'List of protein families in `pressed_hmm_db`.',
         'pressed_hmm_db': 'Collection of Profile HMMs in binary format and indexed.',
         'seed_alignments': 'Seed alignments for the protein families in '
