@@ -547,9 +547,9 @@ plugin.methods.register_function(
         'taxonomy': "Reference taxonomy, "
                     "needed to provide taxonomy features."
     },
-    outputs=[('diamond_db', ReferenceDB[Diamond])],
+    outputs=[('db', ReferenceDB[Diamond])],
     output_descriptions={
-        'diamond_db': "DIAMOND database."
+        'db': "DIAMOND database."
     },
     parameters={
         "threads": Int % Range(1, None),
@@ -578,10 +578,9 @@ plugin.methods.register_function(
     function=q2_annotate.eggnog.fetch_eggnog_db,
     inputs={},
     parameters={},
-    outputs=[("eggnog_db", ReferenceDB[Eggnog])],
+    outputs=[("db", ReferenceDB[Eggnog])],
     output_descriptions={
-        "eggnog_db": "Artifact containing the eggNOG annotation "
-                     "database."
+        "db": "Artifact containing the eggNOG annotation database."
     },
     name="Fetch the databases necessary to run the "
          "eggnog-annotate action.",
@@ -597,9 +596,9 @@ plugin.methods.register_function(
     function=q2_annotate.eggnog.fetch_diamond_db,
     inputs={},
     parameters={},
-    outputs=[("diamond_db", ReferenceDB[Diamond])],
+    outputs=[("db", ReferenceDB[Diamond])],
     output_descriptions={
-        "diamond_db": "Complete Diamond reference database."
+        "db": "Complete Diamond reference database."
     },
     name="Fetch the complete Diamond database necessary to run the "
          "eggnog-diamond-search action.",
@@ -667,9 +666,9 @@ plugin.methods.register_function(
     parameter_descriptions={
         'taxon': "Taxon ID number."
     },
-    outputs=[("diamond_db", ReferenceDB[Diamond])],
+    outputs=[("db", ReferenceDB[Diamond])],
     output_descriptions={
-        "diamond_db": "Complete Diamond reference database for the"
+        "db": "Complete Diamond reference database for the"
                       "specified taxon."
     },
     name="Create a DIAMOND formatted reference database for the"
@@ -1275,7 +1274,7 @@ plugin.methods.register_function(
         ),
     },
     outputs=[
-        ("database", KaijuDB),
+        ("db", KaijuDB),
     ],
     input_descriptions={},
     parameter_descriptions={
@@ -1283,7 +1282,7 @@ plugin.methods.register_function(
         "information on available types please see the list on Kaiju's web "
         "server: https://bioinformatics-centre.github.io/kaiju/downloads.html",
     },
-    output_descriptions={"database": "Kaiju database."},
+    output_descriptions={"db": "Kaiju database."},
     name="Fetch Kaiju database.",
     description="This method fetches the latest Kaiju database from "
                 "Kaiju's web server.",
@@ -1421,9 +1420,9 @@ p_virus, p_prok, p_euk, o_busco_db = TypeMap({
 plugin.methods.register_function(
     function=q2_annotate.busco.fetch_busco_db,
     inputs={},
-    outputs=[('busco_db', o_busco_db)],
+    outputs=[('db', o_busco_db)],
     output_descriptions={
-        'busco_db': "BUSCO database for the specified lineages."
+        'db': "BUSCO database for the specified lineages."
     },
     parameters={
         "virus": p_virus,
