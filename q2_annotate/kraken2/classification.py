@@ -95,6 +95,11 @@ def classify_kraken2(
     ValueError
         If more than one type of input occurs in the input list.
     '''
+    kwargs = {
+        k: v for k, v in locals().items()
+        if k not in ["seqs", "kraken2_db", "ctx", "num_partitions"]
+    }
+
     input_types = set( [str(seq.type) for seq in seqs] )
     if len(input_types) != 1:
         msg = (
@@ -106,24 +111,19 @@ def classify_kraken2(
         raise ValueError(msg)
 
     _merge_kraken2_results = ctx.get_action(
-        "q2_annotate", "_merge_kraken2_results"
+        "annotate", "_merge_kraken2_results"
     )
-
-    kwargs = {
-        k: v for k, v in locals().items()
-        if k not in ["seqs", "kraken2_db", "ctx", "num_partitions"]
-    }
 
     reports = []
     outputs = []
     for seqs_artifact in seqs:
         artifact_reports, artifact_outputs = _classify_single_artifact(
-            ctx, seqs, kraken2_db, num_partitions, kwargs
+            ctx, seqs_artifact, kraken2_db, num_partitions, kwargs
         )
         reports.append(artifact_reports)
         outputs.append(artifact_outputs)
 
-    (reports, outputs), = _merge_kraken2_results(reports, outputs)
+    reports, outputs = _merge_kraken2_results(reports, outputs)
 
     return reports, outputs
 

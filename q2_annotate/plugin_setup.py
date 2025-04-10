@@ -166,7 +166,7 @@ plugin.methods.register_function(
                citations["scikit_bio_release"]]
 )
 
-T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
+T_kraken_in_list, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
     List[
         SampleData[
             SequencesWithQuality |
@@ -194,7 +194,7 @@ T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
 plugin.pipelines.register_function(
     function=q2_annotate.kraken2.classification.classify_kraken2,
     inputs={
-        "seqs": T_kraken_in,
+        "seqs": T_kraken_in_list,
         "kraken2_db": Kraken2DB,
     },
     parameters={**kraken2_params, **partition_params},
@@ -221,6 +221,28 @@ plugin.pipelines.register_function(
     citations=[citations["wood2019"]]
 )
 
+T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
+    SampleData[
+        SequencesWithQuality |
+        PairedEndSequencesWithQuality |
+        JoinedSequencesWithQuality
+    ]: (
+        SampleData[Kraken2Reports % Properties('reads')],
+        SampleData[Kraken2Outputs % Properties('reads')]
+    ),
+    SampleData[Contigs]: (
+        SampleData[Kraken2Reports % Properties('contigs')],
+        SampleData[Kraken2Outputs % Properties('contigs')]
+    ),
+    FeatureData[MAG]: (
+        FeatureData[Kraken2Reports % Properties('mags')],
+        FeatureData[Kraken2Outputs % Properties('mags')]
+    ),
+    SampleData[MAGs]: (
+        SampleData[Kraken2Reports % Properties('mags')],
+        SampleData[Kraken2Outputs % Properties('mags')]
+    )
+})
 plugin.methods.register_function(
     function=q2_annotate.kraken2.classification._classify_kraken2,
     inputs={

@@ -138,7 +138,7 @@ class TestClassifyKraken2HasCorrectCalls(TestPluginBase):
         )
 
         annotate.actions._classify_kraken2(
-            seqs=seqs, kraken2_db=db, threads=3, confidence=0.9, quick=True
+            seqs=[seqs], kraken2_db=db, threads=3, confidence=0.9, quick=True
         )
 
         exp_args = [
@@ -618,7 +618,7 @@ class TestClassifyKraken2Reads(TestPluginBase):
 
         with self.test_config:
             reports, outputs = \
-                self.classify_kraken2.parallel(samples, db)._result()
+                self.classify_kraken2.parallel([samples], db)._result()
 
         reports = reports.view(Kraken2ReportDirectoryFormat)
         outputs = outputs.view(Kraken2OutputDirectoryFormat)
@@ -790,7 +790,7 @@ class TestClassifyKraken2Contigs(TestPluginBase):
 
         with self.test_config:
             reports, outputs = \
-                self.classify_kraken2.parallel(samples, db)._result()
+                self.classify_kraken2.parallel([samples], db)._result()
 
         reports = reports.view(Kraken2ReportDirectoryFormat)
         outputs = outputs.view(Kraken2OutputDirectoryFormat)
@@ -995,7 +995,7 @@ class TestClassifyKraken2MAGs(TestPluginBase):
 
         with self.test_config:
             reports, outputs = \
-                self.classify_kraken2.parallel(samples, db)._result()
+                self.classify_kraken2.parallel([samples], db)._result()
 
         reports = reports.view(Kraken2ReportDirectoryFormat)
         outputs = outputs.view(Kraken2OutputDirectoryFormat)
@@ -1045,6 +1045,10 @@ class TestClassifyKraken2MAGs(TestPluginBase):
             exp_missing = all_samples - exp
             self.assertEqual(exp & obs, exp)
             self.assertFalse(exp_missing & obs)
+
+
+class TestMultipleInputArtifacts(TestPluginBase):
+    package = "q2_annotate.kraken2.tests"
 
 
 if __name__ == "__main__":
