@@ -73,9 +73,11 @@ class TestHMMER(TestPluginBase):
     def test_eggnog_hmmer_search_pipeline(self):
         mock_action = MagicMock(side_effect=[
             lambda sequences, num_partitions: ({"mag1": {}, "mag2": {}},),
-            lambda seq, pressed, idmap, fastas, num_cpus, db_in_memory: (0, 0),
+            lambda seq, pressed, idmap, fastas, num_cpus, db_in_memory:
+            (0, 0, 0),
             lambda hits: ("collated_hits",),
             lambda collated_hits: ("collated_tables",),
+            lambda collated_loci: ("collated_loci",),
         ])
         mock_ctx = MagicMock(get_action=mock_action)
         obs = search_orthologs_hmmer(
@@ -85,7 +87,7 @@ class TestHMMER(TestPluginBase):
             idmap=self.idmap_artifact,
             seed_alignments=self.fastas_artifact
         )
-        exp = ("collated_hits", "collated_tables")
+        exp = ("collated_hits", "collated_tables", "collated_loci")
         self.assertTupleEqual(obs, exp)
 
     def test_symlink_files_to_target_dir(self):
@@ -114,8 +116,8 @@ class TestHMMER(TestPluginBase):
             self, mock_eggnog_search, mock_symlink, mock_tmpdir, mock_makedirs
     ):
         mock_tmpdir.return_value.__enter__.return_value = "tmp"
-        mock_eggnog_search.return_value = (0, 1)
-        result, ft = _eggnog_hmmer_search(
+        mock_eggnog_search.return_value = (0, 1, 2)
+        result, ft, loci = _eggnog_hmmer_search(
             sequences=self.mags,
             idmap=self.idmap,
             pressed_hmm_db=self.pressed_hmm,
@@ -129,7 +131,7 @@ class TestHMMER(TestPluginBase):
             ANY,  # partial() method not patchable or comparable
             "tmp"
         )
-        self.assertTupleEqual((result, ft), (0, 1))
+        self.assertTupleEqual((result, ft, loci), (0, 1, 2))
 
     def test_eggnog_search_mags(self):
         sequences = MultiMAGSequencesDirFmt(
@@ -138,7 +140,7 @@ class TestHMMER(TestPluginBase):
         output_loc = self.get_data_path('hits')
         search_runner = MagicMock()
 
-        result, ft = _eggnog_search(sequences, search_runner, output_loc)
+        result, ft, _ = _eggnog_search(sequences, search_runner, output_loc)
         result.validate()
         self.assertIsInstance(ft, pd.DataFrame)
 
@@ -155,7 +157,7 @@ class TestHMMER(TestPluginBase):
         output_loc = self.get_data_path('hits')
         search_runner = MagicMock()
 
-        result, ft = _eggnog_search(sequences, search_runner, output_loc)
+        result, ft, _ = _eggnog_search(sequences, search_runner, output_loc)
         result.validate()
         self.assertIsInstance(ft, pd.DataFrame)
 
@@ -171,7 +173,7 @@ class TestHMMER(TestPluginBase):
         output_loc = self.get_data_path('hits')
         search_runner = MagicMock()
 
-        result, ft = _eggnog_search(sequences, search_runner, output_loc)
+        result, ft, _ = _eggnog_search(sequences, search_runner, output_loc)
         result.validate()
         self.assertIsInstance(ft, pd.DataFrame)
 
@@ -218,7 +220,7 @@ class TestDiamond(TestPluginBase):
             self.get_data_path('contig-sequences-1')
         ).view(ContigSequencesDirFmt)
 
-        _, obs = _eggnog_diamond_search(
+        _, obs, _ = _eggnog_diamond_search(
             sequences=contigs,
             diamond_db=self.diamond_db
         )
@@ -234,7 +236,7 @@ class TestDiamond(TestPluginBase):
             self.get_data_path('mag-sequences')
         ).view(MAGSequencesDirFmt)
 
-        _, obs = _eggnog_diamond_search(
+        _, obs, _ = _eggnog_diamond_search(
             sequences=mags,
             diamond_db=self.diamond_db
         )
@@ -253,7 +255,7 @@ class TestDiamond(TestPluginBase):
             self.get_data_path('mag-sequences-per-sample')
         ).view(MultiMAGSequencesDirFmt)
 
-        _, obs = _eggnog_diamond_search(
+        _, obs, _ = _eggnog_diamond_search(
             sequences=mags,
             diamond_db=self.diamond_db
         )
@@ -279,12 +281,12 @@ class TestDiamond(TestPluginBase):
         )
 
         with self.test_config:
-            _, parallel = self.eggnog_diamond_search.parallel(
+            _, parallel, _ = self.eggnog_diamond_search.parallel(
                 contigs,
                 self.diamond_db_artifact
             )._result()
 
-        _, single = self._eggnog_diamond_search(
+        _, single, _ = self._eggnog_diamond_search(
             sequences=contigs,
             diamond_db=self.diamond_db_artifact
         )
@@ -301,12 +303,12 @@ class TestDiamond(TestPluginBase):
         )
 
         with self.test_config:
-            _, parallel = self.eggnog_diamond_search.parallel(
+            _, parallel, _ = self.eggnog_diamond_search.parallel(
                 mags,
                 self.diamond_db_artifact
             )._result()
 
-        _, single = self._eggnog_diamond_search(
+        _, single, _ = self._eggnog_diamond_search(
             sequences=mags,
             diamond_db=self.diamond_db_artifact
         )
@@ -323,12 +325,12 @@ class TestDiamond(TestPluginBase):
         )
 
         with self.test_config:
-            _, parallel = self.eggnog_diamond_search.parallel(
+            _, parallel, _ = self.eggnog_diamond_search.parallel(
                 mags,
                 self.diamond_db_artifact
             )._result()
 
-        _, single = self._eggnog_diamond_search(
+        _, single, _ = self._eggnog_diamond_search(
             sequences=mags,
             diamond_db=self.diamond_db_artifact
         )
