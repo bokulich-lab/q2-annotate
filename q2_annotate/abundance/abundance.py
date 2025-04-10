@@ -147,7 +147,7 @@ def _calculate_coverage(
 
 
 def estimate_abundance(
-        maps: BAMDirFmt,
+        alignment_maps: BAMDirFmt,
         feature_lengths: pd.DataFrame,
         metric: str = "rpkm",
         min_mapq: int = 0,
@@ -160,7 +160,7 @@ def estimate_abundance(
 
     sample_ids_bam = {
         os.path.basename(x).split("_alignment")[0]: x for x
-        in glob.glob(os.path.join(str(maps), "*.bam"))
+        in glob.glob(os.path.join(str(alignment_maps), "*.bam"))
     }
 
     # calculate coverage for each sample

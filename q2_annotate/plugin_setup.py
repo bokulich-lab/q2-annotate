@@ -687,7 +687,7 @@ plugin.pipelines.register_function(
     inputs={
         'seqs':
             SampleData[Contigs] | SampleData[MAGs] | FeatureData[MAG],
-        'diamond_db': ReferenceDB[Diamond],
+        'db': ReferenceDB[Diamond],
     },
     parameters={
         'num_cpus': Int,
@@ -697,7 +697,7 @@ plugin.pipelines.register_function(
     input_descriptions={
         'seqs': 'Sequence data of the contigs we want to '
                 'search for hits using the Diamond Database',
-        'diamond_db': 'The filepath to an artifact containing the '
+        'db': 'The filepath to an artifact containing the '
                       'Diamond database',
     },
     parameter_descriptions={
@@ -728,7 +728,7 @@ plugin.pipelines.register_function(
     function=q2_annotate.eggnog.search_orthologs_hmmer,
     inputs={
         'seqs': SampleData[Contigs | MAGs] | FeatureData[MAG],
-        'db': ProfileHMM[PressedProtein],
+        'pressed_hmm_db': ProfileHMM[PressedProtein],
         'idmap': EggnogHmmerIdmap,
         'seed_alignments': GenomeData[Proteins]
     },
@@ -739,9 +739,10 @@ plugin.pipelines.register_function(
     },
     input_descriptions={
         'seqs': 'Sequences to be searched for hits.',
-        "db": "Collection of profile HMMs in binary format and indexed.",
-        "idmap": "List of protein families in `db`.",
-        "seed_alignments": "Seed alignments for the protein families in `db`."
+        "pressed_hmm_db": "Collection of profile HMMs in binary format and indexed.",
+        "idmap": "List of protein families in `pressed_hmm_db`.",
+        "seed_alignments": "Seed alignments for the protein families in "
+                           "`pressed_hmm_db`."
     },
     parameter_descriptions={
         'num_cpus': 'Number of CPUs to utilize per partition. \'0\' will '
@@ -817,7 +818,7 @@ plugin.methods.register_function(
         'seqs':
             SampleData[Contigs] | SampleData[MAGs] | FeatureData[MAG],
         'idmap': EggnogHmmerIdmap,
-        'db': ProfileHMM[PressedProtein],
+        'pressed_hmm_db': ProfileHMM[PressedProtein],
         'seed_alignments': GenomeData[Proteins]
     },
     parameters={
@@ -825,10 +826,11 @@ plugin.methods.register_function(
         'db_in_memory': Bool,
     },
     input_descriptions={
-        'seqs': 'Sequence data of the contigs we want to search for hits.',
-        'idmap': 'List of protein families in `db`.',
-        'db': 'Collection of Profile HMMs in binary format and indexed.',
-        'seed_alignments': 'Seed alignments for the protein families in `db`.'
+        'seqs': 'Sequence data of the sequences we want to search for hits.',
+        'idmap': 'List of protein families in `pressed_hmm_db`.',
+        'pressed_hmm_db': 'Collection of Profile HMMs in binary format and indexed.',
+        'seed_alignments': 'Seed alignments for the protein families in '
+                           '`pressed_hmm_db`.'
     },
     parameter_descriptions={
         'num_cpus': 'Number of CPUs to utilize per partition. \'0\' will '
@@ -1593,7 +1595,7 @@ M_abundance_in, P_abundance_out = TypeMap({
 plugin.methods.register_function(
     function=q2_annotate.abundance.estimate_abundance,
     inputs={
-        "maps": FeatureData[AlignmentMap] | SampleData[AlignmentMap],
+        "alignment_maps": FeatureData[AlignmentMap] | SampleData[AlignmentMap],
         "feature_lengths":
             FeatureData[SequenceCharacteristics % Properties("length")],
     },
@@ -1609,7 +1611,7 @@ plugin.methods.register_function(
         ("abundances", FeatureTable[Frequency % P_abundance_out]),
     ],
     input_descriptions={
-        "maps": "Bowtie2 alignment maps between reads and features "
+        "alignment_maps": "Bowtie2 alignment maps between reads and features "
                 "for which the abundance should be estimated.",
         "feature_lengths": "Table containing length of every "
                            "feature (MAG/contig).",

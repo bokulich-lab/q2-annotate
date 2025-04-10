@@ -50,11 +50,11 @@ def _eggnog_diamond_search(
 
 
 def search_orthologs_diamond(
-    ctx, seqs, diamond_db,
+    ctx, seqs, db,
     num_cpus=1, db_in_memory=False, num_partitions=None
 ):
     collated_hits, collated_tables, loci = _run_eggnog_search_pipeline(
-        ctx, seqs, [diamond_db], num_cpus, db_in_memory, num_partitions,
+        ctx, seqs, [db], num_cpus, db_in_memory, num_partitions,
         "_eggnog_diamond_search"
     )
     return collated_hits, collated_tables, loci

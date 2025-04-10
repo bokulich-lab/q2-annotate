@@ -34,7 +34,7 @@ def _eggnog_hmmer_search(
         MAGSequencesDirFmt
     ],
     idmap: EggnogHmmerIdmapDirectoryFmt,
-    db: PressedProfileHmmsDirectoryFmt,
+    pressed_hmm_db: PressedProfileHmmsDirectoryFmt,
     seed_alignments: ProteinsDirectoryFormat,
     num_cpus: int = 1,
     db_in_memory: bool = False
@@ -44,7 +44,7 @@ def _eggnog_hmmer_search(
         tmp_subdir = f"{output_loc}/hmmer/{taxon_id}"
         os.makedirs(tmp_subdir)
         _create_symlinks(
-            [db, idmap, seed_alignments], tmp_subdir
+            [pressed_hmm_db, idmap, seed_alignments], tmp_subdir
         )
         search_runner = partial(
             _search_runner, output_loc=output_loc,
@@ -59,12 +59,12 @@ def _eggnog_hmmer_search(
 
 
 def search_orthologs_hmmer(
-    ctx, seqs, db, idmap, seed_alignments,
+    ctx, seqs, pressed_hmm_db, idmap, seed_alignments,
     num_cpus=1, db_in_memory=False, num_partitions=None
 ):
     collated_hits, collated_tables, collated_loci = \
         _run_eggnog_search_pipeline(
-            ctx, seqs, [idmap, db, seed_alignments],
+            ctx, seqs, [idmap, pressed_hmm_db, seed_alignments],
             num_cpus, db_in_memory, num_partitions,
             "_eggnog_hmmer_search"
         )

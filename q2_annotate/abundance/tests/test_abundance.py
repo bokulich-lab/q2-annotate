@@ -58,7 +58,7 @@ class TestAbundance(TestPluginBase):
 
     def test_estimate_mag_abundance(self):
         obs = estimate_abundance(
-            maps=self.mapped_reads.view(BAMDirFmt),
+            alignment_maps=self.mapped_reads.view(BAMDirFmt),
             feature_lengths=self.mag_length_df,
             metric='rpkm'
         )

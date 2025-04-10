@@ -83,7 +83,7 @@ class TestHMMER(TestPluginBase):
         obs = search_orthologs_hmmer(
             ctx=mock_ctx,
             seqs=self.mags_artifact,
-            db=self.pressed_hmm_artifact,
+            pressed_hmm_db=self.pressed_hmm_artifact,
             idmap=self.idmap_artifact,
             seed_alignments=self.fastas_artifact
         )
@@ -120,7 +120,7 @@ class TestHMMER(TestPluginBase):
         result, ft, loci = _eggnog_hmmer_search(
             seqs=self.mags,
             idmap=self.idmap,
-            db=self.pressed_hmm,
+            pressed_hmm_db=self.pressed_hmm,
             seed_alignments=self.fastas
         )
         mock_symlink.assert_called_once_with(
