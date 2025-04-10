@@ -739,8 +739,7 @@ plugin.pipelines.register_function(
     },
     input_descriptions={
         'seqs': 'Sequences to be searched for hits.',
-        "db": "Collection of profile HMMs in binary format "
-                          "and indexed.",
+        "db": "Collection of profile HMMs in binary format and indexed.",
         "idmap": "List of protein families in `hmm_db`.",
         "seed_alignments": "Seed alignments for the protein families in "
                           "`hmm_db`."
@@ -829,8 +828,7 @@ plugin.methods.register_function(
     input_descriptions={
         'seqs': 'Sequence data of the contigs we want to search for hits.',
         'idmap': 'List of protein families in `hmm_db`.',
-        'db': 'Collection of Profile HMMs in binary format '
-                          'and indexed.',
+        'db': 'Collection of Profile HMMs in binary format and indexed.',
         'seed_alignments': 'Seed alignments for the protein families in '
                           '`hmm_db`.'
     },
