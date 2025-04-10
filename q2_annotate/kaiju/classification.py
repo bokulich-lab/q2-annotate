@@ -311,11 +311,11 @@ def classify_kaiju(
     else:
         raise NotImplementedError()
 
-    (partitioned_reads,) = partition_method(seqs, num_partitions)
+    (partitioned_seqs,) = partition_method(seqs, num_partitions)
 
     tables = []
     taxonomies = []
-    for seq in partitioned_reads.values():
+    for seq in partitioned_seqs.values():
         (table, taxonomy) = _classify_kaiju(seq, db, **kwargs)
         tables.append(table)
         taxonomies.append(taxonomy)
