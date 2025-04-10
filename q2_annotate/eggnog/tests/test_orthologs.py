@@ -118,7 +118,7 @@ class TestHMMER(TestPluginBase):
         result, ft = _eggnog_hmmer_search(
             seqs=self.mags,
             idmap=self.idmap,
-            pressed_hmm_db=self.pressed_hmm,
+            db=self.pressed_hmm,
             seed_alignments=self.fastas
         )
         mock_symlink.assert_called_once_with(

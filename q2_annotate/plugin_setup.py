@@ -815,7 +815,7 @@ plugin.methods.register_function(
         'seqs':
             SampleData[Contigs] | SampleData[MAGs] | FeatureData[MAG],
         'idmap': EggnogHmmerIdmap,
-        'pressed_hmm_db': ProfileHMM[PressedProtein],
+        'db': ProfileHMM[PressedProtein],
         'seed_alignments': GenomeData[Proteins]
     },
     parameters={
@@ -825,7 +825,7 @@ plugin.methods.register_function(
     input_descriptions={
         'seqs': 'Sequence data of the contigs we want to search for hits.',
         'idmap': 'List of protein families in `hmm_db`.',
-        'pressed_hmm_db': 'Collection of Profile HMMs in binary format '
+        'db': 'Collection of Profile HMMs in binary format '
                           'and indexed.',
         'seed_alignments': 'Seed alignments for the protein families in '
                           '`hmm_db`.'
