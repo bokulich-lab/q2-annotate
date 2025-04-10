@@ -373,5 +373,7 @@ class TestBUSCOUtils(TestPluginBase):
     def test_validate_parameters_lineage_and_auto(self):
         with self.assertRaisesRegex(ValueError, "If 'lineage-dataset' is provided"):
             _validate_parameters(True, False, True, False)
+        with self.assertRaisesRegex(ValueError, "If 'lineage-dataset' is provided"):
             _validate_parameters(True, True, False, False)
+        with self.assertRaisesRegex(ValueError, "If 'lineage-dataset' is provided"):
             _validate_parameters(True, False, False, True)
