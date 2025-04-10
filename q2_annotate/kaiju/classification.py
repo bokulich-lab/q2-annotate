@@ -206,7 +206,9 @@ def _classify_kaiju_helper(
 ) -> (pd.DataFrame, pd.DataFrame):
     """
     Args:
-        seqs (pd.DataFrame): A DataFrame containing sample information.
+        seqs: Sequences object, can be of class SingleLanePerSampleSingleEndFastqDirFmt, 
+              SingleLanePerSamplePairedEndFastqDirFmt, ContigSequencesDirFmt, 
+              MAGSequencesDirFmt or MultiFASTADirectoryFormat.
         all_args (dict): A dictionary containing arguments for running Kaiju.
 
     Returns:
@@ -252,12 +254,10 @@ def _classify_kaiju_helper(
     
 
         elif isinstance(seqs, ContigSequencesDirFmt):
-            inner_dict = seqs.sample_dict()
-            outer_dict = {"":inner_dict}
+            outer_dict = {"": seqs.sample_dict()}
 
         elif isinstance(seqs, MAGSequencesDirFmt):
-            inner_dict = seqs.feature_dict()
-            outer_dict = {"": inner_dict}
+            outer_dict = {"": seqs.feature_dict()}
 
         elif isinstance(seqs, MultiFASTADirectoryFormat):
             outer_dict = seqs.sample_dict()
