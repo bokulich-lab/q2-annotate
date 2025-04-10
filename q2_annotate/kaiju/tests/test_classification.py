@@ -207,7 +207,7 @@ class TestKaijuClassification(TestPluginBase):
 
         p1.assert_called_once_with(f"{self.temp_dir.name}/results.tsv")
         p2.assert_called_once_with(exp_cmd, check=True)
-    
+
     @patch("subprocess.run")
     @patch("q2_annotate.kaiju.classification._process_kaiju_reports")
     def test_classify_kaiju_single(self, p1, p2):
@@ -237,11 +237,11 @@ class TestKaijuClassification(TestPluginBase):
             self.get_data_path("mags"), "r"
         )
         r_out = (r".*3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa.out,.*"
-                       r"8894435a-c836-4c18-b475-8b38a9ab6c6b.out,.*"
-                       r"99e2f6c5-5811-4a31-a4de-65040c8197bd.out")
+                 r"8894435a-c836-4c18-b475-8b38a9ab6c6b.out,.*"
+                 r"99e2f6c5-5811-4a31-a4de-65040c8197bd.out")
         r_in = (r".*3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa.fasta,.*"
-                      r"8894435a-c836-4c18-b475-8b38a9ab6c6b.fasta,.*"
-                      r"99e2f6c5-5811-4a31-a4de-65040c8197bd.fasta")
+                r"8894435a-c836-4c18-b475-8b38a9ab6c6b.fasta,.*"
+                r"99e2f6c5-5811-4a31-a4de-65040c8197bd.fasta")
         self.classify_kaiju_test_helper(p1, p2, seqs, r_in, r_out)
 
     @patch("subprocess.run")
@@ -265,7 +265,7 @@ class TestKaijuClassification(TestPluginBase):
         r_out = r".*sample1.out,.*sample2.out"
         r_in = r".*sample1_contigs.fasta,.*sample2_contigs.fasta"
         self.classify_kaiju_test_helper(p1, p2, seqs, r_in, r_out)
-    
+
     def classify_kaiju_test_helper(self, p1, p2, seqs, r_in, r_out, r_paired=None):
         db_path = self.temp_dir.name
         open(os.path.join(db_path, "kaiju_123.fmi"), "w").close()
@@ -286,13 +286,13 @@ class TestKaijuClassification(TestPluginBase):
             "-i", ANY, "-o", ANY
         ]
         obs_cmd = p2.call_args.args[0]
-        
+
         if r_paired:
             self.assertRegex(obs_cmd[-5], r_paired)
             exp_cmd[21:2] = ["-j", ANY]
-        
-        self.assertRegex(obs_cmd[-1],r_out)
-        self.assertRegex(obs_cmd[-3],r_in)
+
+        self.assertRegex(obs_cmd[-1], r_out)
+        self.assertRegex(obs_cmd[-3], r_in)
         p2.assert_called_once_with(exp_cmd, check=True)
 
     @patch("subprocess.run", side_effect=CalledProcessError(1, "hello"))
@@ -455,7 +455,6 @@ class TestKaijuClassification(TestPluginBase):
         self.assertEqual("merged_table", out_table)
         self.assertEqual("merged_taxa", out_taxonomy)
 
-
     def test_classify_kaiju_single_partition_mags(self):
         fake_seqs = qiime2.Artifact.import_data(
             "SampleData[MAGs]",
@@ -537,6 +536,7 @@ class TestKaijuClassification(TestPluginBase):
         self.mock_merge_taxa.assert_called_once_with(["taxonomy1"])
         self.assertEqual("merged_table", out_table)
         self.assertEqual("merged_taxa", out_taxonomy)
+
 
 if __name__ == "__main__":
     unittest.main()
