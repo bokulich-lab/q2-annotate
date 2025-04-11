@@ -547,7 +547,7 @@ class TestClassifyKraken2Reads(TestPluginBase):
         samples = SingleLanePerSamplePairedEndFastqDirFmt(reads_path, 'r')
 
         cls.reports, cls.outputs = _classify_kraken2(samples, cls.db)
-        cls.output_views = list(cls.outputs.reports.iter_views(pd.DataFrame))
+        cls.output_views = list(cls.outputs.outputs.iter_views(pd.DataFrame))
         cls.report_views = list(cls.reports.reports.iter_views(pd.DataFrame))
 
         cls.sample_id_to_ncbi_id = {
@@ -623,7 +623,7 @@ class TestClassifyKraken2Reads(TestPluginBase):
         reports = reports.view(Kraken2ReportDirectoryFormat)
         outputs = outputs.view(Kraken2OutputDirectoryFormat)
 
-        output_views = outputs.reports.iter_views(pd.DataFrame)
+        output_views = outputs.outputs.iter_views(pd.DataFrame)
         report_views = reports.reports.iter_views(pd.DataFrame)
 
         samples_of_interest = ('ba', 'mm', 'sa', 'se', 'ba-mm-mixed')
@@ -725,7 +725,7 @@ class TestClassifyKraken2Contigs(TestPluginBase):
         cls.samples = ContigSequencesDirFmt(contigs_path, 'r')
 
         cls.reports, cls.outputs = _classify_kraken2(cls.samples, cls.db)
-        cls.output_views = cls.outputs.reports.iter_views(pd.DataFrame)
+        cls.output_views = cls.outputs.outputs.iter_views(pd.DataFrame)
         cls.report_views = cls.reports.reports.iter_views(pd.DataFrame)
 
         cls.sample_id_to_ncbi_id = {
@@ -795,7 +795,7 @@ class TestClassifyKraken2Contigs(TestPluginBase):
         reports = reports.view(Kraken2ReportDirectoryFormat)
         outputs = outputs.view(Kraken2OutputDirectoryFormat)
 
-        output_views = outputs.reports.iter_views(pd.DataFrame)
+        output_views = outputs.outputs.iter_views(pd.DataFrame)
         report_views = reports.reports.iter_views(pd.DataFrame)
 
         samples_of_interest = ('ba', 'mm', 'sa', 'se', 'ba-mm-mixed')
@@ -854,7 +854,7 @@ class TestClassifyKraken2MAGsDerep(unittest.TestCase):
         samples = MAGSequencesDirFmt(mags_path, 'r')
 
         cls.reports, cls.outputs = _classify_kraken2(samples, db)
-        cls.output_views = cls.outputs.reports.iter_views(pd.DataFrame)
+        cls.output_views = cls.outputs.outputs.iter_views(pd.DataFrame)
         cls.report_views = cls.reports.reports.iter_views(pd.DataFrame)
 
         cls.uuid_to_sample = {
@@ -932,7 +932,7 @@ class TestClassifyKraken2MAGs(TestPluginBase):
         cls.samples = MultiFASTADirectoryFormat(mags_path, 'r')
 
         cls.reports, cls.outputs = _classify_kraken2(cls.samples, cls.db)
-        cls.output_views = cls.outputs.reports.iter_views(pd.DataFrame)
+        cls.output_views = cls.outputs.outputs.iter_views(pd.DataFrame)
         cls.report_views = cls.reports.reports.iter_views(pd.DataFrame)
 
         cls.uuid_to_sample = {
@@ -1000,7 +1000,7 @@ class TestClassifyKraken2MAGs(TestPluginBase):
         reports = reports.view(Kraken2ReportDirectoryFormat)
         outputs = outputs.view(Kraken2OutputDirectoryFormat)
 
-        output_views = outputs.reports.iter_views(pd.DataFrame)
+        output_views = outputs.outputs.iter_views(pd.DataFrame)
         report_views = reports.reports.iter_views(pd.DataFrame)
 
         samples_of_interest = self.uuid_to_sample.keys()
