@@ -12,7 +12,7 @@ from qiime2.plugin.testing import TestPluginBase
 from q2_annotate.busco.utils import (
     _parse_busco_params, _collect_summaries, _parse_df_columns,
     _partition_dataframe, _get_feature_table, _calculate_summary_stats,
-    _get_mag_lengths, _validate_lineage_dataset_input
+    _get_mag_lengths, _validate_lineage_dataset_input, _validate_parameters
 )
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
@@ -365,3 +365,15 @@ class TestBUSCOUtils(TestPluginBase):
                 "auto_lineage_prok": False
             }
         )
+
+    def test_validate_parameters_lineage_all_false(self):
+        with self.assertRaisesRegex(ValueError, "At least one of these parameters"):
+            _validate_parameters(None, False, False, False)
+
+    def test_validate_parameters_lineage_and_auto(self):
+        with self.assertRaisesRegex(ValueError, "If 'lineage-dataset' is provided"):
+            _validate_parameters(True, False, True, False)
+        with self.assertRaisesRegex(ValueError, "If 'lineage-dataset' is provided"):
+            _validate_parameters(True, True, False, False)
+        with self.assertRaisesRegex(ValueError, "If 'lineage-dataset' is provided"):
+            _validate_parameters(True, False, False, True)
