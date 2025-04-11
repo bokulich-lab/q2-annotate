@@ -112,8 +112,8 @@ class TestBUSCOSampleData(TestPluginBase):
     @patch("q2_annotate.busco.busco._busco_helper")
     def test_evaluate_busco_offline(self, mock_helper):
         _evaluate_busco(
-            bins=self.mags,
-            busco_db=self.busco_db,
+            mags=self.mags,
+            db=self.busco_db,
             mode="some_mode",
             lineage_dataset="lineage_1"
         )
@@ -154,7 +154,7 @@ class TestBUSCOSampleData(TestPluginBase):
     ):
         _visualize_busco(
             output_dir=self.temp_dir.name,
-            busco_results=pd.read_csv(
+            results=pd.read_csv(
                 self.get_data_path('summaries/all_renamed_with_lengths.csv')
             )
         )
@@ -208,8 +208,8 @@ class TestBUSCOSampleData(TestPluginBase):
         )
         obs = evaluate_busco(
             ctx=mock_ctx,
-            bins=mags,
-            busco_db=busco_db,
+            mags=mags,
+            db=busco_db,
             num_partitions=2
         )
         exp = ("collated_result", "visualization")

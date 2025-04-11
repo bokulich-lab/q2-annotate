@@ -35,12 +35,12 @@ def _annotate_seed_orthologs_runner(
 
 def _eggnog_annotate(
         eggnog_hits: SeedOrthologDirFmt,
-        eggnog_db: EggnogRefDirFmt,
+        db: EggnogRefDirFmt,
         db_in_memory: bool = False,
         num_cpus: int = 1
 ) -> OrthologAnnotationDirFmt:
 
-    eggnog_db_fp = eggnog_db.path
+    eggnog_db_fp = db.path
 
     result = OrthologAnnotationDirFmt()
 
@@ -62,7 +62,7 @@ def _eggnog_annotate(
 def map_eggnog(
         ctx,
         eggnog_hits,
-        eggnog_db,
+        db,
         db_in_memory=False,
         num_cpus=1,
         num_partitions=None
@@ -82,7 +82,7 @@ def map_eggnog(
     annotations = []
     for orthologs in partitioned_orthologs.values():
         (annotation, ) = _eggnog_annotate(
-            orthologs, eggnog_db, db_in_memory, num_cpus
+            orthologs, db, db_in_memory, num_cpus
         )
         annotations.append(annotation)
 

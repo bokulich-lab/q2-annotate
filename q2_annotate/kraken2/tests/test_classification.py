@@ -138,7 +138,7 @@ class TestClassifyKraken2HasCorrectCalls(TestPluginBase):
         )
 
         annotate.actions._classify_kraken2(
-            seqs=seqs, kraken2_db=db, threads=3, confidence=0.9, quick=True
+            seqs=seqs, db=db, threads=3, confidence=0.9, quick=True
         )
 
         exp_args = [

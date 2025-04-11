@@ -84,7 +84,7 @@ class TestBUSCOFeatureData(TestPluginBase):
     ):
         _visualize_busco(
             output_dir=self.temp_dir.name,
-            busco_results=pd.read_csv(
+            results=pd.read_csv(
                 self.get_data_path(
                     'summaries/all_renamed_with_lengths_feature_data.csv'
                 )
@@ -142,8 +142,8 @@ class TestBUSCOFeatureData(TestPluginBase):
         )
         obs = evaluate_busco(
             ctx=mock_ctx,
-            bins=mags,
-            busco_db=busco_db,
+            mags=mags,
+            db=busco_db,
             num_partitions=2
         )
         exp = ("collated_result", "visualization")
