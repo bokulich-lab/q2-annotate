@@ -262,3 +262,18 @@ def _extract_json_data(base_path, mag_id, sample_id, file_name):
     }
 
     return pd.DataFrame([results])
+
+
+def _validate_parameters(lineage_dataset, auto_lineage,
+                         auto_lineage_euk, auto_lineage_prok):
+    if not any([lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok]):
+        raise ValueError(
+            "At least one of these parameters must be provided/set to True: "
+            "'lineage-dataset', 'auto-lineage', 'auto-lineage-euk', "
+            "'auto-lineage-prok'."
+        )
+    if lineage_dataset and any([auto_lineage, auto_lineage_euk, auto_lineage_prok]):
+        raise ValueError(
+            "If 'lineage-dataset' is provided, all the parameters 'auto-lineage', "
+            "'auto-lineage-euk' and 'auto-lineage-prok' must be set to False."
+        )

@@ -28,33 +28,33 @@ from q2_types.reference_db import DiamondDatabaseDirFmt
 
 
 def _eggnog_diamond_search(
-    sequences: Union[
+    seqs: Union[
         ContigSequencesDirFmt,
         MultiMAGSequencesDirFmt,
         MAGSequencesDirFmt
     ],
-    diamond_db: DiamondDatabaseDirFmt,
+    db: DiamondDatabaseDirFmt,
     num_cpus: int = 1,
     db_in_memory: bool = False,
 ) -> (SeedOrthologDirFmt, pd.DataFrame, LociDirectoryFormat):
     with tempfile.TemporaryDirectory() as output_loc:
-        db_fp = os.path.join(str(diamond_db), 'ref_db.dmnd')
+        db_fp = os.path.join(str(db), 'ref_db.dmnd')
         search_runner = partial(
             _search_runner, output_loc=str(output_loc),
             num_cpus=num_cpus, db_in_memory=db_in_memory,
             runner_args=['diamond', '--dmnd_db', str(db_fp)]
         )
-        result, ft, loci = _eggnog_search(sequences, search_runner,
+        result, ft, loci = _eggnog_search(seqs, search_runner,
                                           str(output_loc))
     return result, ft, loci
 
 
 def search_orthologs_diamond(
-    ctx, sequences, diamond_db,
+    ctx, seqs, db,
     num_cpus=1, db_in_memory=False, num_partitions=None
 ):
     collated_hits, collated_tables, loci = _run_eggnog_search_pipeline(
-        ctx, sequences, [diamond_db], num_cpus, db_in_memory, num_partitions,
+        ctx, seqs, [db], num_cpus, db_in_memory, num_partitions,
         "_eggnog_diamond_search"
     )
     return collated_hits, collated_tables, loci

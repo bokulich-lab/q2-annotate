@@ -13,18 +13,18 @@ from q2_annotate.busco.types import BUSCOResultsDirectoryFormat
 
 
 def collate_busco_results(
-    busco_results: BUSCOResultsDirectoryFormat,
+    results: BUSCOResultsDirectoryFormat,
 ) -> BUSCOResultsDirectoryFormat:
     collated_results = BUSCOResultsDirectoryFormat()
 
-    results = []
-    for result in busco_results:
+    result_dfs = []
+    for result in results:
         df = pd.read_csv(
             result.path / "busco_results.tsv", sep='\t', index_col=0
         )
-        results.append(df)
+        result_dfs.append(df)
 
-    pd.concat(results).to_csv(
+    pd.concat(result_dfs).to_csv(
         os.path.join(collated_results.path, 'busco_results.tsv'),
         sep='\t', index=True, header=True
     )

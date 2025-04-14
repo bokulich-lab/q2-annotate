@@ -20,6 +20,6 @@ def diamond_makedb(use):
             seqs=fasta_input,
         ),
         use.UsageOutputNames(
-            diamond_db='diamond_db',
+            db='diamond_db',
         )
     )

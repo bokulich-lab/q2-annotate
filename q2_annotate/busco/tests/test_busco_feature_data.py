@@ -85,7 +85,7 @@ class TestBUSCOFeatureData(TestPluginBase):
     ):
         _visualize_busco(
             output_dir=self.temp_dir.name,
-            busco_results=pd.read_csv(
+            results=pd.read_csv(
                 self.get_data_path(
                     'summaries/all_renamed_with_lengths_feature_data.csv'
                 )
@@ -124,7 +124,8 @@ class TestBUSCOFeatureData(TestPluginBase):
         mock_clean.assert_called_with(self.temp_dir.name)
 
     # TODO: maybe this could be turned into an actual test
-    def test_evaluate_busco_action(self):
+    @patch('q2_annotate.busco.busco._validate_parameters')
+    def test_evaluate_busco_action(self, mock_validate):
         mock_action = MagicMock(side_effect=[
             lambda x, **kwargs: (0, ),
             lambda x: ("collated_result", ),
@@ -142,8 +143,8 @@ class TestBUSCOFeatureData(TestPluginBase):
         )
         obs = evaluate_busco(
             ctx=mock_ctx,
-            bins=mags,
-            busco_db=busco_db,
+            mags=mags,
+            db=busco_db,
             num_partitions=2
         )
         exp = ("collated_result", "visualization")

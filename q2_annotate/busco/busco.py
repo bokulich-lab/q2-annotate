@@ -23,8 +23,8 @@ from q2_annotate.busco.utils import (
     _parse_busco_params,
     _parse_df_columns, _partition_dataframe, _calculate_summary_stats,
     _get_feature_table, _cleanup_bootstrap,
-    _validate_lineage_dataset_input,
-    _extract_json_data
+    _validate_lineage_dataset_input, _extract_json_data,
+    _validate_parameters
 )
 from q2_annotate._utils import _process_common_input_params, run_command
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
@@ -88,8 +88,8 @@ def _busco_helper(mags, common_args):
 
 
 def _evaluate_busco(
-    bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt],
-    busco_db: BuscoDatabaseDirFmt,
+    mags: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt],
+    db: BuscoDatabaseDirFmt,
     mode: str = "genome",
     lineage_dataset: str = None,
     augustus: bool = False,
@@ -111,15 +111,15 @@ def _evaluate_busco(
     scaffold_composition: bool = False,
 ) -> pd.DataFrame:
     kwargs = {
-        k: v for k, v in locals().items() if k not in ["bins", "busco_db"]
+        k: v for k, v in locals().items() if k not in ["mags", "db"]
     }
     kwargs["offline"] = True
-    kwargs["download_path"] = f"{str(busco_db)}/busco_downloads"
+    kwargs["download_path"] = f"{str(db)}/busco_downloads"
 
     if lineage_dataset is not None:
         _validate_lineage_dataset_input(
             lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok,
-            busco_db, kwargs  # kwargs may be modified inside this function
+            db, kwargs  # kwargs may be modified inside this function
         )
 
     # Filter out all kwargs that are None, False or 0.0
@@ -127,20 +127,20 @@ def _evaluate_busco(
         processing_func=_parse_busco_params, params=kwargs
     )
 
-    return _busco_helper(bins, common_args)
+    return _busco_helper(mags, common_args)
 
 
-def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
-    busco_results.to_csv(
+def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
+    results.to_csv(
         os.path.join(output_dir, "busco_results.csv"),
         index=False
     )
     # Outputs different df for sample and feature data
-    busco_results = _parse_df_columns(busco_results)
+    results = _parse_df_columns(results)
     max_rows = 100
 
     # Partition data frames
-    if len(busco_results["sample_id"].unique()) >= 2:
+    if len(results["sample_id"].unique()) >= 2:
         counter_col = "sample_id"
         assets_subdir = "sample_data"
         tab_title = ["Sample details", "Feature details"]
@@ -149,7 +149,7 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
         # Draw selectable histograms (only for sample data mags)
         tabbed_context = {
             "vega_summary_selectable_json":
-            json.dumps(_draw_selectable_summary_histograms(busco_results))
+            json.dumps(_draw_selectable_summary_histograms(results))
         }
     else:
         counter_col = "mag_id"
@@ -158,7 +158,7 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
         is_sample_data = False
         tabbed_context = {}  # Init as empty bc we update it below
 
-    dfs = _partition_dataframe(busco_results, max_rows, is_sample_data)
+    dfs = _partition_dataframe(results, max_rows, is_sample_data)
 
     # Copy BUSCO results from tmp dir to output_dir
     TEMPLATES = os.path.join(
@@ -212,10 +212,10 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
     # Render
     vega_json = json.dumps(context)
     vega_json_summary = json.dumps(
-        _draw_marker_summary_histograms(busco_results)
+        _draw_marker_summary_histograms(results)
     )
-    table_json = _get_feature_table(busco_results)
-    stats_json = _calculate_summary_stats(busco_results)
+    table_json = _get_feature_table(results)
+    stats_json = _calculate_summary_stats(results)
     tabbed_context.update({
         "tabs": [
             {"title": "QC overview", "url": "index.html"},
@@ -236,8 +236,8 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
 
 def evaluate_busco(
     ctx,
-    bins,
-    busco_db,
+    mags,
+    db,
     mode="genome",
     lineage_dataset=None,
     augustus=False,
@@ -259,23 +259,25 @@ def evaluate_busco(
     scaffold_composition=False,
     num_partitions=None
 ):
+    _validate_parameters(lineage_dataset, auto_lineage,
+                         auto_lineage_euk, auto_lineage_prok)
 
     kwargs = {
         k: v for k, v in locals().items()
-        if k not in ["bins", "ctx", "num_partitions"]
+        if k not in ["mags", "ctx", "num_partitions"]
     }
 
     _evaluate_busco = ctx.get_action("annotate", "_evaluate_busco")
     collate_busco_results = ctx.get_action("annotate", "collate_busco_results")
     _visualize_busco = ctx.get_action("annotate", "_visualize_busco")
 
-    if issubclass(bins.format, MultiMAGSequencesDirFmt):
+    if issubclass(mags.format, MultiMAGSequencesDirFmt):
         partition_action = "partition_sample_data_mags"
     else:
         partition_action = "partition_feature_data_mags"
     partition_mags = ctx.get_action("types", partition_action)
 
-    (partitioned_mags, ) = partition_mags(bins, num_partitions)
+    (partitioned_mags, ) = partition_mags(mags, num_partitions)
     results = []
     for mag in partitioned_mags.values():
         (busco_result, ) = _evaluate_busco(mag, **kwargs)
