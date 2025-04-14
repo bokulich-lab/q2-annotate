@@ -32,7 +32,7 @@ from q2_annotate.busco.types import BuscoDatabaseDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 
 
-def _run_busco(input_dir:str, output_dir: str, sample: str, params: List[str]):
+def _run_busco(input_dir: str, output_dir: str, sample: str, params: List[str]):
     """Runs BUSCO on one (sample) directory
 
     Args:
@@ -59,16 +59,16 @@ def _run_busco(input_dir:str, output_dir: str, sample: str, params: List[str]):
 
 def _busco_helper(mags, common_args):
     results_all = pd.DataFrame()
-    
+
     if isinstance(mags, MultiMAGSequencesDirFmt):
         sample_dir = mags.sample_dict()
-        
+
     elif isinstance(mags, MAGSequencesDirFmt):
         sample_dir = {"": mags.feature_dict()}
-    
+
     with tempfile.TemporaryDirectory() as tmp:
         for sample_id, feature_dict in sample_dir.items():
-        
+
             _run_busco(
                 input_dir=os.path.join(str(mags), sample_id),
                 output_dir=str(tmp),
@@ -80,7 +80,7 @@ def _busco_helper(mags, common_args):
                 results_mag = _extract_json_data(
                     str(tmp), mag_id, sample_id, os.path.basename(mag_fp)
                 )
-                
+
                 # Add results df from one sample to results_all df
                 results_all = pd.concat([results_all, results_mag])
 

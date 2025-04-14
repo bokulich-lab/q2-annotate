@@ -100,7 +100,6 @@ class TestBUSCOUtils(TestPluginBase):
         expected = ["--lineage_dataset", "bacteria-XYZ"]
         self.assertSetEqual(set(observed), set(expected))
 
-
     def test_parse_df_columns(self):
         obs = _parse_df_columns(self.df4)
         exp = self.df5
@@ -263,7 +262,6 @@ class TestBUSCOUtils(TestPluginBase):
 
         self.assertEqual(obs, exp)
 
-
     def test_validate_lineage_dataset_input_valid(self):
         # Give path to valid database
         p = self.get_data_path("busco_db")
@@ -330,9 +328,9 @@ class TestBUSCOUtils(TestPluginBase):
 
     def test_extract_json_data(self):
         obs = _extract_json_data(
-            base_path=self.get_data_path("busco_output"), 
-            mag_id="24dee6fe-9b84-45bb-8145-de7b092533a1", 
-            sample_id="sample1", 
+            base_path=self.get_data_path("busco_output"),
+            mag_id="24dee6fe-9b84-45bb-8145-de7b092533a1",
+            sample_id="sample1",
             file_name="24dee6fe-9b84-45bb-8145-de7b092533a1.fasta")
 
         exp = pd.DataFrame([{
@@ -358,9 +356,9 @@ class TestBUSCOUtils(TestPluginBase):
 
     def test_extract_json_data_division_by_zero(self):
         obs = _extract_json_data(
-            base_path=self.get_data_path("busco_output"), 
-            mag_id="24dee6fe-9b84-45bb-8145-de7b092533a2", 
-            sample_id="sample1", 
+            base_path=self.get_data_path("busco_output"),
+            mag_id="24dee6fe-9b84-45bb-8145-de7b092533a2",
+            sample_id="sample1",
             file_name="24dee6fe-9b84-45bb-8145-de7b092533a2.fasta")
 
         exp = pd.DataFrame([{
@@ -383,7 +381,7 @@ class TestBUSCOUtils(TestPluginBase):
             "contamination": None
         }])
         pd.testing.assert_frame_equal(obs, exp)
-        
+
     def test_validate_parameters_lineage_all_false(self):
         with self.assertRaisesRegex(ValueError, "At least one of these parameters"):
             _validate_parameters(None, False, False, False)

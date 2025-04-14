@@ -59,7 +59,6 @@ class TestBUSCOSampleData(TestPluginBase):
             '--out_path', "cwd/output_dir", '-o', 'sample1'
         ], cwd="cwd")
 
-
     @patch('q2_annotate.busco.busco._extract_json_data')
     @patch('q2_annotate.busco.busco._run_busco')
     def test_busco_helper(self, mock_run, mock_extract):
@@ -87,7 +86,9 @@ class TestBUSCOSampleData(TestPluginBase):
 
         obs = _busco_helper(self.mags, ['--lineage_dataset', 'bacteria_odb10'])
 
-        exp = pd.read_csv(self.get_data_path('busco_results/results_all/busco_results.tsv'), sep="\t")
+        exp = pd.read_csv(self.get_data_path(
+            'busco_results/results_all/busco_results.tsv'
+        ), sep="\t")
 
         pd.testing.assert_frame_equal(obs, exp)
 

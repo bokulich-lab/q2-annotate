@@ -211,8 +211,8 @@ def _extract_json_data(base_path, mag_id, sample_id, file_name):
     """
     Extracts key metrics and metadata from a BUSCO JSON result file.
 
-    This function locates the corresponding BUSCO result `.json` file for a given 
-    MAG. It reads and parses the JSON, computes completeness and contamination 
+    This function locates the corresponding BUSCO result `.json` file for a given
+    MAG. It reads and parses the JSON, computes completeness and contamination
     metrics, and returns a dictionary with BUSCO results and metadata.
 
     Args:
@@ -225,7 +225,7 @@ def _extract_json_data(base_path, mag_id, sample_id, file_name):
         pd.DataFrame: A dataframe containing BUSCO results and metadata.
     """
     json_path = glob.glob(os.path.join(base_path, sample_id, file_name, "*.json"))[0]
-    
+
     with open(json_path) as f:
         data = json.load(f)
 

@@ -6,14 +6,10 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import json
-import os
-import shutil
 import qiime2
 import pandas as pd
-from q2_annotate.busco.busco import (
-    _run_busco, _visualize_busco, evaluate_busco, _busco_helper
-)
-from unittest.mock import patch, ANY, MagicMock, call
+from q2_annotate.busco.busco import _visualize_busco, evaluate_busco, _busco_helper
+from unittest.mock import patch, ANY, MagicMock
 from qiime2.plugin.testing import TestPluginBase
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 
