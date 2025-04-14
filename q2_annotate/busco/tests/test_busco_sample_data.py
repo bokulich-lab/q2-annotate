@@ -46,75 +46,65 @@ class TestBUSCOSampleData(TestPluginBase):
 
     @patch('q2_annotate.busco.busco.run_command')
     def test_run_busco(self, mock_run):
-        self._prepare_summaries()
-
-        obs = _run_busco(
-            output_dir=self.temp_dir.name,
-            mags=self.mags,
+        _run_busco(
+            input_dir="input_dir",
+            output_dir="cwd/output_dir",
+            sample="sample1",
             params=['--lineage_dataset', 'bacteria_odb10', '--cpu', '7']
         )
-        exp = {
-            'sample1': f"{self.temp_dir.name}/sample1/batch_summary.txt",
-            'sample2': f"{self.temp_dir.name}/sample2/batch_summary.txt",
-        }
 
-        self.assertDictEqual(obs, exp)
-        mock_run.assert_has_calls([
-            call(
-                [
-                    'busco', '--lineage_dataset', 'bacteria_odb10',
-                    '--cpu', '7', '--in', self.get_data_path('mags/sample1'),
-                    '--out_path', self.temp_dir.name, '-o', 'sample1'
-                ],
-                cwd=os.path.dirname(self.temp_dir.name)
-            ),
-            call(
-                [
-                    'busco', '--lineage_dataset', 'bacteria_odb10',
-                    '--cpu', '7', '--in', self.get_data_path('mags/sample2'),
-                    '--out_path', self.temp_dir.name, '-o', 'sample2'
-                ],
-                cwd=os.path.dirname(self.temp_dir.name)
-            ),
-        ])
+        mock_run.assert_called_once_with([
+            'busco', '-f', '--lineage_dataset', 'bacteria_odb10',
+            '--cpu', '7', '--in', "input_dir",
+            '--out_path', "cwd/output_dir", '-o', 'sample1'
+        ], cwd="cwd")
 
+
+    @patch('q2_annotate.busco.busco._extract_json_data')
     @patch('q2_annotate.busco.busco._run_busco')
-    @patch('q2_annotate.busco.busco._get_mag_lengths')
-    @patch('q2_annotate.busco.busco._compute_completeness_contamination')
-    def test_busco_helper(self, mock_compute, mock_len, mock_run):
-        self._prepare_summaries()
-        mock_run.return_value = {
-            'sample1': f"{self.temp_dir.name}/sample1/batch_summary.txt",
-            'sample2': f"{self.temp_dir.name}/sample2/batch_summary.txt",
-        }
-        mock_len.return_value = pd.Series(
-            {
-                'ab23d75d-547d-455a-8b51-16b46ddf7496': 3177889,
-                '0e514d88-16c4-4273-a1df-1a360eb2c823': 19625518,
-                '8098e3a8-df4a-46af-83e2-6c2443d74cb9': 912062,
-                'd4637408-80ab-49d5-ab32-c66509c3a544': 2678999,
-                '503c2f56-3e4f-4ce7-9b61-b63bc7fe0592': 21035714
-            }, name='length'
-        )
-        mock_compute.side_effect = [
-            pd.Series([83, 0]),
-            pd.Series([100, 98.4]),
-            pd.Series([12.1, 100]),
-            pd.Series([74.2, 0]),
-            pd.Series([99.2, 95.9]),
+    def test_busco_helper(self, mock_run, mock_extract):
+        mock_extract.side_effect = [
+            pd.read_csv(self.get_data_path(
+                "busco_results/sample1/bec9c09a-62c3-4fbb-8f7f-9fdf9aefc02f.tsv"),
+                        sep="\t"),
+            pd.read_csv(self.get_data_path(
+                "busco_results/sample1/5978e667-0476-4921-8cc2-34b9d1b508c1.tsv"),
+                        sep="\t"),
+            pd.read_csv(self.get_data_path(
+                "busco_results/sample1/625c95e6-ac2f-4e6e-9470-af8cd11c75dd.tsv"),
+                        sep="\t"),
+            pd.read_csv(self.get_data_path(
+                "busco_results/sample2/6ed8c097-1c87-4019-8b38-b95507011b41.tsv"),
+                        sep="\t"),
+            pd.read_csv(self.get_data_path(
+                "busco_results/sample2/bf2c0af0-83ba-44a6-b550-3b7884a62a82.tsv"),
+                        sep="\t"),
+            pd.read_csv(self.get_data_path(
+                "busco_results/sample2/a2401d15-802f-42c3-9eb4-c282e2141b14.tsv"),
+                        sep="\t")
+
         ]
-        obs = _busco_helper(
-            self.mags, ['--lineage_dataset', 'bacteria_odb10']
-        )
-        exp = pd.read_csv(
-            self.get_data_path('summaries/all_renamed_with_lengths.csv'),
-        )
+
+        obs = _busco_helper(self.mags, ['--lineage_dataset', 'bacteria_odb10'])
+
+        exp = pd.read_csv(self.get_data_path('busco_results/results_all/busco_results.tsv'), sep="\t")
 
         pd.testing.assert_frame_equal(obs, exp)
-        mock_run.assert_called_with(
-            output_dir=ANY, mags=self.mags,
-            params=['--lineage_dataset', 'bacteria_odb10']
-        )
+
+        mock_run.assert_has_calls([
+            call(
+                input_dir=ANY,
+                output_dir=ANY,
+                sample="sample1",
+                params=['--lineage_dataset', 'bacteria_odb10']
+            ),
+            call(
+                input_dir=ANY,
+                output_dir=ANY,
+                sample="sample2",
+                params=['--lineage_dataset', 'bacteria_odb10']
+            )
+        ])
 
     @patch("q2_annotate.busco.busco._busco_helper")
     def test_evaluate_busco_offline(self, mock_helper):
