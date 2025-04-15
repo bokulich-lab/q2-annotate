@@ -1853,7 +1853,8 @@ filter_reports_param_descriptions = {
                    "optional `where` parameter will be excluded from the "
                    "filtered data.",
     "remove_empty": "If True, reports with 100% unclassified reads will be "
-                    "removed from the filtered data.",
+                    "removed from the filtered data. Reports containing "
+                    "sequences classified only as root will also be removed.",
 }
 
 plugin.methods.register_function(
@@ -1876,7 +1877,7 @@ plugin.methods.register_function(
         "reports": "The Kraken reports to filter.",
         "outputs": "The Kraken outputs to filter."
     },
-    parameter_descriptions=filter_contigs_param_descriptions,
+    parameter_descriptions=filter_reports_param_descriptions,
     name="Filter Kraken2 reports and outputs.",
     description="Filter Kraken2 reports and outputs based on metadata or remove "
                 "reports with 100% unclassified reads.",

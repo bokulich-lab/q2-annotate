@@ -39,12 +39,19 @@ class TestFilterKrakenReports(TestPluginBase):
                 instance.get_data_path(
                     "reports-mags-unclassified-missing-frac"),
                 "r"))
+        cls.report_mags_unclassified_with_root = (
+            Kraken2ReportDirectoryFormat(
+                instance.get_data_path(
+                    "reports-mags-unclassified-root"),
+                "r"))
 
         cls.file_dict_report_mags = cls.report_mags.file_dict()
         cls.file_dict_output_mags = cls.output_mags.file_dict()
 
         cls.file_dict_report_unclassified = (
             cls.report_mags_unclassified_missing_frac.file_dict())
+        cls.file_dict_report_unclassified_root = (
+            cls.report_mags_unclassified_with_root.file_dict())
 
         cls.metadata_df = pd.read_csv(
             instance.get_data_path("metadata/metadata.tsv"),
@@ -69,6 +76,14 @@ class TestFilterKrakenReports(TestPluginBase):
     def test_find_empty_reports_missing_frac(self):
         empty_reports = _find_empty_reports(
             file_dict={"": self.file_dict_report_unclassified}
+        )
+        self.assertEqual(
+            empty_reports, {"8894435a-c836-4c18-b475-8b38a9ab6c6b"}
+        )
+
+    def test_find_empty_reports_with_root(self):
+        empty_reports = _find_empty_reports(
+            file_dict={"": self.file_dict_report_unclassified_root}
         )
         self.assertEqual(
             empty_reports, {"8894435a-c836-4c18-b475-8b38a9ab6c6b"}

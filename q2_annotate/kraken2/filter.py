@@ -36,10 +36,15 @@ def _find_empty_reports(file_dict: dict) -> set:
                 # Read the first line and check if there's a second line
                 first_line = file.readline().strip()
                 second_line = file.readline()
+                third_line = file.readline()
 
                 # Only process if the file has exactly one line
-                if not second_line:
-                    columns = first_line.split('\t')
+                if not second_line or not third_line:
+                    if not second_line:
+                        l = first_line
+                    else:
+                        l = second_line
+                    columns = l.split('\t')
 
                     # Check if the 6th column contains "unclassified" or
                     # "root"

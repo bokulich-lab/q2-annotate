@@ -77,7 +77,8 @@ def _find_lcas(taxa_list: List[pd.DataFrame], mode: str):
 def _add_unclassified_mags(
         table: pd.DataFrame,
         taxonomy: pd.DataFrame,
-        reports: Kraken2ReportDirectoryFormat
+        reports: Kraken2ReportDirectoryFormat,
+        coverage_threshold: float
 ) -> (pd.DataFrame, pd.Series):
     # identify which MAGs are entirely unclassified - they will be missing
     # from the table
@@ -89,21 +90,29 @@ def _add_unclassified_mags(
 
     for mag in unclassified:
         report_fp = os.path.join(reports.path, f"{mag}.report.txt")
+        unclassified_fraction = 0.0
         with open(report_fp, "r") as f:
-            line = f.readline()
-            if "unclassified" in line:
+            for line in f:
                 fraction = float(line.split("\t")[0])
-                if fraction != 100.0:
-                    raise ValueError(
-                        f"Unclassified fraction for MAG '{mag}' is not "
-                        f"100.0%: {fraction:.2f}%."
-                    )
-                taxonomy.loc[mag, "Taxon"] = "d__Unclassified"
-            else:
-                raise ValueError(
-                    f"Unclassified line for MAG '{mag}' is missing from "
-                    f"the Kraken 2 report."
-                )
+                if "unclassified" in line:
+                    unclassified_fraction += fraction
+                elif "root" in line:
+                    unclassified_fraction += fraction
+                    if fraction < coverage_threshold:
+                        break
+                elif fraction < coverage_threshold:
+                    unclassified_fraction += fraction
+                    break
+
+        if unclassified_fraction != 100.0:
+            raise ValueError(
+                f"Unclassified fraction for MAG '{mag}' is not "
+                f"100.0%: {unclassified_fraction:.2f}%. "
+                "Please check the Kraken 2 report."
+            )
+
+        taxonomy.loc[mag, "Taxon"] = "d__Unclassified"
+
     return taxonomy
 
 
@@ -136,7 +145,7 @@ def kraken2_to_mag_features(
         taxa_list.append(new_taxa)
 
     taxonomy = _find_lcas(taxa_list, mode='lca')
-    return _add_unclassified_mags(table, taxonomy, reports)
+    return _add_unclassified_mags(table, taxonomy, reports, coverage_threshold)
 
 
 def kraken2_to_features(reports: Kraken2ReportDirectoryFormat,
@@ -166,6 +175,12 @@ def kraken2_to_features(reports: Kraken2ReportDirectoryFormat,
     # filter taxonomy to only IDs in table
     # use list to avoid index name change
     taxonomy = taxonomy.loc[list(table.columns)]
+
+    if table.empty:
+        raise ValueError(
+            "The resulting feature table was empty. Please adjust the "
+            "coverage threshold and try again."
+        )
 
     return table, taxonomy
 
