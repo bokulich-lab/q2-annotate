@@ -58,7 +58,7 @@ def _run_busco(input_dir: str, output_dir: str, sample: str, params: List[str]):
 
 
 def _busco_helper(mags, common_args):
-    results_all = pd.DataFrame()
+    results = []
 
     if isinstance(mags, MultiMAGSequencesDirFmt):
         sample_dir = mags.sample_dict()
@@ -80,11 +80,9 @@ def _busco_helper(mags, common_args):
                 results_mag = _extract_json_data(
                     str(tmp), mag_id, sample_id, os.path.basename(mag_fp)
                 )
+                results.append(results_mag)
 
-                # Add results df from one sample to results_all df
-                results_all = pd.concat([results_all, results_mag])
-
-    return results_all.reset_index(drop=True)
+    return pd.concat(results).reset_index(drop=True)
 
 
 def _evaluate_busco(
