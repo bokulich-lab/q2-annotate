@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 import os
 import shutil
-from copy import copy, deepcopy
 
 import pandas as pd
 from qiime2.core.exceptions import ValidationError
