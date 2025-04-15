@@ -41,10 +41,10 @@ def _find_empty_reports(file_dict: dict) -> set:
                 # Only process if the file has exactly one line
                 if not second_line or not third_line:
                     if not second_line:
-                        l = first_line
+                        next_line = first_line
                     else:
-                        l = second_line
-                    columns = l.split('\t')
+                        next_line = second_line
+                    columns = next_line.split('\t')
 
                     # Check if the 6th column contains "unclassified" or
                     # "root"

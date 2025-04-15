@@ -201,7 +201,7 @@ class TestKrakenSelect(TestPluginBase):
             index=pd.Index([
                 "3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa",
                 "8894435a-c836-4c18-b475-8b38a9ab6c6b"
-            ],name="Feature ID")
+            ], name="Feature ID")
         )
 
         pandas.testing.assert_frame_equal(obs_taxonomy, exp_taxonomy)
@@ -223,7 +223,7 @@ class TestKrakenSelect(TestPluginBase):
             index=pd.Index([
                 "3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa",
                 "8894435a-c836-4c18-b475-8b38a9ab6c6b"
-            ],name="Feature ID")
+            ], name="Feature ID")
         )
 
         pandas.testing.assert_frame_equal(obs_taxonomy, exp_taxonomy)
@@ -244,7 +244,7 @@ class TestKrakenSelect(TestPluginBase):
             index=pd.Index([
                 "3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa",
                 "8894435a-c836-4c18-b475-8b38a9ab6c6b"
-            ],name="Feature ID")
+            ], name="Feature ID")
         )
 
         pandas.testing.assert_frame_equal(obs_taxonomy, exp_taxonomy)
