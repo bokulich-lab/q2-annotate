@@ -207,62 +207,48 @@ def _calculate_summary_stats(df: pd.DataFrame) -> json:
     return stats.T.to_json(orient='table')
 
 
-def _extract_json_data(base_path, mag_id, sample_id, file_name):
+def _extract_json_data(path):
     """
     Extracts key metrics and metadata from a BUSCO JSON result file.
 
-    This function locates the corresponding BUSCO result `.json` file for a given
-    MAG. It reads and parses the JSON, computes completeness and contamination
-    metrics, and returns a dictionary with BUSCO results and metadata.
-
     Args:
-        base_path (str): The root directory containing BUSCO outputs.
-        mag_id (str): The MAG ID.
-        sample_id (str): The sample ID.
-        file_name (str): The filename of the MAG.
+        path (str): The path to the BUSCO JSON results file.
 
     Returns:
-        pd.DataFrame: A dataframe containing BUSCO results and metadata.
+        dict: A dict containing BUSCO results and metadata.
     """
-    json_path = glob.glob(os.path.join(base_path, sample_id, file_name, "*.json"))[0]
-
-    with open(json_path) as f:
+    with open(path) as f:
         data = json.load(f)
 
-    n_markers = data["results"]["n_markers"]
-    missing = data["results"]["Missing BUSCOs"]
-    complete = data["results"]["Complete BUSCOs"]
-    duplicated = data["results"]["Multi copy BUSCOs"]
-
-    completeness = round(100 * (1 - (missing / n_markers)), 1)
-
-    try:
-        contamination = round(100 * duplicated / complete, 1)
-    except ZeroDivisionError:
-        contamination = None
-
-    results = {
-        "mag_id": mag_id,
-        "sample_id": sample_id,
-        "input_file": file_name,
+    busco_results = {
         "dataset": data["lineage_dataset"]["name"],
         "complete": data["results"]["Complete percentage"],
+        "complete_value": data["results"]["Complete BUSCOs"],
         "single": data["results"]["Single copy percentage"],
         "duplicated": data["results"]["Multi copy percentage"],
+        "duplicated_value": data["results"]["Multi copy BUSCOs"],
         "fragmented": data["results"]["Fragmented percentage"],
         "missing": data["results"]["Missing percentage"],
-        "n_markers": n_markers,
+        "missing_value": data["results"]["Missing BUSCOs"],
+        "n_markers": data["results"]["n_markers"],
         "scaffold_n50": data["results"]["Scaffold N50"],
         "contigs_n50": data["results"]["Contigs N50"],
         "percent_gaps": data["metrics"]["Percent gaps"],
         "scaffolds": data["metrics"]["Number of scaffolds"],
         "length": data["metrics"]["Total length"],
-        "completeness": completeness,
-        "contamination": contamination
     }
 
-    return pd.DataFrame([results])
+    return busco_results
 
+def _calculate_contamination_completeness(missing, total, duplicated, complete):
+    completeness = round(100 * (1 - (missing / total)), 1)
+
+    try:
+        contamination = round(100 * duplicated / complete, 1)
+    except ZeroDivisionError:
+        contamination = None
+        
+    return completeness, contamination
 
 def _validate_parameters(lineage_dataset, auto_lineage,
                          auto_lineage_euk, auto_lineage_prok):
@@ -277,3 +263,26 @@ def _validate_parameters(lineage_dataset, auto_lineage,
             "If 'lineage-dataset' is provided, all the parameters 'auto-lineage', "
             "'auto-lineage-euk' and 'auto-lineage-prok' must be set to False."
         )
+
+def _process_busco_results(add_contam_complete, results, mag_id, file_name, sample_id):
+    # Add completeness and contamination values if specified
+    if add_contam_complete:
+        results["completeness"], results["contamination"] = \
+            _calculate_contamination_completeness(
+                results["missing_value"], results["n_markers"],
+                results["duplicated_value"], results["complete_value"]
+            )
+
+    # Remove whole value keys
+    for key in ["missing_value", "complete_value", "duplicated_value"]:
+        results.pop(key, None)
+
+    # Add MAG ID, sample ID and input file name at the beginning
+    results = {
+        "mag_id": mag_id,
+        "sample_id": "" if sample_id == "feature_data" else sample_id,
+        "input_file": file_name,
+        **results,
+    }
+
+    return results

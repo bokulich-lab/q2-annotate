@@ -49,7 +49,7 @@ class TestBUSCOSampleData(TestPluginBase):
         _run_busco(
             input_dir="input_dir",
             output_dir="cwd/output_dir",
-            sample="sample1",
+            sample_id="sample1",
             params=['--lineage_dataset', 'bacteria_odb10', '--cpu', '7']
         )
 

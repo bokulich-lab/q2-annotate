@@ -5,6 +5,7 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import glob
 import json
 import os
 import tempfile
@@ -24,7 +25,7 @@ from q2_annotate.busco.utils import (
     _parse_df_columns, _partition_dataframe, _calculate_summary_stats,
     _get_feature_table, _cleanup_bootstrap,
     _validate_lineage_dataset_input, _extract_json_data,
-    _validate_parameters
+    _validate_parameters, _process_busco_results
 )
 from q2_annotate._utils import _process_common_input_params, run_command
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
@@ -32,18 +33,16 @@ from q2_annotate.busco.types import BuscoDatabaseDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 
 
-def _run_busco(input_dir: str, output_dir: str, sample: str, params: List[str]):
+def _run_busco(input_dir: str, output_dir: str, sample_id: str, params: List[str]):
     """Runs BUSCO on one (sample) directory
 
     Args:
         input_dir (str): Location where the MAG FASTA files are stored.
         output_dir (str): Location where the final results should be stored.
-        sample (str): The sample ID.
+        sample_id (str): The sample ID.
         params (List[str]): List of parsed arguments to pass to BUSCO.
     """
-    # Using -f (force) to be able to write to existing tmp dir when running feature data
-    # mags.
-    base_cmd = ["busco", "-f", *params]
+    base_cmd = ["busco", *params]
 
     cmd = deepcopy(base_cmd)
     cmd.extend([
@@ -52,37 +51,46 @@ def _run_busco(input_dir: str, output_dir: str, sample: str, params: List[str]):
         "--out_path",
         output_dir,
         "-o",
-        sample
+        sample_id
     ])
     run_command(cmd,  cwd=os.path.dirname(output_dir))
 
 
-def _busco_helper(mags, common_args):
-    results = []
+def _busco_helper(mags, common_args, add_contam_complete):
+    results_all = []
 
     if isinstance(mags, MultiMAGSequencesDirFmt):
         sample_dir = mags.sample_dict()
 
     elif isinstance(mags, MAGSequencesDirFmt):
-        sample_dir = {"": mags.feature_dict()}
+        sample_dir = {"feature_data": mags.feature_dict()}
 
     with tempfile.TemporaryDirectory() as tmp:
         for sample_id, feature_dict in sample_dir.items():
 
             _run_busco(
-                input_dir=os.path.join(str(mags), sample_id),
+                input_dir=os.path.join(
+                    str(mags), "" if sample_id == "feature_data" else sample_id
+                ),
                 output_dir=str(tmp),
-                sample=sample_id,
+                sample_id=sample_id,
                 params=common_args,
             )
             # Extract results from JSON files for one sample
             for mag_id, mag_fp in feature_dict.items():
-                results_mag = _extract_json_data(
-                    str(tmp), mag_id, sample_id, os.path.basename(mag_fp)
-                )
-                results.append(results_mag)
 
-    return pd.concat(results).reset_index(drop=True)
+                json_path = glob.glob(
+                    os.path.join(str(tmp), sample_id, 
+                                 os.path.basename(mag_fp), "*.json"))[0]
+
+                results = _process_busco_results(add_contam_complete, 
+                                                 _extract_json_data(json_path), mag_id, 
+                                                 os.path.basename(mag_fp), sample_id)
+   
+                results_all.append(results)
+
+    df = pd.DataFrame(results_all)
+    return df
 
 
 def _evaluate_busco(
@@ -107,9 +115,10 @@ def _evaluate_busco(
     metaeuk_rerun_parameters: str = None,
     miniprot: bool = False,
     scaffold_composition: bool = False,
+    add_contam_complete: bool = False,
 ) -> pd.DataFrame:
     kwargs = {
-        k: v for k, v in locals().items() if k not in ["mags", "db"]
+        k: v for k, v in locals().items() if k not in ["mags", "db", "add_contam_complete"]
     }
     kwargs["offline"] = True
     kwargs["download_path"] = f"{str(db)}/busco_downloads"
@@ -125,7 +134,7 @@ def _evaluate_busco(
         processing_func=_parse_busco_params, params=kwargs
     )
 
-    return _busco_helper(mags, common_args)
+    return _busco_helper(mags, common_args, add_contam_complete)
 
 
 def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
@@ -255,6 +264,7 @@ def evaluate_busco(
     metaeuk_rerun_parameters=None,
     miniprot=False,
     scaffold_composition=False,
+    add_contam_complete=False,
     num_partitions=None
 ):
     _validate_parameters(lineage_dataset, auto_lineage,
