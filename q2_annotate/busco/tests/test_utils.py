@@ -379,7 +379,6 @@ class TestBUSCOUtils(TestPluginBase):
         self.assertEqual(completeness, 90.0)
         self.assertEqual(contamination, 10.0)
 
-
     def test_calculate_contamination_completeness_divide_by_zero(self):
         completeness, contamination = _calculate_contamination_completeness(
             missing=5,
@@ -390,7 +389,7 @@ class TestBUSCOUtils(TestPluginBase):
         self.assertEqual(completeness, 95.0)
         self.assertEqual(contamination, None)
 
-    @patch("q2_annotate.busco.utils._calculate_contamination_completeness", 
+    @patch("q2_annotate.busco.utils._calculate_contamination_completeness",
            return_value=(95.0, 10.0))
     def test_with_completeness_contamination(self, mock_calc):
         results = self.busco_results.copy()

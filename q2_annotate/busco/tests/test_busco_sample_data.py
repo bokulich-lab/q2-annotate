@@ -51,7 +51,7 @@ class TestBUSCOSampleData(TestPluginBase):
     @patch('q2_annotate.busco.busco._process_busco_results')
     @patch('q2_annotate.busco.busco._run_busco')
     @patch('q2_annotate.busco.busco.glob.glob')
-    def test_busco_helper(self, mock_glob, mock_run, mock_process ,mock_extract):
+    def test_busco_helper(self, mock_glob, mock_run, mock_process, mock_extract):
         with open(self.get_data_path(
                 "busco_results_json/busco_results.json"), "r") as f:
             busco_list = json.load(f)

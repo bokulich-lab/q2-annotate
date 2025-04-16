@@ -80,11 +80,11 @@ def _busco_helper(mags, common_args, add_contam_complete):
             for mag_id, mag_fp in feature_dict.items():
 
                 json_path = glob.glob(
-                    os.path.join(str(tmp), sample_id, 
+                    os.path.join(str(tmp), sample_id,
                                  os.path.basename(mag_fp), "*.json"))[0]
 
-                results = _process_busco_results(add_contam_complete, 
-                                                 _extract_json_data(json_path), mag_id, 
+                results = _process_busco_results(add_contam_complete,
+                                                 _extract_json_data(json_path), mag_id,
                                                  os.path.basename(mag_fp), sample_id)
                 results_all.append(results)
 
@@ -116,7 +116,9 @@ def _evaluate_busco(
     add_contam_complete: bool = False,
 ) -> pd.DataFrame:
     kwargs = {
-        k: v for k, v in locals().items() if k not in ["mags", "db", "add_contam_complete"]
+        k: v for k, v in locals().items() if k not in [
+            "mags", "db", "add_contam_complete"
+        ]
     }
     kwargs["offline"] = True
     kwargs["download_path"] = f"{str(db)}/busco_downloads"

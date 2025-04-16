@@ -5,7 +5,6 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-import glob
 import json
 import os
 import warnings
@@ -240,6 +239,7 @@ def _extract_json_data(path):
 
     return busco_results
 
+
 def _calculate_contamination_completeness(missing, total, duplicated, complete):
     completeness = round(100 * (1 - (missing / total)), 1)
 
@@ -247,8 +247,9 @@ def _calculate_contamination_completeness(missing, total, duplicated, complete):
         contamination = round(100 * duplicated / complete, 1)
     except ZeroDivisionError:
         contamination = None
-        
+
     return completeness, contamination
+
 
 def _validate_parameters(lineage_dataset, auto_lineage,
                          auto_lineage_euk, auto_lineage_prok):
@@ -263,6 +264,7 @@ def _validate_parameters(lineage_dataset, auto_lineage,
             "If 'lineage-dataset' is provided, all the parameters 'auto-lineage', "
             "'auto-lineage-euk' and 'auto-lineage-prok' must be set to False."
         )
+
 
 def _process_busco_results(add_contam_complete, results, mag_id, file_name, sample_id):
     """

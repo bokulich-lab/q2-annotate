@@ -28,7 +28,7 @@ class TestBUSCOFeatureData(TestPluginBase):
     @patch('q2_annotate.busco.busco._process_busco_results')
     @patch('q2_annotate.busco.busco._run_busco')
     @patch('q2_annotate.busco.busco.glob.glob')
-    def test_busco_helper(self, mock_glob, mock_run, mock_process ,mock_extract):
+    def test_busco_helper(self, mock_glob, mock_run, mock_process, mock_extract):
         with open(self.get_data_path(
                 "busco_results_json/busco_results_feature_data.json"), "r") as f:
             busco_list = json.load(f)
@@ -50,14 +50,13 @@ class TestBUSCOFeatureData(TestPluginBase):
             params=['--lineage_dataset', 'bacteria_odb10']
         )
         mock_process.assert_has_calls([
-            call(True, ANY, '24dee6fe-9b84-45bb-8145-de7b092533a1', 
+            call(True, ANY, '24dee6fe-9b84-45bb-8145-de7b092533a1',
                  '24dee6fe-9b84-45bb-8145-de7b092533a1.fasta', 'feature_data'),
-            call(True, ANY, 'ca7012fc-ba65-40c3-84f5-05aa478a7585', 
+            call(True, ANY, 'ca7012fc-ba65-40c3-84f5-05aa478a7585',
                  'ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta', 'feature_data'),
-            call(True, ANY, 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3', 
+            call(True, ANY, 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3',
                  'fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta', 'feature_data')
         ])
-           
 
     @patch(
         "q2_annotate.busco.busco._draw_detailed_plots",
