@@ -279,7 +279,7 @@ def _process_busco_results(add_contam_complete, results, mag_id, file_name, samp
         sample_id (str): Sample ID.
 
     Returns:
-        dict: Processed BUSCO results with added metadata and optional 
+        dict: Processed BUSCO results with added metadata and optional
         completeness/contamination values.
     """
     # Add completeness and contamination values if specified
