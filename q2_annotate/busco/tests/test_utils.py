@@ -350,24 +350,7 @@ class TestBUSCOUtils(TestPluginBase):
             "busco_output/short_summary.specific.iridoviridae_odb10."
             "24dee6fe-9b84-45bb-8145-de7b092533a1.fasta.json"))
 
-        exp = {
-            "dataset": "bacteria_odb10",
-            "complete": 87.9,
-            "complete_value": 80,
-            "single": 86.3,
-            "duplicated": 1.6,
-            "duplicated_value": 5,
-            "fragmented": 4.8,
-            "missing": 7.3,
-            "missing_value": 10,
-            "n_markers": 100,
-            "scaffold_n50": "975",
-            "contigs_n50": "975",
-            "percent_gaps": "0.000%",
-            "scaffolds": "2",
-            "length": "1935",
-        }
-        self.assertEqual(obs, exp)
+        self.assertEqual(obs, self.busco_results)
 
     def test_calculate_contamination_completeness_normal(self):
         completeness, contamination = _calculate_contamination_completeness(
