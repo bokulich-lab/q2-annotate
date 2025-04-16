@@ -7,13 +7,15 @@
 # ----------------------------------------------------------------------------
 import json
 import tempfile
+from unittest.mock import patch
+
 import pandas as pd
 from qiime2.plugin.testing import TestPluginBase
 from q2_annotate.busco.utils import (
     _parse_busco_params, _parse_df_columns,
     _partition_dataframe, _get_feature_table, _calculate_summary_stats,
     _validate_lineage_dataset_input, _extract_json_data,
-    _validate_parameters
+    _validate_parameters, _calculate_contamination_completeness, _process_busco_results
 )
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
@@ -79,6 +81,23 @@ class TestBUSCOUtils(TestPluginBase):
             'complete': [13.0, 14.0, 15.0],
             'n_markers': [16, 17, 18]
         })
+        self.busco_results = {
+            "dataset": "bacteria_odb10",
+            "complete": 87.9,
+            "complete_value": 80,
+            "single": 86.3,
+            "duplicated": 1.6,
+            "duplicated_value": 5,
+            "fragmented": 4.8,
+            "missing": 7.3,
+            "missing_value": 10,
+            "n_markers": 100,
+            "scaffold_n50": "975",
+            "contigs_n50": "975",
+            "percent_gaps": "0.000%",
+            "scaffolds": "2",
+            "length": "1935",
+        }
 
     def test_parse_busco_params_1(self):
         observed = _parse_busco_params("auto_lineage", True)
@@ -327,16 +346,66 @@ class TestBUSCOUtils(TestPluginBase):
         )
 
     def test_extract_json_data(self):
-        obs = _extract_json_data(
-            base_path=self.get_data_path("busco_output"),
-            mag_id="24dee6fe-9b84-45bb-8145-de7b092533a1",
-            sample_id="sample1",
-            file_name="24dee6fe-9b84-45bb-8145-de7b092533a1.fasta")
+        obs = _extract_json_data(self.get_data_path(
+            "busco_output/short_summary.specific.iridoviridae_odb10."
+            "24dee6fe-9b84-45bb-8145-de7b092533a1.fasta.json"))
 
-        exp = pd.DataFrame([{
-            "mag_id": "24dee6fe-9b84-45bb-8145-de7b092533a1",
+        exp = {
+            "dataset": "bacteria_odb10",
+            "complete": 87.9,
+            "complete_value": 80,
+            "single": 86.3,
+            "duplicated": 1.6,
+            "duplicated_value": 5,
+            "fragmented": 4.8,
+            "missing": 7.3,
+            "missing_value": 10,
+            "n_markers": 100,
+            "scaffold_n50": "975",
+            "contigs_n50": "975",
+            "percent_gaps": "0.000%",
+            "scaffolds": "2",
+            "length": "1935",
+        }
+        self.assertEqual(obs, exp)
+
+    def test_calculate_contamination_completeness_normal(self):
+        completeness, contamination = _calculate_contamination_completeness(
+            missing=10,
+            total=100,
+            duplicated=5,
+            complete=50
+        )
+        self.assertEqual(completeness, 90.0)
+        self.assertEqual(contamination, 10.0)
+
+
+    def test_calculate_contamination_completeness_divide_by_zero(self):
+        completeness, contamination = _calculate_contamination_completeness(
+            missing=5,
+            total=100,
+            duplicated=5,
+            complete=0
+        )
+        self.assertEqual(completeness, 95.0)
+        self.assertEqual(contamination, None)
+
+    @patch("q2_annotate.busco.utils._calculate_contamination_completeness", 
+           return_value=(95.0, 10.0))
+    def test_with_completeness_contamination(self, mock_calc):
+        results = self.busco_results.copy()
+        output = _process_busco_results(
+            add_contam_complete=True,
+            results=results,
+            mag_id="mag1",
+            file_name="mag1.fasta",
+            sample_id="sample1"
+        )
+
+        expected = {
+            "mag_id": "mag1",
             "sample_id": "sample1",
-            "input_file": "24dee6fe-9b84-45bb-8145-de7b092533a1.fasta",
+            "input_file": "mag1.fasta",
             "dataset": "bacteria_odb10",
             "complete": 87.9,
             "single": 86.3,
@@ -349,38 +418,41 @@ class TestBUSCOUtils(TestPluginBase):
             "percent_gaps": "0.000%",
             "scaffolds": "2",
             "length": "1935",
-            "completeness": 90.0,
-            "contamination": 6.2
-        }])
-        pd.testing.assert_frame_equal(obs, exp)
+            "completeness": 95.0,
+            "contamination": 10.0,
+        }
 
-    def test_extract_json_data_division_by_zero(self):
-        obs = _extract_json_data(
-            base_path=self.get_data_path("busco_output"),
-            mag_id="24dee6fe-9b84-45bb-8145-de7b092533a2",
-            sample_id="sample1",
-            file_name="24dee6fe-9b84-45bb-8145-de7b092533a2.fasta")
+        self.assertEqual(output, expected)
 
-        exp = pd.DataFrame([{
-            "mag_id": "24dee6fe-9b84-45bb-8145-de7b092533a2",
+    def test_without_completeness_contamination(self):
+        results = self.busco_results.copy()
+        output = _process_busco_results(
+            add_contam_complete=False,
+            results=results,
+            mag_id="mag1",
+            file_name="mag1.fasta",
+            sample_id="sample1"
+        )
+
+        expected = {
+            "mag_id": "mag1",
             "sample_id": "sample1",
-            "input_file": "24dee6fe-9b84-45bb-8145-de7b092533a2.fasta",
+            "input_file": "mag1.fasta",
             "dataset": "bacteria_odb10",
-            "complete": 0.0,
-            "single": 0.0,
-            "duplicated": 0.0,
-            "fragmented": 0.0,
-            "missing": 100.0,
-            "n_markers": 10,
+            "complete": 87.9,
+            "single": 86.3,
+            "duplicated": 1.6,
+            "fragmented": 4.8,
+            "missing": 7.3,
+            "n_markers": 100,
             "scaffold_n50": "975",
             "contigs_n50": "975",
             "percent_gaps": "0.000%",
             "scaffolds": "2",
             "length": "1935",
-            "completeness": 0.0,
-            "contamination": None
-        }])
-        pd.testing.assert_frame_equal(obs, exp)
+        }
+
+        self.assertEqual(output, expected)
 
     def test_validate_parameters_lineage_all_false(self):
         with self.assertRaisesRegex(ValueError, "At least one of these parameters"):

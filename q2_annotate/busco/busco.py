@@ -76,7 +76,7 @@ def _busco_helper(mags, common_args, add_contam_complete):
                 sample_id=sample_id,
                 params=common_args,
             )
-            # Extract results from JSON files for one sample
+            # Extract and process results from JSON files for one sample
             for mag_id, mag_fp in feature_dict.items():
 
                 json_path = glob.glob(
@@ -86,11 +86,9 @@ def _busco_helper(mags, common_args, add_contam_complete):
                 results = _process_busco_results(add_contam_complete, 
                                                  _extract_json_data(json_path), mag_id, 
                                                  os.path.basename(mag_fp), sample_id)
-   
                 results_all.append(results)
 
-    df = pd.DataFrame(results_all)
-    return df
+    return pd.DataFrame(results_all)
 
 
 def _evaluate_busco(

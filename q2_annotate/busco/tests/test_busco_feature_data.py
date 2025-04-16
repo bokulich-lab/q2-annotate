@@ -9,9 +9,11 @@ import json
 import qiime2
 import pandas as pd
 from q2_annotate.busco.busco import _visualize_busco, evaluate_busco, _busco_helper
-from unittest.mock import patch, ANY, MagicMock
+from unittest.mock import patch, ANY, MagicMock, call
 from qiime2.plugin.testing import TestPluginBase
 from q2_types.feature_data_mag import MAGSequencesDirFmt
+
+from q2_annotate.busco.utils import _extract_json_data
 
 
 class TestBUSCOFeatureData(TestPluginBase):
@@ -23,36 +25,98 @@ class TestBUSCOFeatureData(TestPluginBase):
             path=self.get_data_path('mags/sample1'),
             mode="r",
         )
+        self.busco_data_1 = {
+            "mag_id": "24dee6fe-9b84-45bb-8145-de7b092533a1",
+            "sample_id": "",
+            "input_file": "24dee6fe-9b84-45bb-8145-de7b092533a1.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 28.2,
+            "single": 27.4,
+            "duplicated": 0.8,
+            "fragmented": 8.9,
+            "missing": 62.9,
+            "n_markers": 124,
+            "scaffold_n50": 4785,
+            "contigs_n50": 4785,
+            "percent_gaps": "0.000%",
+            "scaffolds": 265,
+            "length": 1219165,
+            "completeness": 12,
+            "contamination": 45
+        }
+
+        self.busco_data_2 = {
+            "mag_id": "ca7012fc-ba65-40c3-84f5-05aa478a7585",
+            "sample_id": "",
+            "input_file": "ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 1.6,
+            "single": 1.6,
+            "duplicated": 0.0,
+            "fragmented": 1.6,
+            "missing": 96.8,
+            "n_markers": 124,
+            "scaffold_n50": 3548,
+            "contigs_n50": 3548,
+            "percent_gaps": "0.000%",
+            "scaffolds": 67,
+            "length": 245922,
+            "completeness": 12,
+            "contamination": 45
+        }
+
+        self.busco_data_3 = {
+            "mag_id": "fb0bc871-04f6-486b-a10e-8e0cb66f8de3",
+            "sample_id": "",
+            "input_file": "fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 1.6,
+            "single": 1.6,
+            "duplicated": 0.0,
+            "fragmented": 1.6,
+            "missing": 96.8,
+            "n_markers": 124,
+            "scaffold_n50": 3548,
+            "contigs_n50": 3548,
+            "percent_gaps": "0.000%",
+            "scaffolds": 67,
+            "length": 245922,
+            "completeness": 12,
+            "contamination": 45
+        }
 
     @patch('q2_annotate.busco.busco._extract_json_data')
+    @patch('q2_annotate.busco.busco._process_busco_results')
     @patch('q2_annotate.busco.busco._run_busco')
-    def test_busco_helper(self, mock_run, mock_extract):
-        mock_extract.side_effect = [
-            pd.read_csv(self.get_data_path(
-                "busco_results/sample1/bec9c09a-62c3-4fbb-8f7f-9fdf9aefc02f.tsv"),
-                        sep="\t"),
-            pd.read_csv(self.get_data_path(
-                "busco_results/sample1/5978e667-0476-4921-8cc2-34b9d1b508c1.tsv"),
-                        sep="\t"),
-            pd.read_csv(self.get_data_path(
-                "busco_results/sample1/625c95e6-ac2f-4e6e-9470-af8cd11c75dd.tsv"),
-                        sep="\t"),
+    @patch('q2_annotate.busco.busco.glob.glob')
+    def test_busco_helper(self, mock_glob, mock_run, mock_process ,mock_extract):
+        mock_process.side_effect = [
+            self.busco_data_1, self.busco_data_2, self.busco_data_3
         ]
 
-        obs = _busco_helper(self.mags, ['--lineage_dataset', 'bacteria_odb10'])
+        obs = _busco_helper(self.mags, ['--lineage_dataset', 'bacteria_odb10'], True)
 
         exp = pd.read_csv(self.get_data_path(
             'busco_results/results_all/busco_results_feature_data.tsv'
-        ), sep="\t")
-
+        ), sep="\t", keep_default_na=False)
+        exp["sample_id"] = exp["sample_id"].astype(object)
         pd.testing.assert_frame_equal(obs, exp)
 
         mock_run.assert_called_once_with(
             input_dir=ANY,
             output_dir=ANY,
-            sample="",
+            sample_id="feature_data",
             params=['--lineage_dataset', 'bacteria_odb10']
         )
+        mock_process.assert_has_calls([
+            call(True, ANY, '24dee6fe-9b84-45bb-8145-de7b092533a1', 
+                 '24dee6fe-9b84-45bb-8145-de7b092533a1.fasta', 'feature_data'),
+            call(True, ANY, 'ca7012fc-ba65-40c3-84f5-05aa478a7585', 
+                 'ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta', 'feature_data'),
+            call(True, ANY, 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3', 
+                 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta', 'feature_data')
+        ])
+           
 
     @patch(
         "q2_annotate.busco.busco._draw_detailed_plots",

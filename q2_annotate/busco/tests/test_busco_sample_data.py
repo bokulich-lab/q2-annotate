@@ -34,15 +34,125 @@ class TestBUSCOSampleData(TestPluginBase):
             mode="r"
         )
 
-    def _prepare_summaries(self):
-        for s in ['1', '2']:
-            os.makedirs(os.path.join(self.temp_dir.name, f"sample{s}"))
-            shutil.copy(
-                self.get_data_path(f'summaries/batch_summary_{s}.txt'),
-                os.path.join(
-                    self.temp_dir.name, f"sample{s}", 'batch_summary.txt'
-                )
-            )
+        self.busco_data_1 = {
+            "mag_id": "24dee6fe-9b84-45bb-8145-de7b092533a1",
+            "sample_id": "sample1",
+            "input_file": "24dee6fe-9b84-45bb-8145-de7b092533a1.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 28.2,
+            "single": 27.4,
+            "duplicated": 0.8,
+            "fragmented": 8.9,
+            "missing": 62.9,
+            "n_markers": 124,
+            "scaffold_n50": 4785,
+            "contigs_n50": 4785,
+            "percent_gaps": "0.000%",
+            "scaffolds": 265,
+            "length": 1219165,
+            "completeness": 12,
+            "contamination": 45
+        }
+
+        self.busco_data_2 = {
+            "mag_id": "ca7012fc-ba65-40c3-84f5-05aa478a7585",
+            "sample_id": "sample1",
+            "input_file": "ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 1.6,
+            "single": 1.6,
+            "duplicated": 0.0,
+            "fragmented": 1.6,
+            "missing": 96.8,
+            "n_markers": 124,
+            "scaffold_n50": 3548,
+            "contigs_n50": 3548,
+            "percent_gaps": "0.000%",
+            "scaffolds": 67,
+            "length": 245922,
+            "completeness": 12,
+            "contamination": 45
+        }
+
+        self.busco_data_3 = {
+            "mag_id": "fb0bc871-04f6-486b-a10e-8e0cb66f8de3",
+            "sample_id": "sample1",
+            "input_file": "fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 1.6,
+            "single": 1.6,
+            "duplicated": 0.0,
+            "fragmented": 1.6,
+            "missing": 96.8,
+            "n_markers": 124,
+            "scaffold_n50": 3548,
+            "contigs_n50": 3548,
+            "percent_gaps": "0.000%",
+            "scaffolds": 67,
+            "length": 245922,
+            "completeness": 12,
+            "contamination": 45
+        }
+
+        self.busco_data_4 = {
+            "mag_id": "d65a71fa-4279-4588-b937-0747ed5d604d",
+            "sample_id": "sample2",
+            "input_file": "d65a71fa-4279-4588-b937-0747ed5d604d.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 28.2,
+            "single": 27.4,
+            "duplicated": 0.8,
+            "fragmented": 8.9,
+            "missing": 62.9,
+            "n_markers": 124,
+            "scaffold_n50": 4785,
+            "contigs_n50": 4785,
+            "percent_gaps": "0.000%",
+            "scaffolds": 265,
+            "length": 1219165,
+            "completeness": 12,
+            "contamination": 45
+        }
+
+        self.busco_data_5 = {
+            "mag_id": "db03f8b6-28e1-48c5-a47c-9c65f38f7357",
+            "sample_id": "sample2",
+            "input_file": "db03f8b6-28e1-48c5-a47c-9c65f38f7357.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 1.6,
+            "single": 1.6,
+            "duplicated": 0.0,
+            "fragmented": 1.6,
+            "missing": 96.8,
+            "n_markers": 124,
+            "scaffold_n50": 3548,
+            "contigs_n50": 3548,
+            "percent_gaps": "0.000%",
+            "scaffolds": 67,
+            "length": 245922,
+            "completeness": 12,
+            "contamination": 45
+        }
+
+        self.busco_data_6 = {
+            "mag_id": "fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf",
+            "sample_id": "sample2",
+            "input_file": "fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 1.6,
+            "single": 1.6,
+            "duplicated": 0.0,
+            "fragmented": 1.6,
+            "missing": 96.8,
+            "n_markers": 124,
+            "scaffold_n50": 3548,
+            "contigs_n50": 3548,
+            "percent_gaps": "0.000%",
+            "scaffolds": 67,
+            "length": 245922,
+            "completeness": 12,
+            "contamination": 45
+        }
 
     @patch('q2_annotate.busco.busco.run_command')
     def test_run_busco(self, mock_run):
@@ -54,37 +164,22 @@ class TestBUSCOSampleData(TestPluginBase):
         )
 
         mock_run.assert_called_once_with([
-            'busco', '-f', '--lineage_dataset', 'bacteria_odb10',
+            'busco', '--lineage_dataset', 'bacteria_odb10',
             '--cpu', '7', '--in', "input_dir",
             '--out_path', "cwd/output_dir", '-o', 'sample1'
         ], cwd="cwd")
 
     @patch('q2_annotate.busco.busco._extract_json_data')
+    @patch('q2_annotate.busco.busco._process_busco_results')
     @patch('q2_annotate.busco.busco._run_busco')
-    def test_busco_helper(self, mock_run, mock_extract):
-        mock_extract.side_effect = [
-            pd.read_csv(self.get_data_path(
-                "busco_results/sample1/bec9c09a-62c3-4fbb-8f7f-9fdf9aefc02f.tsv"),
-                        sep="\t"),
-            pd.read_csv(self.get_data_path(
-                "busco_results/sample1/5978e667-0476-4921-8cc2-34b9d1b508c1.tsv"),
-                        sep="\t"),
-            pd.read_csv(self.get_data_path(
-                "busco_results/sample1/625c95e6-ac2f-4e6e-9470-af8cd11c75dd.tsv"),
-                        sep="\t"),
-            pd.read_csv(self.get_data_path(
-                "busco_results/sample2/6ed8c097-1c87-4019-8b38-b95507011b41.tsv"),
-                        sep="\t"),
-            pd.read_csv(self.get_data_path(
-                "busco_results/sample2/bf2c0af0-83ba-44a6-b550-3b7884a62a82.tsv"),
-                        sep="\t"),
-            pd.read_csv(self.get_data_path(
-                "busco_results/sample2/a2401d15-802f-42c3-9eb4-c282e2141b14.tsv"),
-                        sep="\t")
-
+    @patch('q2_annotate.busco.busco.glob.glob')
+    def test_busco_helper(self, mock_glob, mock_run, mock_process ,mock_extract):
+        mock_process.side_effect = [
+            self.busco_data_1, self.busco_data_2, self.busco_data_3,
+            self.busco_data_4, self.busco_data_5, self.busco_data_6
         ]
 
-        obs = _busco_helper(self.mags, ['--lineage_dataset', 'bacteria_odb10'])
+        obs = _busco_helper(self.mags, ['--lineage_dataset', 'bacteria_odb10'], True)
 
         exp = pd.read_csv(self.get_data_path(
             'busco_results/results_all/busco_results.tsv'
@@ -96,15 +191,30 @@ class TestBUSCOSampleData(TestPluginBase):
             call(
                 input_dir=ANY,
                 output_dir=ANY,
-                sample="sample1",
+                sample_id="sample1",
                 params=['--lineage_dataset', 'bacteria_odb10']
             ),
             call(
                 input_dir=ANY,
                 output_dir=ANY,
-                sample="sample2",
+                sample_id="sample2",
                 params=['--lineage_dataset', 'bacteria_odb10']
             )
+        ])
+
+        mock_process.assert_has_calls([
+            call(True, ANY, '24dee6fe-9b84-45bb-8145-de7b092533a1',
+                 '24dee6fe-9b84-45bb-8145-de7b092533a1.fasta', 'sample1'),
+            call(True, ANY, 'ca7012fc-ba65-40c3-84f5-05aa478a7585',
+                 'ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta', 'sample1'),
+            call(True, ANY, 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3',
+                 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta', 'sample1'),
+            call(True, ANY, 'd65a71fa-4279-4588-b937-0747ed5d604d',
+                 'd65a71fa-4279-4588-b937-0747ed5d604d.fasta', 'sample2'),
+            call(True, ANY, 'db03f8b6-28e1-48c5-a47c-9c65f38f7357',
+                 'db03f8b6-28e1-48c5-a47c-9c65f38f7357.fasta', 'sample2'),
+            call(True, ANY, 'fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf',
+                 'fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf.fasta', 'sample2')
         ])
 
     @patch("q2_annotate.busco.busco._busco_helper")
@@ -121,7 +231,7 @@ class TestBUSCOSampleData(TestPluginBase):
                 '--mode', 'some_mode', '--lineage_dataset', 'lineage_1',
                 '--cpu', '1', '--contig_break', '10', '--evalue', '0.001',
                 '--limit', '3', '--offline', "--download_path",
-                f"{str(self.busco_db)}/busco_downloads"
+                f"{str(self.busco_db)}/busco_downloads", False
             ]
         )
 

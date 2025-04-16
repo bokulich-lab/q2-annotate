@@ -265,6 +265,21 @@ def _validate_parameters(lineage_dataset, auto_lineage,
         )
 
 def _process_busco_results(add_contam_complete, results, mag_id, file_name, sample_id):
+    """
+    Process BUSCO results by optionally calculating contamination and completeness,
+    removing raw marker counts, and adding metadata identifiers.
+
+    Args:
+        add_contam_complete (bool): Whether to add contamination and completeness.
+        results (dict): Dictionary containing BUSCO output metrics.
+        mag_id (str): MAG ID.
+        file_name (str): Name of the input file from which results were derived.
+        sample_id (str): Sample ID.
+
+    Returns:
+        dict: Processed BUSCO results with added metadata and optional 
+        completeness/contamination values.
+    """
     # Add completeness and contamination values if specified
     if add_contam_complete:
         results["completeness"], results["contamination"] = \

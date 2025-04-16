@@ -1,2 +1,0 @@
-mag_id	sample_id	input_file	dataset	complete	single	duplicated	fragmented	missing	n_markers	scaffold_n50	contigs_n50	percent_gaps	scaffolds	length	completeness	contamination
-bec9c09a-62c3-4fbb-8f7f-9fdf9aefc02f	SRR13221817	bec9c09a-62c3-4fbb-8f7f-9fdf9aefc02f.fasta	bacteria_odb10	28.2	27.4	0.8	8.9	62.9	124	4785	4785	0.000%	265	1219165	12	45
