@@ -79,15 +79,50 @@ def _add_unclassified_mags(
         taxonomy: pd.DataFrame,
         reports: Kraken2ReportDirectoryFormat,
         coverage_threshold: float
-) -> (pd.DataFrame, pd.Series):
-    # identify which MAGs are entirely unclassified - they will be missing
-    # from the table
+) -> pd.DataFrame:
+    """
+    Identify and process MAGs that are entirely unclassified based on
+    Kraken 2 reports.
+
+    Args:
+        table (pd.DataFrame): A DataFrame representing the feature table with
+                              MAGs as rows and assignments as columns.
+        taxonomy (pd.DataFrame): A DataFrame containing taxonomy assignments
+                                 for the features.
+        reports (Kraken2ReportDirectoryFormat): Directory format containing
+                                            Kraken 2 report files for each MAG.
+        coverage_threshold (float): Minimum coverage threshold used to evaluate
+                                    and classify MAGs from the Kraken 2 reports.
+
+    Returns:
+        pd.DataFrame: The updated taxonomy DataFrame with unclassified MAGs added.
+
+    Raises:
+        ValueError: If the unclassified fraction for a MAG is not 100%,
+        indicating incomplete classification or inconsistent inputs.
+    """
     samples = [
         os.path.basename(f).replace(".report.txt", "")
         for f in glob.glob(os.path.join(reports.path, "*.report.txt"))
     ]
     unclassified = set(samples) - set(table.index)
 
+    # For each MAG missing from the table we will look at the original
+    # Kraken 2 report and check whether the unclassified counts add up
+    # by summing up the following fractions:
+    # - line 1: fraction of unclassified
+    # - line 2 (if present): fraction of classified as root (we treat
+    #                        those as practically unclassified); if the
+    #                        fraction is lower than the coverage threshold
+    #                        we stop iterating as at this point we have
+    #                        accounted for all unclassified sequences
+    #                        (everything that follows should have been
+    #                        excluded)
+    # - line 3 on (if present): fraction lower than coverage threshold -
+    #                           as soon as we hit this we stop for the same
+    #                           reason as above
+    # If the report was fine, at this point we should arrive at 100%. If not,
+    # something must have been wrong with the report - we raise an error.
     for mag in unclassified:
         report_fp = os.path.join(reports.path, f"{mag}.report.txt")
         unclassified_fraction = 0.0
