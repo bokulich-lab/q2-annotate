@@ -56,7 +56,7 @@ def _run_busco(input_dir: str, output_dir: str, sample_id: str, params: List[str
     run_command(cmd,  cwd=os.path.dirname(output_dir))
 
 
-def _busco_helper(mags, common_args, add_contam_complete):
+def _busco_helper(mags, common_args, additional_metrics):
     results_all = []
 
     if isinstance(mags, MultiMAGSequencesDirFmt):
@@ -83,7 +83,7 @@ def _busco_helper(mags, common_args, add_contam_complete):
                     os.path.join(str(tmp), sample_id,
                                  os.path.basename(mag_fp), "*.json"))[0]
 
-                results = _process_busco_results(add_contam_complete,
+                results = _process_busco_results(additional_metrics,
                                                  _extract_json_data(json_path), mag_id,
                                                  os.path.basename(mag_fp), sample_id)
                 results_all.append(results)
@@ -113,11 +113,11 @@ def _evaluate_busco(
     metaeuk_rerun_parameters: str = None,
     miniprot: bool = False,
     scaffold_composition: bool = False,
-    add_contam_complete: bool = False,
+    additional_metrics: bool = False,
 ) -> pd.DataFrame:
     kwargs = {
         k: v for k, v in locals().items() if k not in [
-            "mags", "db", "add_contam_complete"
+            "mags", "db", "additional_metrics"
         ]
     }
     kwargs["offline"] = True
@@ -134,7 +134,7 @@ def _evaluate_busco(
         processing_func=_parse_busco_params, params=kwargs
     )
 
-    return _busco_helper(mags, common_args, add_contam_complete)
+    return _busco_helper(mags, common_args, additional_metrics)
 
 
 def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
@@ -264,7 +264,7 @@ def evaluate_busco(
     metaeuk_rerun_parameters=None,
     miniprot=False,
     scaffold_composition=False,
-    add_contam_complete=False,
+    additional_metrics=True,
     num_partitions=None
 ):
     _validate_parameters(lineage_dataset, auto_lineage,

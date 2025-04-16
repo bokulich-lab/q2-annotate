@@ -1069,7 +1069,7 @@ busco_params = {
     "metaeuk_rerun_parameters": Str,
     "miniprot": Bool,
     "scaffold_composition": Bool,
-    "add_contam_complete": Bool,
+    "additional_metrics": Bool,
 }
 busco_param_descriptions = {
     "mode": "Specify which BUSCO analysis mode to run."
@@ -1121,9 +1121,9 @@ busco_param_descriptions = {
     "miniprot": "Use miniprot gene predictor for eukaryote runs.",
     "scaffold_composition": "Writes ACGTN content per scaffold to a file "
                             "`scaffold_composition.txt`.",
-    "add_contam_complete": "Adds completeness and contamination values to the BUSCO "
-                           "report. Check here for documentation: https://github.com/"
-                           "metashot/busco?tab=readme-ov-file#documetation",
+    "additional_metrics": "Adds completeness and contamination values to the BUSCO "
+                          "report. Check here for documentation: https://github.com/"
+                          "metashot/busco?tab=readme-ov-file#documetation",
 }
 
 

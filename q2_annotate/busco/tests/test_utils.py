@@ -394,7 +394,7 @@ class TestBUSCOUtils(TestPluginBase):
     def test_with_completeness_contamination(self, mock_calc):
         results = self.busco_results.copy()
         output = _process_busco_results(
-            add_contam_complete=True,
+            additional_metrics=True,
             results=results,
             mag_id="mag1",
             file_name="mag1.fasta",
@@ -426,7 +426,7 @@ class TestBUSCOUtils(TestPluginBase):
     def test_without_completeness_contamination(self):
         results = self.busco_results.copy()
         output = _process_busco_results(
-            add_contam_complete=False,
+            additional_metrics=False,
             results=results,
             mag_id="mag1",
             file_name="mag1.fasta",
