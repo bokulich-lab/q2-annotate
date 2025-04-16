@@ -7,12 +7,15 @@
 # ----------------------------------------------------------------------------
 import json
 import tempfile
+from unittest.mock import patch
+
 import pandas as pd
 from qiime2.plugin.testing import TestPluginBase
 from q2_annotate.busco.utils import (
-    _parse_busco_params, _collect_summaries, _parse_df_columns,
+    _parse_busco_params, _parse_df_columns,
     _partition_dataframe, _get_feature_table, _calculate_summary_stats,
-    _get_mag_lengths, _validate_lineage_dataset_input, _validate_parameters
+    _validate_lineage_dataset_input, _extract_json_data,
+    _validate_parameters, _calculate_contamination_completeness, _process_busco_results
 )
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
@@ -78,6 +81,23 @@ class TestBUSCOUtils(TestPluginBase):
             'complete': [13.0, 14.0, 15.0],
             'n_markers': [16, 17, 18]
         })
+        self.busco_results = {
+            "dataset": "bacteria_odb10",
+            "complete": 87.9,
+            "complete_value": 80,
+            "single": 86.3,
+            "duplicated": 1.6,
+            "duplicated_value": 5,
+            "fragmented": 4.8,
+            "missing": 7.3,
+            "missing_value": 10,
+            "n_markers": 100,
+            "scaffold_n50": "975",
+            "contigs_n50": "975",
+            "percent_gaps": "0.000%",
+            "scaffolds": "2",
+            "length": "1935",
+        }
 
     def test_parse_busco_params_1(self):
         observed = _parse_busco_params("auto_lineage", True)
@@ -98,22 +118,6 @@ class TestBUSCOUtils(TestPluginBase):
         observed = _parse_busco_params("lineage_dataset", "bacteria-XYZ")
         expected = ["--lineage_dataset", "bacteria-XYZ"]
         self.assertSetEqual(set(observed), set(expected))
-
-    def test_collect_summaries(self):
-        with tempfile.TemporaryDirectory():
-            paths = {}
-
-            for i in range(1, 4):
-                paths[f"sample{i}"] = self.get_data_path(
-                    filename=f"batch_summary_sample{i}.txt"
-                )
-
-            obs = _collect_summaries(paths)
-            exp = pd.read_csv(
-                self.get_data_path(filename="all_batch_summaries.csv")
-            )
-            pd.set_option('display.max_columns', None)
-            pd.testing.assert_frame_equal(obs, exp)
 
     def test_parse_df_columns(self):
         obs = _parse_df_columns(self.df4)
@@ -277,31 +281,6 @@ class TestBUSCOUtils(TestPluginBase):
 
         self.assertEqual(obs, exp)
 
-    def test_get_mag_lengths_sample_data(self):
-        obs = _get_mag_lengths(self.mags)
-        exp = pd.Series(
-            {
-                '24dee6fe-9b84-45bb-8145-de7b092533a1': 1935,
-                'ca7012fc-ba65-40c3-84f5-05aa478a7585': 3000,
-                'fb0bc871-04f6-486b-a10e-8e0cb66f8de3': 2000,
-                'd65a71fa-4279-4588-b937-0747ed5d604d': 3000,
-                'db03f8b6-28e1-48c5-a47c-9c65f38f7357': 2000,
-                'fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf': 3000
-            }, name="length"
-        )
-        pd.testing.assert_series_equal(obs, exp)
-
-    def test_get_mag_lengths_feature_data(self):
-        obs = _get_mag_lengths(self.feature_data_mags)
-        exp = pd.Series(
-            {
-                '24dee6fe-9b84-45bb-8145-de7b092533a1': 1935,
-                'ca7012fc-ba65-40c3-84f5-05aa478a7585': 3000,
-                'fb0bc871-04f6-486b-a10e-8e0cb66f8de3': 2000,
-            }, name="length"
-        )
-        pd.testing.assert_series_equal(obs, exp)
-
     def test_validate_lineage_dataset_input_valid(self):
         # Give path to valid database
         p = self.get_data_path("busco_db")
@@ -365,6 +344,97 @@ class TestBUSCOUtils(TestPluginBase):
                 "auto_lineage_prok": False
             }
         )
+
+    def test_extract_json_data(self):
+        obs = _extract_json_data(self.get_data_path(
+            "busco_output/short_summary.specific.iridoviridae_odb10."
+            "24dee6fe-9b84-45bb-8145-de7b092533a1.fasta.json"))
+
+        self.assertEqual(obs, self.busco_results)
+
+    def test_calculate_contamination_completeness_normal(self):
+        completeness, contamination = _calculate_contamination_completeness(
+            missing=10,
+            total=100,
+            duplicated=5,
+            complete=50
+        )
+        self.assertEqual(completeness, 90.0)
+        self.assertEqual(contamination, 10.0)
+
+    def test_calculate_contamination_completeness_divide_by_zero(self):
+        completeness, contamination = _calculate_contamination_completeness(
+            missing=5,
+            total=100,
+            duplicated=5,
+            complete=0
+        )
+        self.assertEqual(completeness, 95.0)
+        self.assertEqual(contamination, None)
+
+    @patch("q2_annotate.busco.utils._calculate_contamination_completeness",
+           return_value=(95.0, 10.0))
+    def test_with_completeness_contamination(self, mock_calc):
+        results = self.busco_results.copy()
+        output = _process_busco_results(
+            results=results,
+            sample_id="sample1",
+            mag_id="mag1",
+            file_name="mag1.fasta",
+            additional_metrics=True,
+        )
+
+        expected = {
+            "mag_id": "mag1",
+            "sample_id": "sample1",
+            "input_file": "mag1.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 87.9,
+            "single": 86.3,
+            "duplicated": 1.6,
+            "fragmented": 4.8,
+            "missing": 7.3,
+            "n_markers": 100,
+            "scaffold_n50": "975",
+            "contigs_n50": "975",
+            "percent_gaps": "0.000%",
+            "scaffolds": "2",
+            "length": "1935",
+            "completeness": 95.0,
+            "contamination": 10.0,
+        }
+
+        self.assertEqual(output, expected)
+
+    def test_without_completeness_contamination(self):
+        results = self.busco_results.copy()
+        output = _process_busco_results(
+            results=results,
+            sample_id="sample1",
+            mag_id="mag1",
+            file_name="mag1.fasta",
+            additional_metrics=False,
+        )
+
+        expected = {
+            "mag_id": "mag1",
+            "sample_id": "sample1",
+            "input_file": "mag1.fasta",
+            "dataset": "bacteria_odb10",
+            "complete": 87.9,
+            "single": 86.3,
+            "duplicated": 1.6,
+            "fragmented": 4.8,
+            "missing": 7.3,
+            "n_markers": 100,
+            "scaffold_n50": "975",
+            "contigs_n50": "975",
+            "percent_gaps": "0.000%",
+            "scaffolds": "2",
+            "length": "1935",
+        }
+
+        self.assertEqual(output, expected)
 
     def test_validate_parameters_lineage_all_false(self):
         with self.assertRaisesRegex(ValueError, "At least one of these parameters"):

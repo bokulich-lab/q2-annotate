@@ -1,4 +1,0 @@
-mag_id	sample_id	input_file	dataset	complete	single	duplicated	fragmented	missing	n_markers	scaffold_n50	contigs_n50	percent_gaps	scaffolds	length
-6ed8c097-1c87-4019-8b38-b95507011b41	SRR14143412	6ed8c097-1c87-4019-8b38-b95507011b41.fasta	bacteria_odb10	8.1	8.1	0.0	0.8	91.1	124	74198	74198	0.000%	11	560715
-bf2c0af0-83ba-44a6-b550-3b7884a62a82	SRR14143412	bf2c0af0-83ba-44a6-b550-3b7884a62a82.fasta	bacteria_odb10	95.9	93.5	2.4	2.4	1.7	124	80820	80820	0.000%	92	4253319
-a2401d15-802f-42c3-9eb4-c282e2141b14	SRR14143412	a2401d15-802f-42c3-9eb4-c282e2141b14.fasta	bacteria_odb10	89.5	89.5	0.0	1.6	8.9	124	31708	31708	0.000%	106	2120157

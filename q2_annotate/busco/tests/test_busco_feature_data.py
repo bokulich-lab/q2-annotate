@@ -6,14 +6,10 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import json
-import os
-import shutil
 import qiime2
 import pandas as pd
-from q2_annotate.busco.busco import (
-    _run_busco, _visualize_busco, evaluate_busco
-)
-from unittest.mock import patch, ANY, MagicMock
+from q2_annotate.busco.busco import _visualize_busco, evaluate_busco, _busco_helper
+from unittest.mock import patch, ANY, MagicMock, call
 from qiime2.plugin.testing import TestPluginBase
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 
@@ -28,34 +24,39 @@ class TestBUSCOFeatureData(TestPluginBase):
             mode="r",
         )
 
-    def _prepare_summaries(self):
-        os.makedirs(os.path.join(self.temp_dir.name, "sample1"))
-        shutil.copy(
-            self.get_data_path('summaries/batch_summary_1.txt'),
-            os.path.join(
-                self.temp_dir.name, "sample1", 'batch_summary.txt'
-            )
+    @patch('q2_annotate.busco.busco._extract_json_data')
+    @patch('q2_annotate.busco.busco._process_busco_results')
+    @patch('q2_annotate.busco.busco._run_busco')
+    @patch('q2_annotate.busco.busco.glob.glob')
+    def test_busco_helper(self, mock_glob, mock_run, mock_process, mock_extract):
+        with open(self.get_data_path(
+                "busco_results_json/busco_results_feature_data.json"), "r") as f:
+            busco_list = json.load(f)
+
+        mock_process.side_effect = busco_list
+
+        obs = _busco_helper(self.mags, ['--lineage_dataset', 'bacteria_odb10'], True)
+
+        exp = pd.read_csv(self.get_data_path(
+            'busco_results/results_all/busco_results_feature_data.tsv'
+        ), sep="\t", keep_default_na=False)
+        exp["sample_id"] = exp["sample_id"].astype(object)
+        pd.testing.assert_frame_equal(obs, exp)
+
+        mock_run.assert_called_once_with(
+            input_dir=ANY,
+            output_dir=ANY,
+            sample_id="feature_data",
+            params=['--lineage_dataset', 'bacteria_odb10']
         )
-
-    @patch('q2_annotate.busco.busco.run_command')
-    def test_run_busco(self, mock_run):
-        self._prepare_summaries()
-
-        obs = _run_busco(
-            output_dir=self.temp_dir.name,
-            mags=self.mags,
-            params=['--lineage_dataset', 'bacteria_odb10', '--cpu', '7']
-        )
-        exp = {
-            'sample1': f"{self.temp_dir.name}/sample1/batch_summary.txt",
-        }
-
-        self.assertDictEqual(obs, exp)
-        mock_run.assert_called_once_with([
-            'busco', '--lineage_dataset', 'bacteria_odb10',
-            '--cpu', '7', '--in', self.get_data_path('mags/sample1'),
-            '--out_path', self.temp_dir.name, '-o', 'sample1'
-        ], cwd=os.path.dirname(self.temp_dir.name))
+        mock_process.assert_has_calls([
+            call(True, ANY, '24dee6fe-9b84-45bb-8145-de7b092533a1',
+                 '24dee6fe-9b84-45bb-8145-de7b092533a1.fasta', 'feature_data'),
+            call(True, ANY, 'ca7012fc-ba65-40c3-84f5-05aa478a7585',
+                 'ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta', 'feature_data'),
+            call(True, ANY, 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3',
+                 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta', 'feature_data')
+        ])
 
     @patch(
         "q2_annotate.busco.busco._draw_detailed_plots",
