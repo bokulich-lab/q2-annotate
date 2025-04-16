@@ -266,7 +266,7 @@ def _validate_parameters(lineage_dataset, auto_lineage,
         )
 
 
-def _process_busco_results(additional_metrics, results, mag_id, file_name, sample_id):
+def _process_busco_results(results, sample_id, mag_id, file_name, additional_metrics):
     """
     Process BUSCO results by optionally calculating contamination and completeness,
     removing raw marker counts, and adding metadata identifiers.

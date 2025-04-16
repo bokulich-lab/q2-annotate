@@ -394,11 +394,11 @@ class TestBUSCOUtils(TestPluginBase):
     def test_with_completeness_contamination(self, mock_calc):
         results = self.busco_results.copy()
         output = _process_busco_results(
-            additional_metrics=True,
             results=results,
+            sample_id="sample1",
             mag_id="mag1",
             file_name="mag1.fasta",
-            sample_id="sample1"
+            additional_metrics=True,
         )
 
         expected = {
@@ -426,11 +426,11 @@ class TestBUSCOUtils(TestPluginBase):
     def test_without_completeness_contamination(self):
         results = self.busco_results.copy()
         output = _process_busco_results(
-            additional_metrics=False,
             results=results,
+            sample_id="sample1",
             mag_id="mag1",
             file_name="mag1.fasta",
-            sample_id="sample1"
+            additional_metrics=False,
         )
 
         expected = {
