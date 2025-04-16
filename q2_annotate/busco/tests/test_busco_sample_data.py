@@ -110,8 +110,8 @@ class TestBUSCOSampleData(TestPluginBase):
                 '--mode', 'some_mode', '--lineage_dataset', 'lineage_1',
                 '--cpu', '1', '--contig_break', '10', '--evalue', '0.001',
                 '--limit', '3', '--offline', "--download_path",
-                f"{str(self.busco_db)}/busco_downloads", False
-            ]
+                f"{str(self.busco_db)}/busco_downloads"
+            ], False
         )
 
     @patch(
