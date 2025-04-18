@@ -47,7 +47,7 @@ class TestAnnotate(TestPluginBase):
         )
 
         obs_obj = _eggnog_annotate(
-            eggnog_hits=seed_orthologs, eggnog_db=self.eggnog_db
+            eggnog_hits=seed_orthologs, db=self.eggnog_db
         )
 
         exp_fp = self.get_data_path(
@@ -74,7 +74,7 @@ class TestAnnotate(TestPluginBase):
 
         single, = self._eggnog_annotate(
             eggnog_hits=orthologs,
-            eggnog_db=self.eggnog_db_artifact
+            db=self.eggnog_db_artifact
         )
 
         parallel = parallel.view(OrthologAnnotationDirFmt)

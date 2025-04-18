@@ -55,7 +55,7 @@ def _construct_output_paths(
 def classify_kraken2(
         ctx,
         seqs,
-        kraken2_db,
+        db,
         threads=1,
         confidence=0.0,
         minimum_base_quality=0,
@@ -66,7 +66,7 @@ def classify_kraken2(
         num_partitions=None
 ):
     kwargs = {k: v for k, v in locals().items()
-              if k not in ["seqs", "kraken2_db", "ctx", "num_partitions"]}
+              if k not in ["seqs", "db", "ctx", "num_partitions"]}
 
     _classify_kraken2 = ctx.get_action("annotate", "_classify_kraken2")
     collate_kraken2_reports = ctx.get_action("annotate",
@@ -88,7 +88,7 @@ def classify_kraken2(
     # FeatureData[MAG] is not parallelized
     elif seqs.type <= FeatureData[MAG]:
         kraken2_reports, kraken2_outputs = \
-                _classify_kraken2(seqs, kraken2_db, **kwargs)
+                _classify_kraken2(seqs, db, **kwargs)
         return kraken2_reports, kraken2_outputs
     else:
         raise NotImplementedError()
@@ -99,7 +99,7 @@ def classify_kraken2(
     kraken2_outputs = []
     for seq in partitioned_seqs.values():
         (kraken2_report, kraken2_output) = _classify_kraken2(
-                seq, kraken2_db, **kwargs)
+                seq, db, **kwargs)
         kraken2_reports.append(kraken2_report)
         kraken2_outputs.append(kraken2_output)
 
@@ -117,7 +117,7 @@ def _classify_kraken2(
             MAGSequencesDirFmt,
             MultiFASTADirectoryFormat
         ],
-        kraken2_db: Kraken2DBDirectoryFormat,
+        db: Kraken2DBDirectoryFormat,
         threads: int = 1,
         confidence: float = 0.0,
         minimum_base_quality: int = 0,
@@ -130,12 +130,12 @@ def _classify_kraken2(
         Kraken2OutputDirectoryFormat,
 ):
     kwargs = {k: v for k, v in locals().items()
-              if k not in ["seqs", "kraken2_db", "ctx"]}
+              if k not in ["seqs", "db", "ctx"]}
 
     common_args = _process_common_input_params(
         processing_func=_process_kraken2_arg, params=kwargs
     )
-    common_args.extend(["--db", str(kraken2_db.path)])
+    common_args.extend(["--db", str(db.path)])
     return classify_kraken2_helper(seqs, common_args)
 
 

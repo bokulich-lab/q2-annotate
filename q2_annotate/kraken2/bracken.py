@@ -60,8 +60,8 @@ def _run_bracken_one_sample(
 
 
 def _estimate_bracken(
-        kraken_reports: Kraken2ReportDirectoryFormat,
-        bracken_db: BrackenDBDirectoryFormat,
+        kraken2_reports: Kraken2ReportDirectoryFormat,
+        db: BrackenDBDirectoryFormat,
         threshold: int,
         read_len: int,
         level: str
@@ -71,9 +71,9 @@ def _estimate_bracken(
 
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
-            for report_fp in kraken_reports.path.iterdir():
+            for report_fp in kraken2_reports.path.iterdir():
                 bracken_table = _run_bracken_one_sample(
-                    bracken_db=str(bracken_db),
+                    bracken_db=str(db),
                     kraken2_report_fp=report_fp,
                     bracken_report_dir=str(bracken_reports),
                     tmp_dir=tmpdir, threshold=threshold,
@@ -161,8 +161,8 @@ def _add_unclassified(
 
 
 def estimate_bracken(
-    kraken_reports: Kraken2ReportDirectoryFormat,
-    bracken_db: BrackenDBDirectoryFormat,
+    kraken2_reports: Kraken2ReportDirectoryFormat,
+    db: BrackenDBDirectoryFormat,
     threshold: int = 0,
     read_len: int = 100,
     level: str = 'S',
@@ -176,10 +176,10 @@ def estimate_bracken(
             "due to the unavailability of the Bracken package. Please try it on Linux."
         )
 
-    _assert_read_lens_available(bracken_db, read_len)
+    _assert_read_lens_available(db, read_len)
 
     table, reports = _estimate_bracken(
-        kraken_reports=kraken_reports, bracken_db=bracken_db,
+        kraken2_reports=kraken2_reports, db=db,
         threshold=threshold, read_len=read_len, level=level
     )
 
@@ -190,6 +190,6 @@ def estimate_bracken(
     if include_unclassified:
         # Bracken does not report unclassified reads in its output table,
         # so we need to re-add them
-        table, taxonomy = _add_unclassified(table, taxonomy, kraken_reports)
+        table, taxonomy = _add_unclassified(table, taxonomy, kraken2_reports)
 
     return reports, taxonomy, table

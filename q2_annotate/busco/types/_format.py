@@ -16,24 +16,30 @@ class BUSCOResultsFormat(model.TextFileFormat):
         "mag_id", "sample_id", "input_file", "dataset", "complete",
         "single", "duplicated", "fragmented", "missing", "n_markers",
         "scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds",
-        "length"
+        "length", "completeness", "contamination"
     ]
+    HEADER_2 = HEADER[:-2]
 
     def _validate(self, n_records=None):
         with self.open() as fh:
             reader = csv.reader(fh, delimiter='\t')
             headers = next(reader)
 
-            if set(headers) != set(self.HEADER):
+            if set(headers) == set(self.HEADER):
+                expected = self.HEADER
+            elif set(headers) == set(self.HEADER_2):
+                expected = self.HEADER_2
+            else:
                 raise ValidationError(
-                    f'Invalid header: {headers}, expected: {self.HEADER}'
+                    f'Invalid header: {headers}, expected: {self.HEADER}, '
+                    '"completness" and "contamination" columns are optional.'
                 )
 
             for i, row in enumerate(reader, start=2):
-                if len(row) != len(self.HEADER):
+                if len(row) != len(expected):
                     raise ValidationError(
                         f'Line {i} has {len(row)} columns, '
-                        f'expected {len(self.HEADER)}'
+                        f'expected {len(expected)}'
                     )
 
                 if n_records is not None and i - 1 >= n_records:

@@ -190,17 +190,17 @@ plugin.pipelines.register_function(
     function=q2_annotate.kraken2.classification.classify_kraken2,
     inputs={
         "seqs": T_kraken_in,
-        "kraken2_db": Kraken2DB,
+        "db": Kraken2DB,
     },
     parameters={**kraken2_params, **partition_params},
     outputs=[
         ('reports', T_kraken_out_rep),
-        ('hits', T_kraken_out_hits),
+        ('outputs', T_kraken_out_hits),
     ],
     input_descriptions={
         "seqs": "Sequences to be classified. Both, single-/paired-end reads"
                 "and assembled MAGs, can be provided.",
-        "kraken2_db": "Kraken 2 database.",
+        "db": "Kraken 2 database.",
     },
     parameter_descriptions={
         **kraken2_param_descriptions,
@@ -208,7 +208,7 @@ plugin.pipelines.register_function(
     },
     output_descriptions={
         'reports': 'Reports produced by Kraken2.',
-        'hits': 'Output files produced by Kraken2.',
+        'outputs': 'Output files produced by Kraken2.',
     },
     name='Perform taxonomic classification of reads or MAGs using Kraken 2.',
     description='This method uses Kraken 2 to classify provided NGS reads '
@@ -220,22 +220,22 @@ plugin.methods.register_function(
     function=q2_annotate.kraken2.classification._classify_kraken2,
     inputs={
         "seqs": T_kraken_in,
-        "kraken2_db": Kraken2DB,
+        "db": Kraken2DB,
     },
     parameters=kraken2_params,
     outputs=[
         ('reports', T_kraken_out_rep),
-        ('hits', T_kraken_out_hits),
+        ('outputs', T_kraken_out_hits),
     ],
     input_descriptions={
         "seqs": "The sequences to be classified. Single-end or paired-end "
                 "reads, contigs, or MAGs can be provided.",
-        "kraken2_db": "Kraken 2 database.",
+        "db": "Kraken 2 database.",
     },
     parameter_descriptions=kraken2_param_descriptions,
     output_descriptions={
         'reports': 'Reports produced by Kraken2.',
-        'hits': 'Output files produced by Kraken2.',
+        'outputs': 'Output files produced by Kraken2.',
     },
     name='Perform taxonomic classification of reads or MAGs using Kraken 2.',
     description='This method uses Kraken 2 to classify provided NGS reads '
@@ -257,13 +257,13 @@ P_kraken_in, P_kraken_out = TypeMap({
 plugin.methods.register_function(
     function=q2_annotate.kraken_helpers.collate_kraken2_reports,
     inputs={
-        "kraken2_reports": List[
+        "reports": List[
             SampleData[Kraken2Reports % P_kraken_in]
         ]
     },
     parameters={},
     outputs={
-        "collated_kraken2_reports": SampleData[Kraken2Reports % P_kraken_out]
+        "collated_reports": SampleData[Kraken2Reports % P_kraken_out]
     },
     name="Collate kraken2 reports",
     description="Collates kraken2 reports"
@@ -272,13 +272,13 @@ plugin.methods.register_function(
 plugin.methods.register_function(
     function=q2_annotate.kraken_helpers.collate_kraken2_outputs,
     inputs={
-        "kraken2_outputs": List[
+        "outputs": List[
             SampleData[Kraken2Outputs % P_kraken_in]
         ]
     },
     parameters={},
     outputs={
-        "collated_kraken2_outputs":
+        "collated_outputs":
             SampleData[Kraken2Outputs % P_kraken_out]
     },
     name="Collate kraken2 outputs",
@@ -289,8 +289,8 @@ if platform.system() != "Darwin":
     plugin.methods.register_function(
         function=q2_annotate.kraken2.bracken.estimate_bracken,
         inputs={
-            "kraken_reports": SampleData[Kraken2Reports % Properties('reads')],
-            "bracken_db": BrackenDB
+            "kraken2_reports": SampleData[Kraken2Reports % Properties('reads')],
+            "db": BrackenDB
         },
         parameters={
             'threshold': Int % Range(0, None),
@@ -304,8 +304,8 @@ if platform.system() != "Darwin":
             ('table', FeatureTable[Frequency])
         ],
         input_descriptions={
-            "kraken_reports": "Reports produced by Kraken2.",
-            "bracken_db": "Bracken database."
+            "kraken2_reports": "Reports produced by Kraken2.",
+            "db": "Bracken database."
         },
         parameter_descriptions={
             'threshold': 'Bracken: number of reads required PRIOR to abundance '
@@ -351,8 +351,8 @@ plugin.methods.register_function(
         'read_len': List[Int % Range(1, None)],
     },
     outputs=[
-        ('kraken2_database', Kraken2DB),
-        ('bracken_database', BrackenDB),
+        ('kraken2_db', Kraken2DB),
+        ('bracken_db', BrackenDB),
     ],
     input_descriptions={
         "seqs": "Sequences to be added to the Kraken 2 database."
@@ -384,8 +384,8 @@ plugin.methods.register_function(
                     'database.'
     },
     output_descriptions={
-        'kraken2_database': 'Kraken2 database.',
-        'bracken_database': 'Bracken database.'
+        'kraken2_db': 'Kraken2 database.',
+        'bracken_db': 'Bracken database.'
     },
     name='Build Kraken 2 database.',
     description='This method builds a Kraken 2/Bracken databases from '
@@ -431,7 +431,7 @@ plugin.methods.register_function(
     },
     outputs=[
         ('dereplicated_mags', FeatureData[MAG]),
-        ('feature_table', FeatureTable[PresenceAbsence])
+        ('table', FeatureTable[PresenceAbsence])
     ],
     input_descriptions={
         "mags": "MAGs to be dereplicated.",
@@ -450,7 +450,7 @@ plugin.methods.register_function(
     },
     output_descriptions={
         "dereplicated_mags": "Dereplicated MAGs.",
-        "feature_table": "Mapping between MAGs and samples."
+        "table": "Mapping between MAGs and samples."
     },
     name='Dereplicate MAGs from multiple samples.',
     description='This method dereplicates MAGs from multiple samples '
@@ -506,7 +506,7 @@ plugin.methods.register_function(
     function=q2_annotate.kraken2.kraken2_to_mag_features,
     inputs={
         'reports': FeatureData[Kraken2Reports % Properties('mags')],
-        'hits': FeatureData[Kraken2Outputs % Properties('mags')],
+        'outputs': FeatureData[Kraken2Outputs % Properties('mags')],
     },
     parameters={
         'coverage_threshold': Float % Range(0, 100, inclusive_end=True),
@@ -515,7 +515,7 @@ plugin.methods.register_function(
     outputs=[('taxonomy', FeatureData[Taxonomy])],
     input_descriptions={
         'reports': 'Per-sample Kraken 2 reports.',
-        'hits': 'Per-sample Kraken 2 output files.',
+        'outputs': 'Per-sample Kraken 2 output files.',
     },
     parameter_descriptions={
         'coverage_threshold': 'The minimum percent coverage required to '
@@ -547,9 +547,9 @@ plugin.methods.register_function(
         'taxonomy': "Reference taxonomy, "
                     "needed to provide taxonomy features."
     },
-    outputs=[('diamond_db', ReferenceDB[Diamond])],
+    outputs=[('db', ReferenceDB[Diamond])],
     output_descriptions={
-        'diamond_db': "DIAMOND database."
+        'db': "DIAMOND database."
     },
     parameters={
         "threads": Int % Range(1, None),
@@ -578,10 +578,9 @@ plugin.methods.register_function(
     function=q2_annotate.eggnog.fetch_eggnog_db,
     inputs={},
     parameters={},
-    outputs=[("eggnog_db", ReferenceDB[Eggnog])],
+    outputs=[("db", ReferenceDB[Eggnog])],
     output_descriptions={
-        "eggnog_db": "Artifact containing the eggNOG annotation "
-                     "database."
+        "db": "Artifact containing the eggNOG annotation database."
     },
     name="Fetch the databases necessary to run the "
          "eggnog-annotate action.",
@@ -597,9 +596,9 @@ plugin.methods.register_function(
     function=q2_annotate.eggnog.fetch_diamond_db,
     inputs={},
     parameters={},
-    outputs=[("diamond_db", ReferenceDB[Diamond])],
+    outputs=[("db", ReferenceDB[Diamond])],
     output_descriptions={
-        "diamond_db": "Complete Diamond reference database."
+        "db": "Complete Diamond reference database."
     },
     name="Fetch the complete Diamond database necessary to run the "
          "eggnog-diamond-search action.",
@@ -667,10 +666,9 @@ plugin.methods.register_function(
     parameter_descriptions={
         'taxon': "Taxon ID number."
     },
-    outputs=[("diamond_db", ReferenceDB[Diamond])],
+    outputs=[("db", ReferenceDB[Diamond])],
     output_descriptions={
-        "diamond_db": "Complete Diamond reference database for the"
-                      "specified taxon."
+        "db": "Complete Diamond reference database for the specified taxon."
     },
     name="Create a DIAMOND formatted reference database for the"
          "specified taxon.",
@@ -685,9 +683,9 @@ plugin.methods.register_function(
 plugin.pipelines.register_function(
     function=q2_annotate.eggnog.search_orthologs_diamond,
     inputs={
-        'sequences':
+        'seqs':
             SampleData[Contigs] | SampleData[MAGs] | FeatureData[MAG],
-        'diamond_db': ReferenceDB[Diamond],
+        'db': ReferenceDB[Diamond],
     },
     parameters={
         'num_cpus': Int,
@@ -695,10 +693,8 @@ plugin.pipelines.register_function(
         **partition_params
     },
     input_descriptions={
-        'sequences': 'Sequence data of the contigs we want to '
-                     'search for hits using the Diamond Database',
-        'diamond_db': 'The filepath to an artifact containing the '
-                      'Diamond database',
+        'seqs': 'Sequences to be searched for hits using the Diamond Database',
+        'db': 'The filepath to an artifact containing the Diamond database',
     },
     parameter_descriptions={
         'num_cpus': 'Number of CPUs to utilize. \'0\' will '
@@ -711,7 +707,8 @@ plugin.pipelines.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci])
     ],
     name='Run eggNOG search using diamond aligner',
     description="This method performs the steps by which we find our "
@@ -726,7 +723,7 @@ plugin.pipelines.register_function(
 plugin.pipelines.register_function(
     function=q2_annotate.eggnog.search_orthologs_hmmer,
     inputs={
-        'sequences': SampleData[Contigs | MAGs] | FeatureData[MAG],
+        'seqs': SampleData[Contigs | MAGs] | FeatureData[MAG],
         'pressed_hmm_db': ProfileHMM[PressedProtein],
         'idmap': EggnogHmmerIdmap,
         'seed_alignments': GenomeData[Proteins]
@@ -737,12 +734,11 @@ plugin.pipelines.register_function(
         **partition_params
     },
     input_descriptions={
-        'sequences': 'Sequences to be searched for hits.',
-        "pressed_hmm_db": "Collection of profile HMMs in binary format "
-                          "and indexed.",
-        "idmap": "List of protein families in `hmm_db`.",
+        'seqs': 'Sequences to be searched for hits.',
+        "pressed_hmm_db": "Collection of profile HMMs in binary format and indexed.",
+        "idmap": "List of protein families in `pressed_hmm_db`.",
         "seed_alignments": "Seed alignments for the protein families in "
-                          "`hmm_db`."
+                           "`pressed_hmm_db`."
     },
     parameter_descriptions={
         'num_cpus': 'Number of CPUs to utilize per partition. \'0\' will '
@@ -755,7 +751,8 @@ plugin.pipelines.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci]),
     ],
     name='Run eggNOG search using HMMER aligner',
     description="This method uses HMMER to find possible target sequences "
@@ -769,17 +766,17 @@ plugin.pipelines.register_function(
 plugin.methods.register_function(
     function=q2_annotate.eggnog._eggnog_diamond_search,
     inputs={
-        'sequences':
+        'seqs':
             SampleData[Contigs] | SampleData[MAGs] | FeatureData[MAG],
-        'diamond_db': ReferenceDB[Diamond]
+        'db': ReferenceDB[Diamond]
     },
     parameters={
         'num_cpus': Int,
-        'db_in_memory': Bool,
+        'db_in_memory': Bool
     },
     input_descriptions={
-        'sequences': 'Sequences to be searched for ortholog hits.',
-        'diamond_db': 'Diamond database.',
+        'seqs': 'Sequences to be searched for ortholog hits.',
+        'db': 'Diamond database.'
     },
     parameter_descriptions={
         'num_cpus': 'Number of CPUs to utilize. \'0\' will '
@@ -791,12 +788,14 @@ plugin.methods.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci])
     ],
     output_descriptions={
         'eggnog_hits': 'BLAST6-like table(s) describing the identified '
                        'orthologs. One table per sample or MAG in the input.',
-        'table': 'Feature table with counts of orthologs per sample/MAG.'
+        'table': 'Feature table with counts of orthologs per sample/MAG.',
+        'loci': 'Loci of the identified orthologs.'
     },
     name='Run eggNOG search using Diamond aligner',
     description="This method performs the steps by which we find our "
@@ -812,7 +811,7 @@ plugin.methods.register_function(
 plugin.methods.register_function(
     function=q2_annotate.eggnog._eggnog_hmmer_search,
     inputs={
-        'sequences':
+        'seqs':
             SampleData[Contigs] | SampleData[MAGs] | FeatureData[MAG],
         'idmap': EggnogHmmerIdmap,
         'pressed_hmm_db': ProfileHMM[PressedProtein],
@@ -823,13 +822,11 @@ plugin.methods.register_function(
         'db_in_memory': Bool,
     },
     input_descriptions={
-        'sequences': 'Sequence data of the contigs we want to '
-                     'search for hits.',
-        'idmap': 'List of protein families in `hmm_db`.',
-        'pressed_hmm_db': 'Collection of Profile HMMs in binary format '
-                          'and indexed.',
+        'seqs': 'Sequences to be searched for hits.',
+        'idmap': 'List of protein families in `pressed_hmm_db`.',
+        'pressed_hmm_db': 'Collection of Profile HMMs in binary format and indexed.',
         'seed_alignments': 'Seed alignments for the protein families in '
-                          '`hmm_db`.'
+                           '`pressed_hmm_db`.'
     },
     parameter_descriptions={
         'num_cpus': 'Number of CPUs to utilize per partition. \'0\' will '
@@ -841,12 +838,14 @@ plugin.methods.register_function(
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
-        ('table', FeatureTable[Frequency])
+        ('table', FeatureTable[Frequency]),
+        ('loci', GenomeData[Loci])
     ],
     output_descriptions={
         'eggnog_hits': 'BLAST6-like table(s) describing the identified '
                        'orthologs. One table per sample or MAG in the input.',
-        'table': 'Feature table with counts of orthologs per sample/MAG.'
+        'table': 'Feature table with counts of orthologs per sample/MAG.',
+        'loci': 'Loci of the identified orthologs.'
     },
     name='Run eggNOG search using HMMER aligner',
     description='This method performs the steps by which we find our '
@@ -881,12 +880,12 @@ plugin.pipelines.register_function(
     function=q2_annotate.eggnog.map_eggnog,
     inputs={
         'eggnog_hits': SampleData[Orthologs],
-        'eggnog_db': ReferenceDB[Eggnog],
+        'db': ReferenceDB[Eggnog],
     },
     input_descriptions={
         'eggnog_hits': 'BLAST6-like table(s) describing the '
                        'identified orthologs. ',
-        'eggnog_db': 'eggNOG annotation database.'
+        'db': 'eggNOG annotation database.'
     },
     parameters={
         'db_in_memory': Bool,
@@ -915,7 +914,7 @@ plugin.methods.register_function(
     function=q2_annotate.eggnog._eggnog_annotate,
     inputs={
         'eggnog_hits': SampleData[Orthologs],
-        'eggnog_db': ReferenceDB[Eggnog],
+        'db': ReferenceDB[Eggnog],
     },
     parameters={
         'db_in_memory': Bool,
@@ -1070,6 +1069,7 @@ busco_params = {
     "metaeuk_rerun_parameters": Str,
     "miniprot": Bool,
     "scaffold_composition": Bool,
+    "additional_metrics": Bool,
 }
 busco_param_descriptions = {
     "mode": "Specify which BUSCO analysis mode to run."
@@ -1121,14 +1121,17 @@ busco_param_descriptions = {
     "miniprot": "Use miniprot gene predictor for eukaryote runs.",
     "scaffold_composition": "Writes ACGTN content per scaffold to a file "
                             "`scaffold_composition.txt`.",
+    "additional_metrics": "Adds completeness and contamination values to the BUSCO "
+                          "report. Check here for documentation: https://github.com/"
+                          "metashot/busco?tab=readme-ov-file#documetation",
 }
 
 
 plugin.methods.register_function(
     function=q2_annotate.busco.collate_busco_results,
-    inputs={"busco_results": List[BUSCOResults]},
+    inputs={"results": List[BUSCOResults]},
     parameters={},
-    outputs={"collated_busco_results": BUSCOResults},
+    outputs={"collated_results": BUSCOResults},
     name="Collate BUSCO results.",
     description="Collates BUSCO results."
 )
@@ -1136,11 +1139,11 @@ plugin.methods.register_function(
 plugin.visualizers.register_function(
     function=q2_annotate.busco._visualize_busco,
     inputs={
-        "busco_results": BUSCOResults,
+        "results": BUSCOResults,
     },
     parameters={},
     input_descriptions={
-        "busco_results": "BUSCO results table.",
+        "results": "BUSCO results table.",
     },
     parameter_descriptions={},
     name="Visualize BUSCO results.",
@@ -1152,16 +1155,16 @@ plugin.visualizers.register_function(
 plugin.methods.register_function(
     function=q2_annotate.busco._evaluate_busco,
     inputs={
-        "bins": SampleData[MAGs] | FeatureData[MAG],
-        "busco_db": i_busco_db
+        "mags": SampleData[MAGs] | FeatureData[MAG],
+        "db": i_busco_db
     },
     parameters=busco_params,
     outputs={
         "results": BUSCOResults
     },
     input_descriptions={
-        "bins": "MAGs to be analyzed.",
-        "busco_db": "BUSCO database."
+        "mags": "MAGs to be analyzed.",
+        "db": "BUSCO database."
     },
     parameter_descriptions=busco_param_descriptions,
     output_descriptions={
@@ -1178,23 +1181,23 @@ plugin.methods.register_function(
 plugin.pipelines.register_function(
     function=q2_annotate.busco.evaluate_busco,
     inputs={
-        "bins": SampleData[MAGs] | FeatureData[MAG],
-        "busco_db": i_busco_db
+        "mags": SampleData[MAGs] | FeatureData[MAG],
+        "db": i_busco_db
     },
     parameters={**busco_params, **partition_params},
     outputs={
-        "results_table": BUSCOResults,
+        "results": BUSCOResults,
         "visualization": Visualization
     },
     input_descriptions={
-        "bins": "MAGs to be analyzed.",
-        "busco_db": "BUSCO database."
+        "mags": "MAGs to be analyzed.",
+        "db": "BUSCO database."
     },
     parameter_descriptions={
         **busco_param_descriptions, **partition_param_descriptions
     },
     output_descriptions={
-        "results_table": "BUSCO result table.",
+        "results": "BUSCO result table.",
         "visualization": "Visualization of the BUSCO results."
     },
     name="Evaluate quality of the generated MAGs using BUSCO.",
@@ -1208,10 +1211,10 @@ plugin.pipelines.register_function(
 plugin.methods.register_function(
     function=q2_annotate.prodigal.predict_genes_prodigal,
     inputs={
-        'sequences': FeatureData[MAG] | SampleData[MAGs] | SampleData[Contigs]
+        'seqs': FeatureData[MAG] | SampleData[MAGs] | SampleData[Contigs]
     },
     input_descriptions={
-        'sequences': 'MAGs or contigs for which one wishes to predict genes.'
+        'seqs': 'MAGs or contigs for which one wishes to predict genes.'
     },
     parameters={
         "translation_table_number": Str % Choices([
@@ -1272,7 +1275,7 @@ plugin.methods.register_function(
         ),
     },
     outputs=[
-        ("database", KaijuDB),
+        ("db", KaijuDB),
     ],
     input_descriptions={},
     parameter_descriptions={
@@ -1280,7 +1283,7 @@ plugin.methods.register_function(
         "information on available types please see the list on Kaiju's web "
         "server: https://bioinformatics-centre.github.io/kaiju/downloads.html",
     },
-    output_descriptions={"database": "Kaiju database."},
+    output_descriptions={"db": "Kaiju database."},
     name="Fetch Kaiju database.",
     description="This method fetches the latest Kaiju database from "
                 "Kaiju's web server.",
@@ -1418,9 +1421,9 @@ p_virus, p_prok, p_euk, o_busco_db = TypeMap({
 plugin.methods.register_function(
     function=q2_annotate.busco.fetch_busco_db,
     inputs={},
-    outputs=[('busco_db', o_busco_db)],
+    outputs=[('db', o_busco_db)],
     output_descriptions={
-        'busco_db': "BUSCO database for the specified lineages."
+        'db': "BUSCO database for the specified lineages."
     },
     parameters={
         "virus": p_virus,
@@ -1590,10 +1593,10 @@ M_abundance_in, P_abundance_out = TypeMap({
 })
 
 plugin.methods.register_function(
-    function=q2_annotate.abundance.estimate_mag_abundance,
+    function=q2_annotate.abundance.estimate_abundance,
     inputs={
-        "maps": FeatureData[AlignmentMap],
-        "mag_lengths":
+        "alignment_maps": FeatureData[AlignmentMap] | SampleData[AlignmentMap],
+        "feature_lengths":
             FeatureData[SequenceCharacteristics % Properties("length")],
     },
     parameters={
@@ -1608,12 +1611,12 @@ plugin.methods.register_function(
         ("abundances", FeatureTable[Frequency % P_abundance_out]),
     ],
     input_descriptions={
-        "maps": "Bowtie2 alignment maps between reads and MAGs for which "
-                "the abundance should be estimated.",
-        "mag_lengths": "Table containing length of every MAG.",
+        "alignment_maps": "Bowtie2 alignment maps between reads and features "
+                          "for which the abundance should be estimated.",
+        "feature_lengths": "Table containing length of every feature (MAG/contig).",
     },
     parameter_descriptions={
-        "metric": "Metric to be used as a proxy of MAG abundance.",
+        "metric": "Metric to be used as a proxy of feature abundance.",
         "min_mapq": "Minimum mapping quality.",
         "min_query_len": "Minimum query length.",
         "min_base_quality": "Minimum base quality.",
@@ -1621,11 +1624,11 @@ plugin.methods.register_function(
         "threads": "Number of threads to pass to samtools."
     },
     output_descriptions={
-        "abundances": "MAG abundances.",
+        "abundances": "Feature abundances.",
     },
-    name="Estimate MAG abundance.",
-    description="This method estimates MAG abundances by mapping the "
-                "reads to MAGs and calculating respective metric values"
+    name="Estimate feature (MAG/contig) abundance.",
+    description="This method estimates MAG/contig abundances by mapping the "
+                "reads to them and calculating respective metric values"
                 "which are then used as a proxy for the frequency.",
     citations=[],
 )
@@ -1865,7 +1868,8 @@ filter_kraken2_results_param_desc = {
                    "optional `where` parameter will be excluded from the "
                    "filtered data.",
     "remove_empty": "If True, reports with 100% unclassified reads will be "
-                    "removed from the filtered data.",
+                    "removed from the filtered data. Reports containing "
+                    "sequences classified only as root will also be removed.",
 }
 
 plugin.methods.register_function(
