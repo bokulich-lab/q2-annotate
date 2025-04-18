@@ -1830,6 +1830,7 @@ plugin.methods.register_function(
     },
     parameters={
         'abundance_threshold': Float % Range(0, 1, inclusive_end=True),
+        "remove_empty": Bool,
     },
     outputs=[('filtered_reports', TMR)],
     input_descriptions={
@@ -1840,7 +1841,9 @@ plugin.methods.register_function(
             'A proportion between 0 and 1 representing the minimum relative '
             'abundance (by read count) that a taxon must have to be retained '
             'in the filtered report.'
-        )
+        ),
+        "remove_empty": "If True, reports with only unclassified reads "
+                        "remaining will be removed from the filtered data.",
     },
     output_descriptions={
         'filtered_reports': 'The relative abundance-filtered kraken2 reports'
@@ -1867,7 +1870,7 @@ filter_kraken2_results_param_desc = {
     "exclude_ids": "If True, the samples selected by the `metadata` and "
                    "optional `where` parameter will be excluded from the "
                    "filtered data.",
-    "remove_empty": "If True, reports with 100% unclassified reads will be "
+    "remove_empty": "If True, reports with only unclassified reads will be "
                     "removed from the filtered data. Reports containing "
                     "sequences classified only as root will also be removed.",
 }
@@ -1931,7 +1934,6 @@ plugin.pipelines.register_function(
         "exclude_ids": Bool,
         "remove_empty": Bool,
         "abundance_threshold": Float % Range(0, 1, inclusive_end=True),
-        "num_partitions": Int % Range(1, None),
     },
     outputs={
         "filtered_reports": TMR,
@@ -1951,10 +1953,6 @@ plugin.pipelines.register_function(
             "abundance (by read count) that a taxon must have to be retained "
             "in the filtered report."
         ),
-        "num_partitions": (
-            "The number of partitions to create that may be processed in "
-            "parallel. Defaults to one partition per sample."
-        )
     },
     output_descriptions={
         "filtered_reports": "The filtered kraken2 reports.",

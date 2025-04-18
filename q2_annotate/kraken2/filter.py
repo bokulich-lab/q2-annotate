@@ -24,6 +24,9 @@ from q2_types.kraken2 import (
 from q2_annotate.kraken2.select import _get_indentation
 
 
+class ReportFilterError(ValueError): pass
+
+
 def _validate_parameters(metadata, remove_empty, where, exclude_ids):
     if not metadata and not remove_empty:
         raise ValueError('Please specify parameters "--m-metadata-file" or '
@@ -183,7 +186,6 @@ def filter_kraken2_results(
     exclude_ids=False,
     remove_empty=False,
     abundance_threshold=None,
-    num_partitions=None,
 ):
     '''
     Filters kraken2 reports and outputs by metadata and filters taxa within
@@ -209,9 +211,6 @@ def filter_kraken2_results(
     abundance_threshold : float | None
         The relative abundance threshold beneath which taxa in each kraken2
         report will be filtered.
-    num_partitions : int | None
-        The number of partitions into which to split the kraken2 reports
-        and outputs. If None, per-sample partitions are made.
 
     Returns
     -------
@@ -256,20 +255,8 @@ def filter_kraken2_results(
     _filter_kraken2_reports_by_abundance = ctx.get_action(
         'annotate', '_filter_kraken2_reports_by_abundance'
     )
-    partition_kraken2_reports = ctx.get_action(
-        'types', 'partition_kraken2_reports'
-    )
-    partition_kraken2_outputs = ctx.get_action(
-        'types', 'partition_kraken2_outputs'
-    )
     _align_outputs_with_reports = ctx.get_action(
         'annotate', '_align_outputs_with_reports'
-    )
-    collate_kraken2_reports = ctx.get_action(
-        'types', 'collate_kraken2_reports'
-    )
-    collate_kraken2_outputs = ctx.get_action(
-        'types', 'collate_kraken2_outputs'
     )
 
     if metadata is not None or remove_empty:
@@ -289,35 +276,19 @@ def filter_kraken2_results(
     if abundance_threshold is None:
         return post_md_reports, post_md_outputs
 
-    report_partitions, = partition_kraken2_reports(
-        post_md_reports, num_partitions
+    abun_f_reports, = _filter_kraken2_reports_by_abundance(
+        post_md_reports, abundance_threshold, remove_empty
     )
-    output_partitions, = partition_kraken2_outputs(
-        post_md_outputs, num_partitions
+    abun_f_outputs, = _align_outputs_with_reports(
+        post_md_outputs, abun_f_reports
     )
 
-    processed_reports = []
-    processed_outputs = []
-    for report_partition, output_partition in zip(
-        report_partitions.values(), output_partitions.values()
-    ):
-        abun_f_reports, = _filter_kraken2_reports_by_abundance(
-            report_partition, abundance_threshold
-        )
-        abun_f_outputs, = _align_outputs_with_reports(
-            output_partition, abun_f_reports
-        )
-        processed_reports.append(abun_f_reports)
-        processed_outputs.append(abun_f_outputs)
-
-    collated_reports, = collate_kraken2_reports(processed_reports)
-    collated_outputs, = collate_kraken2_outputs(processed_outputs)
-
-    return collated_reports, collated_outputs
+    return abun_f_reports, abun_f_outputs
 
 
 def _filter_kraken2_reports_by_abundance(
     reports: Kraken2ReportDirectoryFormat, abundance_threshold: float,
+    remove_empty: bool = False
 ) -> Kraken2ReportDirectoryFormat:
     '''
     Filters all nodes in a kraken2 report with a relative abundance that is
@@ -339,6 +310,8 @@ def _filter_kraken2_reports_by_abundance(
     '''
     filtered_reports = Kraken2ReportDirectoryFormat()
 
+    has_samples = False
+
     for report_filename, report in reports.reports.iter_views(
         Kraken2ReportFormat
     ):
@@ -351,11 +324,17 @@ def _filter_kraken2_reports_by_abundance(
             total_reads = root._kraken_data['n_frags_covered']
 
             # trim tree
-            root = _trim_tree_dfs(
-                root,
-                abundance_threshold=abundance_threshold,
-                total_reads=total_reads
-            )
+            try:
+                root = _trim_tree_dfs(
+                    root,
+                    abundance_threshold=abundance_threshold,
+                    total_reads=total_reads
+                )
+            except ReportFilterError:
+                if remove_empty:
+                    continue
+                else:
+                    raise
 
         # dump to report
         report = _dump_tree_to_report(root, unclassified_node)
@@ -363,6 +342,10 @@ def _filter_kraken2_reports_by_abundance(
         # add report to output format
         output_fp = Path(filtered_reports.path) / report_filename
         report.to_csv(output_fp, sep='\t', header=None, index=None)
+        has_samples = True
+
+    if not has_samples:
+        raise ReportFilterError('All samples were filtered out.')
 
     # return directory format
     return filtered_reports
@@ -465,7 +448,8 @@ def _trim_tree_dfs(
 
             if ancestor_relative_abundance < abundance_threshold:
                 if ancestor.is_root():
-                    raise ValueError('Root taxon had all reads removed.')
+                    raise ReportFilterError(
+                        'Root taxon had all reads removed.')
 
                 # unlink the ancestor and increase the removed subtree
                 # read count
@@ -607,8 +591,8 @@ def _align_outputs_with_reports(
 
     output_sample_map = outputs.file_dict()
     report_sample_map = reports.file_dict()
-    for sample_id, output_path in output_sample_map.items():
-        report_path = report_sample_map[sample_id]
+    for sample_id, report_path in report_sample_map.items():
+        output_path = output_sample_map[sample_id]
         output = Kraken2OutputFormat(output_path, mode='r')
         report = Kraken2ReportFormat(report_path, mode='r')
 
