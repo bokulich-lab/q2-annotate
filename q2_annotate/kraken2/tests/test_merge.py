@@ -175,6 +175,12 @@ class TestResultMerging(TestPluginBase):
                 self._assert_formats_equal(first_fp, second_fp, type)
 
     def test_result_merging_reads(self):
+        '''
+        Tests that two kraken2 reports and two kraken2 outputs input artifacts
+        all with a single and identical sample ID get properly merged into
+        a single kraken2 reports output and a single kraken2 outputs output
+        (phew).
+        '''
         reports_dir = self.get_data_path(
             Path('merge') / 'result-merging' / 'reads' / 'reports'
         )
@@ -217,6 +223,11 @@ class TestResultMerging(TestPluginBase):
         )
 
     def test_result_merging_mags(self):
+        '''
+        Tests that mag report/output directories for the same sample ID have
+        their constituent report files merged into a single directory in the
+        output data.
+        '''
         reports_dir = self.get_data_path(
             Path('merge') / 'result-merging' / 'mags' / 'reports'
         )
@@ -258,6 +269,11 @@ class TestResultMerging(TestPluginBase):
         )
 
     def test_duplicate_mag_ids_cause_error(self):
+        '''
+        Tests that if two directories with the same sample ID within a report
+        directory format or an output directory format have a report with the
+        same hash (representing the same MAG) then an error is raised.
+        '''
         reports_dir = self.get_data_path(
             Path('merge') / 'result-merging' / 'mags' / 'reports'
         )
@@ -283,6 +299,11 @@ class TestResultMerging(TestPluginBase):
             )
 
     def test_merging_with_minimizers_and_sample_id_overlap_errors(self):
+        '''
+        Tests that when reports contain minimizer information and two or more
+        reports with the same sample ID from different input artifacts are to
+        be merged, an error is raised.
+        '''
         reports_dir = self.get_data_path(
             Path('merge') / 'result-merging' / 'minimizers' / 'reports'
         )
@@ -308,6 +329,12 @@ class TestResultMerging(TestPluginBase):
             )
 
     def test_merging_with_minimzer_and_no_sample_id_overlap_succeeds(self):
+        '''
+        Tests that reports with minimizer information present across multiple
+        input artifacts can still be successfully condensed into a single
+        set of output artifacts, as long as there is no direct merging of
+        reports on a per-sample ID basis.
+        '''
         reports_dir = self.get_data_path(
             Path('merge') / 'result-merging' / 'minimizers' / 'reports'
         )

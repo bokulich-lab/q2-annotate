@@ -75,8 +75,12 @@ kraken2_param_descriptions = {
     'minimum_hit_groups': 'Minimum number of hit groups (overlapping '
                           'k-mers sharing the same minimizer).',
     'quick': 'Quick operation (use first hit or hits).',
-    'report_minimizer_data': 'Include number of read-minimizers per-taxon and'
-                             ' unique read-minimizers per-taxon in the repot.'
+    'report_minimizer_data': (
+        'Include number of read-minimizers per-taxon and unique '
+        'read-minimizers per-taxon in the report. If this parameter is '
+        'enabled then merging kraken2 reports with the sample sample ID from '
+        'two or more input artifacts will not be possible.'
+    )
 }
 
 partition_params = {"num_partitions": Int % Range(1, None)}
