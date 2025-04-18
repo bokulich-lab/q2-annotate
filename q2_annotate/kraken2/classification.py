@@ -55,7 +55,7 @@ def _construct_output_paths(
 def classify_kraken2(
     ctx,
     seqs,
-    kraken2_db,
+    db,
     threads=1,
     confidence=0.0,
     minimum_base_quality=0,
@@ -66,7 +66,6 @@ def classify_kraken2(
     num_partitions=None
 ):
     '''
-
     Parameters
     ----------
     ctx : qiime2.sdk.Context
@@ -94,7 +93,7 @@ def classify_kraken2(
     '''
     kwargs = {
         k: v for k, v in locals().items()
-        if k not in ["seqs", "kraken2_db", "ctx", "num_partitions"]
+        if k not in ["seqs", "db", "ctx", "num_partitions"]
     }
 
     input_types = set([str(seq.type) for seq in seqs])
@@ -115,7 +114,7 @@ def classify_kraken2(
     outputs = []
     for seqs_artifact in seqs:
         artifact_reports, artifact_outputs = _classify_single_artifact(
-            ctx, seqs_artifact, kraken2_db, num_partitions, kwargs
+            ctx, seqs_artifact, db, num_partitions, kwargs
         )
         reports.append(artifact_reports)
         outputs.append(artifact_outputs)
@@ -125,7 +124,7 @@ def classify_kraken2(
     return reports, outputs
 
 
-def _classify_single_artifact(ctx, seqs, kraken2_db, num_partitions, kwargs):
+def _classify_single_artifact(ctx, seqs, db, num_partitions, kwargs):
     '''
     Runs the kraken2 software on the contents of a single artifact.
 
@@ -138,7 +137,7 @@ def _classify_single_artifact(ctx, seqs, kraken2_db, num_partitions, kwargs):
         SampleData[PairedEndSequencesWithQuality],
         SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
         or SampleData[MAGs].
-    kraken2_db : Kraken2DBDirectoryFormat
+    db : Kraken2DBDirectoryFormat
         The kraken2 database.
     num_partitions : int | None
         The number of partitions to create for parallel execution.
@@ -160,7 +159,7 @@ def _classify_single_artifact(ctx, seqs, kraken2_db, num_partitions, kwargs):
 
     if seqs.type <= FeatureData[MAG]:
         # FeatureData[MAG] is not parallelized
-        return _classify_kraken2(seqs, kraken2_db, **kwargs)
+        return _classify_kraken2(seqs, db, **kwargs)
     else:
         partition_action = _get_partition_action(ctx, seqs)
         (partitioned_seqs,) = partition_action(seqs, num_partitions)
@@ -168,7 +167,7 @@ def _classify_single_artifact(ctx, seqs, kraken2_db, num_partitions, kwargs):
         all_reports = []
         all_outputs = []
         for seq in partitioned_seqs.values():
-            reports, outputs = _classify_kraken2(seq, kraken2_db, **kwargs)
+            reports, outputs = _classify_kraken2(seq, db, **kwargs)
             all_reports.append(reports)
             all_outputs.append(outputs)
 
@@ -219,7 +218,7 @@ def _classify_kraken2(
             MAGSequencesDirFmt,
             MultiFASTADirectoryFormat
         ],
-        kraken2_db: Kraken2DBDirectoryFormat,
+        db: Kraken2DBDirectoryFormat,
         threads: int = 1,
         confidence: float = 0.0,
         minimum_base_quality: int = 0,
@@ -232,12 +231,12 @@ def _classify_kraken2(
         Kraken2OutputDirectoryFormat,
 ):
     kwargs = {k: v for k, v in locals().items()
-              if k not in ["seqs", "kraken2_db", "ctx"]}
+              if k not in ["seqs", "db", "ctx"]}
 
     common_args = _process_common_input_params(
         processing_func=_process_kraken2_arg, params=kwargs
     )
-    common_args.extend(["--db", str(kraken2_db.path)])
+    common_args.extend(["--db", str(db.path)])
     return classify_kraken2_helper(seqs, common_args)
 
 

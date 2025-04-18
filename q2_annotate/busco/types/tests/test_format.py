@@ -21,6 +21,14 @@ class TestBUSCOFormats(TestPluginBase):
         results.validate(level='min')
         results.validate(level='max')
 
+    def test_busco_results_format_ok_header_2(self):
+        results = BUSCOResultsFormat(
+            self.get_data_path('busco_results_header_2.tsv'),
+            mode='r'
+        )
+        results.validate(level='min')
+        results.validate(level='max')
+
     def test_busco_results_format_error_header(self):
         results = BUSCOResultsFormat(
             self.get_data_path('busco_results_broken_header.tsv'),

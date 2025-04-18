@@ -1,4 +1,0 @@
-Input_file	Dataset	Complete	Single	Duplicated	Fragmented	Missing	n_markers	Scaffold N50	Contigs N50	Percent gaps	Number of scaffolds	sample_id
-67392c6c-9f45-4c84-85f5-ae0bfc668892.fasta	bacteria_odb10	97.6	96.8	0.8	0.8	1.6	124	170295	170295	0.000%	27	sample1
-67123d05-b5ae-4a53-873b-727952881899.fasta	bacteria_odb10	97.6	96.0	1.6	1.6	0.8	124	109922	109922	0.000%	65	sample1
-311112c9-7f8b-460c-9cad-3864af3148c2.fasta	bacteria_odb10	97.6	96.0	1.6	1.6	0.8	124	111744	111744	0.000%	127	sample1

@@ -82,7 +82,7 @@ class TestHMMER(TestPluginBase):
         mock_ctx = MagicMock(get_action=mock_action)
         obs = search_orthologs_hmmer(
             ctx=mock_ctx,
-            sequences=self.mags_artifact,
+            seqs=self.mags_artifact,
             pressed_hmm_db=self.pressed_hmm_artifact,
             idmap=self.idmap_artifact,
             seed_alignments=self.fastas_artifact
@@ -118,7 +118,7 @@ class TestHMMER(TestPluginBase):
         mock_tmpdir.return_value.__enter__.return_value = "tmp"
         mock_eggnog_search.return_value = (0, 1, 2)
         result, ft, loci = _eggnog_hmmer_search(
-            sequences=self.mags,
+            seqs=self.mags,
             idmap=self.idmap,
             pressed_hmm_db=self.pressed_hmm,
             seed_alignments=self.fastas
@@ -221,8 +221,8 @@ class TestDiamond(TestPluginBase):
         ).view(ContigSequencesDirFmt)
 
         _, obs, _ = _eggnog_diamond_search(
-            sequences=contigs,
-            diamond_db=self.diamond_db
+            seqs=contigs,
+            db=self.diamond_db
         )
         exp = pd.DataFrame({'0': [1.0, 0.0], '2': [1.0, 0.0], '8': [0.0, 3.0]},
                            index=['s1', 's2'])
@@ -237,8 +237,8 @@ class TestDiamond(TestPluginBase):
         ).view(MAGSequencesDirFmt)
 
         _, obs, _ = _eggnog_diamond_search(
-            sequences=mags,
-            diamond_db=self.diamond_db
+            seqs=mags,
+            db=self.diamond_db
         )
         exp = pd.DataFrame(
             {'8': [3.0, 0.0], '0': [0.0, 1.0], '2': [0.0, 1.0]},
@@ -256,8 +256,8 @@ class TestDiamond(TestPluginBase):
         ).view(MultiMAGSequencesDirFmt)
 
         _, obs, _ = _eggnog_diamond_search(
-            sequences=mags,
-            diamond_db=self.diamond_db
+            seqs=mags,
+            db=self.diamond_db
         )
         exp = pd.DataFrame(
             {
@@ -287,8 +287,8 @@ class TestDiamond(TestPluginBase):
             )._result()
 
         _, single, _ = self._eggnog_diamond_search(
-            sequences=contigs,
-            diamond_db=self.diamond_db_artifact
+            seqs=contigs,
+            db=self.diamond_db_artifact
         )
 
         parallel = parallel.view(pd.DataFrame)
@@ -309,8 +309,8 @@ class TestDiamond(TestPluginBase):
             )._result()
 
         _, single, _ = self._eggnog_diamond_search(
-            sequences=mags,
-            diamond_db=self.diamond_db_artifact
+            seqs=mags,
+            db=self.diamond_db_artifact
         )
 
         parallel = parallel.view(pd.DataFrame)
@@ -331,8 +331,8 @@ class TestDiamond(TestPluginBase):
             )._result()
 
         _, single, _ = self._eggnog_diamond_search(
-            sequences=mags,
-            diamond_db=self.diamond_db_artifact
+            seqs=mags,
+            db=self.diamond_db_artifact
         )
 
         parallel = parallel.view(pd.DataFrame)

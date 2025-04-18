@@ -148,8 +148,8 @@ class TestBracken(TestPluginBase):
         p1.side_effect = tables
 
         obs_table, obs_reports = _estimate_bracken(
-            kraken_reports=kraken_reports,
-            bracken_db=bracken_db,
+            kraken2_reports=kraken_reports,
+            db=bracken_db,
             threshold=self.kwargs['threshold'],
             read_len=self.kwargs['read_len'],
             level=self.kwargs['level'],
@@ -181,8 +181,8 @@ class TestBracken(TestPluginBase):
         p1.return_value = (table, kraken_reports)
 
         obs_reports, obs_taxonomy, obs_table = estimate_bracken(
-            kraken_reports=kraken_reports,
-            bracken_db=bracken_db,
+            kraken2_reports=kraken_reports,
+            db=bracken_db,
             threshold=self.kwargs['threshold'],
             read_len=self.kwargs['read_len'],
             level=self.kwargs['level'],
