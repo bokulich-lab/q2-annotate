@@ -1063,7 +1063,7 @@ class TestClassifyMultipleInputArtifacts(TestPluginBase):
 
     def test_multiple_reads(self):
         '''
-        Tests that sequence records with same sample ID in separate input
+        Tests that sequence records with the same sample ID in separate input
         artifacts have their outputs merged into a single report and output.
         '''
         artifact_1_reads_dir = self.get_data_path(
