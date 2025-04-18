@@ -7,6 +7,9 @@
 # ----------------------------------------------------------------------------
 from io import StringIO
 import os.path
+from pathlib import Path
+import shutil
+import tempfile
 from unittest.mock import patch
 
 import pandas as pd
@@ -538,10 +541,9 @@ class TestAbundanceFilter(TestPluginBase):
 
     def test_filter_kraken2_reports_by_abundance(self):
         '''
-        Test that the main `_filter_kraken2_reports_by_abundance` method runs, results in
-        the same number of outputted formats as inputted ones.
+        Test that the main `_filter_kraken2_reports_by_abundance` method runs,
+        results in the same number of outputted formats as inputted ones.
         '''
-        print('self reports path', self.reports.path)
         filtered_reports = _filter_kraken2_reports_by_abundance(
             self.reports, abundance_threshold=0.01
         )
@@ -641,3 +643,75 @@ class TestOutputReportAlignment(TestPluginBase):
             set(sample2_report_df['taxon_id']),
             set(sample2_output_df['taxon_id'])
         )
+
+
+class TestFilterKraken2ResultsPipeline(TestPluginBase):
+    package = "q2_annotate.kraken2.tests"
+
+    @classmethod
+    def setUpClass(cls):
+        pm = qiime2.sdk.PluginManager()
+        cls.filter_kraken2_results = pm.plugins['annotate'].pipelines[
+            'filter_kraken2_results'
+        ]
+
+    def setUp(self):
+        super().setUp()
+
+        self.mag_reports = qiime2.Artifact.import_data(
+            "FeatureData[Kraken2Report % Properties('mags')]",
+            self.get_data_path('reports-mags')
+        )
+        self.mag_outputs = qiime2.Artifact.import_data(
+            "FeatureData[Kraken2Output % Properties('mags')]",
+            self.get_data_path('outputs-mags')
+        )
+
+    def test_empty_filter_with_mags(self):
+        filtered_reports, filtered_outptus = self.filter_kraken2_results(
+            self.mag_reports, self.mag_outputs, remove_empty=True
+        )
+
+    def test_abundance_filter_with_mags(self):
+        pre_row_count = 0
+        pre_reports = self.mag_reports.view(Kraken2ReportDirectoryFormat)
+        for _, report in pre_reports.reports.iter_views(Kraken2ReportFormat):
+            pre_row_count += report.view(pd.DataFrame).shape[0]
+
+        filtered_reports, filtered_outptus = self.filter_kraken2_results(
+            self.mag_reports, self.mag_outputs, abundance_threshold=0.05
+        )
+
+        post_row_count = 0
+        post_reports = filtered_reports.view(Kraken2ReportDirectoryFormat)
+        for _, report in post_reports.reports.iter_views(Kraken2ReportFormat):
+            post_row_count += report.view(pd.DataFrame).shape[0]
+
+        self.assertGreater(pre_row_count, post_row_count)
+
+    def test_errors_on_no_filtering_parameters(self):
+        with self.assertRaisesRegex(ValueError, "None of.*filtering"):
+            filtered_reports, filtered_outptus = self.filter_kraken2_results(
+                self.mag_reports, self.mag_outputs
+            )
+
+    def test_errors_on_mismatched_sample_ids(self):
+        mag_reports = qiime2.Artifact.import_data(
+            "FeatureData[Kraken2Report % Properties('mags')]",
+            self.get_data_path('reports-mags')
+        )
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = '3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa.output.txt'
+            shutil.copyfile(
+                Path(self.get_data_path('outputs-mags')) / filename,
+                Path(tempdir) / filename
+            )
+
+            mag_outputs = qiime2.Artifact.import_data(
+                "FeatureData[Kraken2Output % Properties('mags')]", tempdir
+            )
+
+            with self.assertRaisesRegex(ValueError, "sample IDs"):
+                self.filter_kraken2_results(
+                    mag_reports, mag_outputs, remove_empty=True
+                )
