@@ -450,7 +450,10 @@ def _trim_tree_dfs(
             if ancestor_relative_abundance < abundance_threshold:
                 if ancestor.is_root():
                     raise ReportFilterError(
-                        'Root taxon had all reads removed.')
+                        'Root taxon had all reads removed in at least one '
+                        'of the samples. To exclude these sample(s) '
+                        'from the output, re-run with the '
+                        '`remove_empty` parameter.')
 
                 # unlink the ancestor and increase the removed subtree
                 # read count

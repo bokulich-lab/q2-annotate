@@ -1839,7 +1839,7 @@ plugin.methods.register_function(
     parameter_descriptions={
         'abundance_threshold': (
             'A proportion between 0 and 1 representing the minimum relative '
-            'abundance (by read count) that a taxon must have to be retained '
+            'abundance (by *classified* read count) that a taxon must have to be retained '
             'in the filtered report.'
         ),
         "remove_empty": "If True, reports with only unclassified reads "
@@ -1950,8 +1950,11 @@ plugin.pipelines.register_function(
         "remove_empty": filter_kraken2_results_param_desc['remove_empty'],
         "abundance_threshold": (
             "A proportion between 0 and 1 representing the minimum relative "
-            "abundance (by read count) that a taxon must have to be retained "
-            "in the filtered report."
+            "abundance (by *classified* read count) that a taxon must have to be retained "
+            "in the filtered report. If a taxon is filtered from the report, "
+            "its associated read counts are removed entirely from the "
+            "report (i.e., the subtraction of those counts is propagated "
+            "to parent taxonomic groupings)."
         ),
     },
     output_descriptions={

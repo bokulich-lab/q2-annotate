@@ -544,7 +544,6 @@ class TestAbundanceFilter(TestPluginBase):
         Test that the main `_filter_kraken2_reports_by_abundance` method runs,
         results in the same number of outputted formats as inputted ones.
         '''
-        print('self reports path', self.reports.path)
         filtered_reports = _filter_kraken2_reports_by_abundance(
             self.reports, abundance_threshold=0.01
         )
