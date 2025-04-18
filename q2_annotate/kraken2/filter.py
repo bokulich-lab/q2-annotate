@@ -506,6 +506,7 @@ def _dump_tree_to_report(
     if unclassified_node is not None:
         if report is None:
             report = pd.DataFrame(columns=unclassified_node._kraken_data.keys())
+
         total_reads += unclassified_node._kraken_data['n_frags_covered']
 
     report._kraken_total_reads = total_reads

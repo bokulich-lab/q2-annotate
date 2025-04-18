@@ -75,8 +75,12 @@ kraken2_param_descriptions = {
     'minimum_hit_groups': 'Minimum number of hit groups (overlapping '
                           'k-mers sharing the same minimizer).',
     'quick': 'Quick operation (use first hit or hits).',
-    'report_minimizer_data': 'Include number of read-minimizers per-taxon and'
-                             ' unique read-minimizers per-taxon in the repot.'
+    'report_minimizer_data': (
+        'Include number of read-minimizers per-taxon and unique '
+        'read-minimizers per-taxon in the report. If this parameter is '
+        'enabled then merging kraken2 reports with the sample sample ID from '
+        'two or more input artifacts will not be possible.'
+    )
 }
 
 partition_params = {"num_partitions": Int % Range(1, None)}
@@ -166,21 +170,26 @@ plugin.methods.register_function(
                citations["scikit_bio_release"]]
 )
 
-T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
-    SampleData[SequencesWithQuality |
-               PairedEndSequencesWithQuality | JoinedSequencesWithQuality]: (
+T_kraken_in_list, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
+    List[
+        SampleData[
+            SequencesWithQuality |
+            PairedEndSequencesWithQuality |
+            JoinedSequencesWithQuality
+        ]
+    ]: (
         SampleData[Kraken2Reports % Properties('reads')],
         SampleData[Kraken2Outputs % Properties('reads')]
     ),
-    SampleData[Contigs]: (
+    List[SampleData[Contigs]]: (
         SampleData[Kraken2Reports % Properties('contigs')],
         SampleData[Kraken2Outputs % Properties('contigs')]
     ),
-    FeatureData[MAG]: (
+    List[FeatureData[MAG]]: (
         FeatureData[Kraken2Reports % Properties('mags')],
         FeatureData[Kraken2Outputs % Properties('mags')]
     ),
-    SampleData[MAGs]: (
+    List[SampleData[MAGs]]: (
         SampleData[Kraken2Reports % Properties('mags')],
         SampleData[Kraken2Outputs % Properties('mags')]
     )
@@ -189,7 +198,7 @@ T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
 plugin.pipelines.register_function(
     function=q2_annotate.kraken2.classification.classify_kraken2,
     inputs={
-        "seqs": T_kraken_in,
+        "seqs": T_kraken_in_list,
         "db": Kraken2DB,
     },
     parameters={**kraken2_params, **partition_params},
@@ -216,6 +225,28 @@ plugin.pipelines.register_function(
     citations=[citations["wood2019"]]
 )
 
+T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap({
+    SampleData[
+        SequencesWithQuality |
+        PairedEndSequencesWithQuality |
+        JoinedSequencesWithQuality
+    ]: (
+        SampleData[Kraken2Reports % Properties('reads')],
+        SampleData[Kraken2Outputs % Properties('reads')]
+    ),
+    SampleData[Contigs]: (
+        SampleData[Kraken2Reports % Properties('contigs')],
+        SampleData[Kraken2Outputs % Properties('contigs')]
+    ),
+    FeatureData[MAG]: (
+        FeatureData[Kraken2Reports % Properties('mags')],
+        FeatureData[Kraken2Outputs % Properties('mags')]
+    ),
+    SampleData[MAGs]: (
+        SampleData[Kraken2Reports % Properties('mags')],
+        SampleData[Kraken2Outputs % Properties('mags')]
+    )
+})
 plugin.methods.register_function(
     function=q2_annotate.kraken2.classification._classify_kraken2,
     inputs={
@@ -1899,6 +1930,51 @@ plugin.methods.register_function(
     name="Filter Kraken2 reports and outputs.",
     description="Filter Kraken2 reports and outputs based on metadata or remove "
                 "reports with 100% unclassified reads.",
+)
+
+KRAKEN2_REPORTS_T = TypeMatch([
+    SampleData[Kraken2Reports % Properties('reads')],
+    SampleData[Kraken2Reports % Properties('contigs')],
+    SampleData[Kraken2Reports % Properties('mags')],
+    FeatureData[Kraken2Reports % Properties('mags')],
+])
+KRAKEN2_OUTPUTS_T = TypeMatch([
+    SampleData[Kraken2Outputs % Properties('reads')],
+    SampleData[Kraken2Outputs % Properties('contigs')],
+    SampleData[Kraken2Outputs % Properties('mags')],
+    FeatureData[Kraken2Outputs % Properties('mags')],
+])
+plugin.methods.register_function(
+    function=q2_annotate.kraken2._merge_kraken2_results,
+    inputs={
+        "reports": List[KRAKEN2_REPORTS_T],
+        "outputs": List[KRAKEN2_OUTPUTS_T]
+    },
+    parameters={},
+    outputs={
+        "merged_reports": KRAKEN2_REPORTS_T,
+        "merged_outputs": KRAKEN2_OUTPUTS_T
+    },
+    input_descriptions={
+        "reports": (
+            "Multiple kraken2 reports artifacts to merge on a per-sample ID "
+            "basis."
+        ),
+        "outputs": (
+            "Multiple kraken2 outputs artifacts to merge on a per-sample ID "
+            "basis."
+        ),
+    },
+    parameter_descriptions={},
+    output_descriptions={
+        "merged_reports": "The merged kraken2 reports.",
+        "merged_outputs": "The merged_kraken2 outputs.",
+    },
+    name="Merge kraken2 reports and outputs.",
+    description=(
+        "Merge multiple kraken2 reports and outputs artifacts on a "
+        "per-sample ID basis."
+    )
 )
 
 plugin.methods.register_function(

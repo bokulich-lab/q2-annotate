@@ -1,0 +1,10 @@
+7.37	7	7	U	0	unclassified
+92.63	88	0	R	1	root
+42.11	40	15	D	2	  domain1
+10.53	10	10	P	5	    phylum1
+5.26	5	5	P	6	    phylum2
+10.53	10	10	P	7	    phylum3
+15.79	15	15	D	3	  domain2
+34.74	33	10	D	4	  domain3
+24.21	23	20	P	8	    phylum4
+3.16	3	3	C	9	      class1
