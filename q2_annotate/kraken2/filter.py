@@ -24,7 +24,8 @@ from q2_types.kraken2 import (
 from q2_annotate.kraken2.select import _get_indentation
 
 
-class ReportFilterError(ValueError): pass
+class ReportFilterError(ValueError):
+    pass
 
 
 def _validate_parameters(metadata, remove_empty, where, exclude_ids):
