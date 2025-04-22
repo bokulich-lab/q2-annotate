@@ -308,27 +308,7 @@ def _merge_trees(
     elif second_tree is None:
         merged_tree = first_tree
     else:
-        for node in first_tree.levelorder():
-            match = _find_node(second_tree, node)
-            if match is not None:
-                match._kraken_data['n_frags_assigned'] += \
-                    node._kraken_data['n_frags_assigned']
-                match._kraken_data['n_frags_covered'] += \
-                    node._kraken_data['n_frags_assigned']
-            else:
-                parent = _find_node(second_tree, node.parent)
-                new_node = TreeNode()
-                new_node._kraken_data = node._kraken_data
-                new_node._kraken_data['n_frags_covered'] = \
-                    new_node._kraken_data['n_frags_assigned']
-                parent.append(new_node)
-                match = new_node
-
-            # keep `n_frags_covered` up to date
-            for ancestor in match.ancestors():
-                ancestor._kraken_data['n_frags_covered'] += \
-                    node._kraken_data['n_frags_assigned']
-
+        _merge_trees_recursively(from_node=first_tree, into_node=second_tree)
         merged_tree = second_tree
 
     unclassified_node = _merge_unclassified_nodes(
@@ -349,33 +329,66 @@ def _merge_trees(
     return merged_tree, unclassified_node
 
 
-def _find_node(tree: TreeNode, node: TreeNode) -> TreeNode | None:
+def _merge_trees_recursively(
+    from_node: TreeNode, into_node: TreeNode
+) -> None:
     '''
-    Searches for `node` in `tree`, returns a match if there is one, otherwise
-    None. Matches are determined based on the kraken2-assigned taxon id.
+    Merges the tree rooted at `from_node` into the tree rooted at `into_node`.
+    After this function completes, the `into_node` node represents the merged
+    tree.
 
     Parameters
     ----------
-    tree : skbio.TreeNode
-        The tree in which to search.
-    node : skbio.TreeNode
-        The node for which to search.
+    from_node : TreeNode
+        The root of a tree to be merged into the tree rooted by `into_node`.
+    into_node : TreeNode
+        The root of a tree into which the tree by `from_node` will be merged.
+    '''
+    into_node._kraken_data['n_frags_covered'] += \
+        from_node._kraken_data['n_frags_covered']
+    into_node._kraken_data['n_frags_assigned'] += \
+        from_node._kraken_data['n_frags_assigned']
+
+    for child in from_node.children:
+        match = _find_node_match(child, into_node.children)
+        if match is None:
+            into_node.append(child)
+            child.parent = into_node
+        else:
+            _merge_trees_recursively(child, match)
+
+
+def _find_node_match(
+    search_node: TreeNode, children: list[TreeNode]
+) -> TreeNode | None:
+    '''
+    Searches for a match to `search_node` in `children`. The nodes' taxon ids
+    are used to define matching.
+
+    Parameters
+    ----------
+    search_node: TreeNode
+        The node for which to search in `children`.
+    children: list[TreeNode]
+        The nodes in which to search for `search_node`.
 
     Returns
     -------
-    skbio.TreeNode | None
-        The matching node if one was found, otherwise None.
+    TreeNode | None
+        The matching node or None if no match is found.
 
     Raises
     ------
     ValueError
-        If more than one matching node is found. Taxon ids should be unique
-        within a tree.
+        If more than one matching node is found.
     '''
-    def _match_by_taxon_id(n):
-        return n._kraken_data['taxon_id'] == node._kraken_data['taxon_id']
+    search_taxon_id = search_node._kraken_data['taxon_id']
 
-    matches = list(tree.find_by_func(_match_by_taxon_id))
+    matches = []
+    for child in children:
+        child_taxon_id = child._kraken_data['taxon_id']
+        if search_taxon_id == child_taxon_id:
+            matches.append(child)
 
     if len(matches) > 1:
         raise ValueError('Did not expect more than one taxon id match.')
