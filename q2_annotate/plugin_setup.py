@@ -78,7 +78,7 @@ kraken2_param_descriptions = {
     'report_minimizer_data': (
         'Include number of read-minimizers per-taxon and unique '
         'read-minimizers per-taxon in the report. If this parameter is '
-        'enabled then merging kraken2 reports with the sample sample ID from '
+        'enabled then merging kraken2 reports with the same sample ID from '
         'two or more input artifacts will not be possible.'
     )
 }
@@ -1957,23 +1957,25 @@ plugin.methods.register_function(
     },
     input_descriptions={
         "reports": (
-            "Multiple kraken2 reports artifacts to merge on a per-sample ID "
-            "basis."
+            "The kraken2 reports to merge. Only reports with the same sample "
+            "ID are merged into one report."
         ),
         "outputs": (
-            "Multiple kraken2 outputs artifacts to merge on a per-sample ID "
-            "basis."
+            "The kraken2 outputs to merge. Only outputs with the same sample "
+            "ID are merged into one output."
         ),
     },
     parameter_descriptions={},
     output_descriptions={
         "merged_reports": "The merged kraken2 reports.",
-        "merged_outputs": "The merged_kraken2 outputs.",
+        "merged_outputs": "The merged kraken2 outputs.",
     },
     name="Merge kraken2 reports and outputs.",
     description=(
-        "Merge multiple kraken2 reports and outputs artifacts on a "
-        "per-sample ID basis."
+        "Merge multiple kraken2 reports and outputs such that the results "
+        "contain a union of the samples represented in the inputs. "
+        "If sample IDs overlap across the inputs, these reports and outputs "
+        "will be processed into a single report or output per sample ID."
     )
 )
 

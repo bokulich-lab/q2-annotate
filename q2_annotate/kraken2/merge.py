@@ -5,6 +5,8 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import functools
+
 import pandas as pd
 from skbio import TreeNode
 
@@ -47,42 +49,39 @@ def _merge_kraken2_results(
 
     report_mapping, output_mapping = _condense_formats(reports, outputs, mags)
 
-    def _merge_formats(sample_id, merged_formats, mapping, merger, Format):
-        if Format == Kraken2ReportFormat:
-            file_collection = merged_formats.reports
-        else:
-            file_collection = merged_formats.outputs
-
+    for sample_id in report_mapping:
         if mags:
-            for filename, format in mapping[sample_id].items():
-                file_collection.write_data(
-                    view=format,
-                    view_type=Format,
+            for filename, report in report_mapping[sample_id].items():
+                merged_reports.reports.write_data(
+                    view=report,
+                    view_type=Kraken2ReportFormat,
+                    sample_id=sample_id,
+                    mag_id=filename
+                )
+
+            for filename, output in output_mapping[sample_id].items():
+                merged_outputs.outputs.write_data(
+                    view=output,
+                    view_type=Kraken2OutputFormat,
                     sample_id=sample_id,
                     mag_id=filename
                 )
         else:
-            formats = mapping[sample_id]
-            merged_format = merger(formats)
-            file_collection.write_data(
-                view=merged_format, view_type=Format, sample_id=sample_id
+            reports = report_mapping[sample_id]
+            merged_report = _merge_reports(reports)
+            merged_reports.reports.write_data(
+                view=merged_report,
+                view_type=Kraken2ReportFormat,
+                sample_id=sample_id
             )
 
-    for sample_id in report_mapping:
-        _merge_formats(
-            sample_id,
-            merged_reports,
-            report_mapping,
-            _merge_reports,
-            Kraken2ReportFormat
-        )
-        _merge_formats(
-            sample_id,
-            merged_outputs,
-            output_mapping,
-            _merge_outputs,
-            Kraken2OutputFormat
-        )
+            outputs = output_mapping[sample_id]
+            merged_output = _merge_outputs(outputs)
+            merged_outputs.outputs.write_data(
+                view=merged_output,
+                view_type=Kraken2OutputFormat,
+                sample_id=sample_id
+            )
 
     return merged_reports, merged_outputs
 
@@ -124,7 +123,7 @@ def _condense_formats(
         If two reports with the same sample ID are to be merged but the
         minimizers columns are present in the reports.
     '''
-    minimizers_present = _check_for_minimizers(reports[0])
+    minimizers_present = _check_for_minimizers(reports)
 
     chained_reports = []
     for report in reports:
@@ -146,7 +145,7 @@ def _condense_formats(
                 else:
                     if filename in mapping[sample_id]:
                         msg = (
-                            'Two MAGs with the same uuid were detected '
+                            'Two MAGs with the same uuid were detected. '
                             f'Duplicated uuid: {filename}.'
                         )
                         raise ValueError(msg)
@@ -183,7 +182,7 @@ def _condense_formats(
     return report_mapping, output_mapping
 
 
-def _check_for_minimizers(reports: Kraken2ReportDirectoryFormat) -> bool:
+def _check_for_minimizers(reports: list[Kraken2ReportDirectoryFormat]) -> bool:
     '''
     Checks whether the reports being processed include the optional minimizer
     columns. This determines whether reports with a shared sample ID can be
@@ -191,17 +190,23 @@ def _check_for_minimizers(reports: Kraken2ReportDirectoryFormat) -> bool:
 
     Parameters
     ----------
-    reports : Kraken2ReportDirectoryFormat
-        The kraken2 reports to examine for minimzer columns.
+    reports : list[Kraken2ReportDirectoryFormat]
+        The kraken2 report directory formats to examine for minimzer columns.
 
     Returns
     -------
     bool
         Wether minimizer columns are present in the reports.
     '''
-    _, report = list(reports.reports.iter_views(Kraken2ReportFormat))[0]
+    for report_dir_format in reports:
+        _, report = list(
+            report_dir_format.reports.iter_views(Kraken2ReportFormat)
+        )[0]
 
-    return 'n_read_minimizers' in report.view(pd.DataFrame)
+        if 'n_read_minimizers' in report.view(pd.DataFrame):
+            return True
+
+    return False
 
 
 def _merge_reports(
@@ -224,15 +229,10 @@ def _merge_reports(
     if len(reports) == 1:
         return reports[0]
 
-    merged: tuple[TreeNode | None, TreeNode | None] | None = None
-    while reports:
-        first = _report_df_to_tree(reports.pop().view(pd.DataFrame))
-        if merged is None:
-            second = _report_df_to_tree(reports.pop().view(pd.DataFrame))
-        else:
-            second = merged
-
-        merged = _merge_trees(first, second)
+    merged = functools.reduce(
+        _merge_trees,
+        [_report_df_to_tree(report.view(pd.DataFrame)) for report in reports]
+    )
 
     merged_report_df = _dump_tree_to_report(*merged)
     merged_report = Kraken2ReportFormat()
@@ -263,13 +263,12 @@ def _merge_outputs(
         return outputs[0]
 
     merged_output = Kraken2OutputFormat()
-    while outputs:
-        with (
-            open(str(merged_output), 'a') as merged_fh,
-            open(str(outputs.pop()), 'r') as fh
-        ):
-            while buffer := fh.read(4096):
-                merged_fh.write(buffer)
+
+    with open(str(merged_output), 'w') as merged_fh:
+        while outputs:
+            with open(str(outputs.pop()), 'r') as fh:
+                while buffer := fh.read(4096):
+                    merged_fh.write(buffer)
 
     return merged_output
 
