@@ -342,7 +342,8 @@ def _merge_trees_recursively(
     from_node : TreeNode
         The root of a tree to be merged into the tree rooted by `into_node`.
     into_node : TreeNode
-        The root of a tree into which the tree by `from_node` will be merged.
+        The root of a tree into which the tree represented by `from_node`
+        will be merged.
     '''
     into_node._kraken_data['n_frags_covered'] += \
         from_node._kraken_data['n_frags_covered']
