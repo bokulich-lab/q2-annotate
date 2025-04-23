@@ -75,8 +75,8 @@ def classify_kraken2(
         types SampleData[SequencesWithQuality],
         SampleData[PairedEndSequencesWithQuality],
         SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
-        FeatureData[MAGs], SampleData[MAGs]. Note that the list may contain
-        only one of these types.
+        FeatureData[MAGs], SampleData[MAGs]. Note that the list must consist
+        entirely of only contigs, MAGs, or read types.
     ...
         See plugin_setup.py for an expalanation of the remainder of the
         parameters.
@@ -95,16 +95,6 @@ def classify_kraken2(
         k: v for k, v in locals().items()
         if k not in ["seqs", "db", "ctx", "num_partitions"]
     }
-
-    input_types = set([str(seq.type) for seq in seqs])
-    if len(input_types) != 1:
-        msg = (
-            "When providing multiple input artifacts to merge on a "
-            "per-sample ID basis, please ensure that all artifacts are of "
-            "the same type. The multiple types encountered were: "
-            f"{input_types}."
-        )
-        raise ValueError(msg)
 
     _merge_kraken2_results = ctx.get_action(
         "annotate", "_merge_kraken2_results"

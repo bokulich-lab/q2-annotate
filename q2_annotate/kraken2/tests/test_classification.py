@@ -1158,6 +1158,34 @@ class TestClassifyMultipleInputArtifacts(TestPluginBase):
             len(outputs_dir_format.file_dict()['sample-2']), 1
         )
 
+    def test_improperly_mixed_inputs_error(self):
+        '''
+        '''
+        reads_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'reads' /
+            'artifact-1'
+        )
+        reads_format = SingleLanePerSamplePairedEndFastqDirFmt(
+            reads_dir, mode='r'
+        )
+        reads_artifact = Artifact.import_data(
+            'SampleData[PairedEndSequencesWithQuality]', reads_format
+        )
+
+        mags_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'mags' /
+            'artifact-1'
+        )
+        mags_format = MultiFASTADirectoryFormat(
+            mags_dir, mode='r'
+        )
+        mags_artifact = Artifact.import_data('SampleData[MAGs]', mags_format)
+
+        with self.assertRaises(TypeError):
+            reports, outputs = self.classify_kraken2(
+                [reads_artifact, mags_artifact], self.db
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
