@@ -82,18 +82,18 @@ class TestBUSCOSampleData(TestPluginBase):
         ])
 
         mock_process.assert_has_calls([
-            call(True, ANY, '24dee6fe-9b84-45bb-8145-de7b092533a1',
-                 '24dee6fe-9b84-45bb-8145-de7b092533a1.fasta', 'sample1'),
-            call(True, ANY, 'ca7012fc-ba65-40c3-84f5-05aa478a7585',
-                 'ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta', 'sample1'),
-            call(True, ANY, 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3',
-                 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta', 'sample1'),
-            call(True, ANY, 'd65a71fa-4279-4588-b937-0747ed5d604d',
-                 'd65a71fa-4279-4588-b937-0747ed5d604d.fasta', 'sample2'),
-            call(True, ANY, 'db03f8b6-28e1-48c5-a47c-9c65f38f7357',
-                 'db03f8b6-28e1-48c5-a47c-9c65f38f7357.fasta', 'sample2'),
-            call(True, ANY, 'fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf',
-                 'fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf.fasta', 'sample2')
+            call(ANY, 'sample1', '24dee6fe-9b84-45bb-8145-de7b092533a1',
+                 '24dee6fe-9b84-45bb-8145-de7b092533a1.fasta', True),
+            call(ANY, 'sample1', 'ca7012fc-ba65-40c3-84f5-05aa478a7585',
+                 'ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta', True),
+            call(ANY, 'sample1', 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3',
+                 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta', True),
+            call(ANY, 'sample2', 'd65a71fa-4279-4588-b937-0747ed5d604d',
+                 'd65a71fa-4279-4588-b937-0747ed5d604d.fasta', True),
+            call(ANY, 'sample2', 'db03f8b6-28e1-48c5-a47c-9c65f38f7357',
+                 'db03f8b6-28e1-48c5-a47c-9c65f38f7357.fasta', True),
+            call(ANY, 'sample2', 'fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf',
+                 'fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf.fasta', True)
         ])
 
     @patch("q2_annotate.busco.busco._busco_helper")

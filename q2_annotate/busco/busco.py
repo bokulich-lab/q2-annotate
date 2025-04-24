@@ -61,7 +61,6 @@ def _busco_helper(mags, common_args, additional_metrics):
 
     if isinstance(mags, MultiMAGSequencesDirFmt):
         sample_dir = mags.sample_dict()
-
     elif isinstance(mags, MAGSequencesDirFmt):
         sample_dir = {"feature_data": mags.feature_dict()}
 
@@ -83,9 +82,10 @@ def _busco_helper(mags, common_args, additional_metrics):
                     os.path.join(str(tmp), sample_id,
                                  os.path.basename(mag_fp), "*.json"))[0]
 
-                results = _process_busco_results(additional_metrics,
-                                                 _extract_json_data(json_path), mag_id,
-                                                 os.path.basename(mag_fp), sample_id)
+                results = _process_busco_results(
+                    _extract_json_data(json_path), sample_id, mag_id,
+                    os.path.basename(mag_fp), additional_metrics
+                )
                 results_all.append(results)
 
     return pd.DataFrame(results_all)

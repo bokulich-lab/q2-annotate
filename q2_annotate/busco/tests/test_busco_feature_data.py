@@ -50,12 +50,12 @@ class TestBUSCOFeatureData(TestPluginBase):
             params=['--lineage_dataset', 'bacteria_odb10']
         )
         mock_process.assert_has_calls([
-            call(True, ANY, '24dee6fe-9b84-45bb-8145-de7b092533a1',
-                 '24dee6fe-9b84-45bb-8145-de7b092533a1.fasta', 'feature_data'),
-            call(True, ANY, 'ca7012fc-ba65-40c3-84f5-05aa478a7585',
-                 'ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta', 'feature_data'),
-            call(True, ANY, 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3',
-                 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta', 'feature_data')
+            call(ANY, 'feature_data', '24dee6fe-9b84-45bb-8145-de7b092533a1',
+                 '24dee6fe-9b84-45bb-8145-de7b092533a1.fasta', True),
+            call(ANY, 'feature_data', 'ca7012fc-ba65-40c3-84f5-05aa478a7585',
+                 'ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta', True),
+            call(ANY, 'feature_data', 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3',
+                 'fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta', True)
         ])
 
     @patch(
