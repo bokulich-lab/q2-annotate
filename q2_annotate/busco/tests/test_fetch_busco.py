@@ -16,27 +16,62 @@ class TestFetchBUSCO(TestPluginBase):
 
     @patch("subprocess.run")
     def test_fetch_busco_db_virus(self, subp_run):
-        busco_db = fetch_busco_db(virus=True, prok=False, euk=False)
-
-        # Check that command was called in the expected way
-        cmd = ["busco", "--download", "virus"]
-        subp_run.assert_called_once_with(cmd, check=True, cwd=str(busco_db))
+        busco_db = fetch_busco_db(lineages=["virus"])
+        cmd = [
+            "busco", "--download_path", str(busco_db), "--download", "virus"
+        ]
+        subp_run.assert_called_once_with(cmd, check=True)
 
     @patch("subprocess.run")
     def test_fetch_busco_db_prok_euk(self, subp_run):
-        busco_db = fetch_busco_db(virus=False, prok=True, euk=True)
-
-        # Check that command was called in the expected way
-        cmd = ["busco", "--download", "prokaryota", "eukaryota"]
-        subp_run.assert_called_once_with(cmd, check=True, cwd=str(busco_db))
+        busco_db = fetch_busco_db(lineages=["prokaryota", "eukaryota"])
+        cmd = [
+            "busco", "--download_path", str(busco_db),
+            "--download", "prokaryota", "eukaryota"
+        ]
+        subp_run.assert_called_once_with(cmd, check=True)
 
     @patch("subprocess.run")
     def test_fetch_busco_db_all(self, subp_run):
-        busco_db = fetch_busco_db(virus=True, prok=True, euk=True)
+        busco_db = fetch_busco_db(lineages=["all"])
+        cmd = ["busco", "--download_path", str(busco_db), "--download", "all"]
+        subp_run.assert_called_once_with(cmd, check=True)
 
-        # Check that command was called in the expected way
-        cmd = ["busco", "--download", "all"]
-        subp_run.assert_called_once_with(cmd, check=True, cwd=str(busco_db))
+    @patch("subprocess.run")
+    def test_fetch_busco_db_two_lineages(self, subp_run):
+        busco_db = fetch_busco_db(lineages=["lineage1", "lineage2"])
+        cmd = [
+            "busco", "--download_path", str(busco_db),
+            "--download", "lineage1", "lineage2"
+        ]
+        subp_run.assert_called_once_with(cmd, check=True)
+
+    @patch("subprocess.run")
+    def test_fetch_busco_db_lineages_with_all(self, subp_run):
+        busco_db = fetch_busco_db(
+            lineages=["lineage1", "lineage2", "all"]
+        )
+        cmd = [
+            "busco", "--download_path", str(busco_db), "--download", "all"
+        ]
+        subp_run.assert_called_once_with(cmd, check=True)
+
+    @patch("subprocess.run")
+    def test_fetch_busco_db_lineages_with_domains(self, subp_run):
+        busco_db = fetch_busco_db(
+            lineages=["lineage1", "lineage2", "prokaryota", "virus"]
+        )
+        cmd = [
+            "busco", "--download_path", str(busco_db),
+            "--download", "prokaryota", "virus"
+        ]
+        subp_run.assert_called_once_with(cmd, check=True)
+
+    @patch("subprocess.run")
+    def test_fetch_busco_db_no_lineage(self, subp_run):
+        with self.assertRaisesRegex(
+                ValueError, "No lineages provided."):
+            fetch_busco_db()
 
     def test_delete_symlinks(self):
         temp_dir = self.temp_dir.name

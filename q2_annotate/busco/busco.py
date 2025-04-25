@@ -103,16 +103,13 @@ def _evaluate_busco(
     auto_lineage_euk: bool = False,
     auto_lineage_prok: bool = False,
     cpu: int = 1,
-    config: str = None,
     contig_break: int = 10,
     evalue: float = 1e-03,
-    force: bool = False,
     limit: int = 3,
     long: bool = False,
     metaeuk_parameters: str = None,
     metaeuk_rerun_parameters: str = None,
     miniprot: bool = False,
-    scaffold_composition: bool = False,
     additional_metrics: bool = False,
 ) -> pd.DataFrame:
     kwargs = {
@@ -121,7 +118,7 @@ def _evaluate_busco(
         ]
     }
     kwargs["offline"] = True
-    kwargs["download_path"] = f"{str(db)}/busco_downloads"
+    kwargs["download_path"] = str(db)
 
     if lineage_dataset is not None:
         _validate_lineage_dataset_input(
@@ -254,16 +251,13 @@ def evaluate_busco(
     auto_lineage_euk=False,
     auto_lineage_prok=False,
     cpu=1,
-    config=None,
     contig_break=10,
     evalue=1e-03,
-    force=False,
     limit=3,
     long=False,
     metaeuk_parameters=None,
     metaeuk_rerun_parameters=None,
     miniprot=False,
-    scaffold_composition=False,
     additional_metrics=True,
     num_partitions=None
 ):

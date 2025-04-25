@@ -110,7 +110,7 @@ class TestBUSCOSampleData(TestPluginBase):
                 '--mode', 'some_mode', '--lineage_dataset', 'lineage_1',
                 '--cpu', '1', '--contig_break', '10', '--evalue', '0.001',
                 '--limit', '3', '--offline', "--download_path",
-                f"{str(self.busco_db)}/busco_downloads"
+                str(self.busco_db)
             ], False
         )
 
@@ -190,7 +190,7 @@ class TestBUSCOSampleData(TestPluginBase):
             self.get_data_path('mags')
         )
         busco_db = qiime2.Artifact.import_data(
-            'ReferenceDB[BuscoDB]',
+            'ReferenceDB[BUSCO]',
             self.get_data_path('busco_db')
         )
         obs = evaluate_busco(
