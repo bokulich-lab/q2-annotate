@@ -12,6 +12,7 @@ from typing import List
 from q2_annotate._utils import colorify, run_command
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
 
+
 def _process_lineages(lineages):
     """Process and validate BUSCO lineage selections.
 
@@ -42,7 +43,7 @@ def _process_lineages(lineages):
         return lineages
 
     domain_lineages = ["prokaryota", "eukaryota", "virus"]
-    domain_matches = [l for l in lineages if l in domain_lineages]
+    domain_matches = [lin for lin in lineages if lin in domain_lineages]
     if domain_matches:
         print(colorify(
             f"Domain lineages were provided ({', '.join(domain_matches)}) - "

@@ -1264,7 +1264,7 @@ plugin.methods.register_function(
     output_descriptions={
         'db': "BUSCO database for the specified lineages."
     },
-    parameters={"lineages": List[Str],},
+    parameters={"lineages": List[Str], },
     parameter_descriptions={
         "lineages": "Lineages to be included in the database. Can be any "
                     "valid BUSCO lineage or any of the following: 'all' "
