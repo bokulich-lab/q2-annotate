@@ -67,9 +67,9 @@ def delete_symlinks(root_dir):
         Path to the root directory to start searching for symbolic links.
     """
     for dirpath, dirnames, filenames in os.walk(root_dir, followlinks=False):
-        for file in filenames:
-            if os.path.islink(os.path.join(dirpath, file)):
-                os.unlink(os.path.join(dirpath, file))
+        for _file in filenames:
+            if os.path.islink(os.path.join(dirpath, _file)):
+                os.unlink(os.path.join(dirpath, _file))
 
 
 def fetch_busco_db(
