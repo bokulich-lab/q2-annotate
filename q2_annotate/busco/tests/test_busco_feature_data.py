@@ -138,7 +138,7 @@ class TestBUSCOFeatureData(TestPluginBase):
             self.get_data_path('mags/sample2')
         )
         busco_db = qiime2.Artifact.import_data(
-            'ReferenceDB[BuscoDB]',
+            'ReferenceDB[BUSCO]',
             self.get_data_path('busco_db')
         )
         obs = evaluate_busco(

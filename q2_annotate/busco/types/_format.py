@@ -67,38 +67,40 @@ class BuscoGenericBinaryFileFmt(model.BinaryFileFormat):
 
 
 class BuscoDatabaseDirFmt(model.DirectoryFormat):
-    # File collections for text files
+    # File collections for text files.
+    # Optional because some of those are not present in some lineages.
     (
         ancestral,
-        dataset,
-        lengths_cutoff,
-        scores_cutoff,
-        links_to_ODB,
         ancestral_variants,
-        ogs_id,
-        species,
+        dataset,
         hmms,
-        refseq_db_md5
+        lengths_cutoff,
+        links_to_ODB,
+        ogs_id,
+        refseq_db_md5,
+        scores_cutoff,
+        species,
     ) = [
-            model.FileCollection(
-                rf"busco_downloads\/lineages\/.+\/{pattern}",
-                format=BuscoGenericTextFileFmt
-            )
-            for pattern in [
-                r'ancestral$',
-                r'dataset\.cfg$',
-                r'lengths_cutoff$',
-                r'scores_cutoff$',
-                r'links_to_ODB.+\.txt$',
-                r'ancestral_variants$',
-                r'info\/ogs\.id\.info$',
-                r'info\/species\.info$',
-                r'hmms\/.+\.hmm$',
-                r'refseq_db\.faa\.gz\.md5'
-            ]
+        model.FileCollection(
+            rf"lineages\/.+\/{pattern}",
+            format=BuscoGenericTextFileFmt,
+            optional=True
+        )
+        for pattern in [
+            r'ancestral$',
+            r'ancestral_variants$',
+            r'dataset\.cfg$',
+            r'hmms\/.+\.hmm$',
+            r'lengths_cutoff$',
+            r'links_to_ODB.+\.txt$',
+            r'info\/ogs\.id\.info$',
+            r'refseq_db\.faa\.gz\.md5',
+            r'scores_cutoff$',
+            r'info\/species\.info$',
         ]
+    ]
 
-    # Placement_files. Optional because they are not in virus DB
+    # Placement files. Optional because they are not in virus DB
     (
         list_of_reference_markers,
         mapping_taxid_lineage,
@@ -107,7 +109,7 @@ class BuscoDatabaseDirFmt(model.DirectoryFormat):
         tree_metadata,
     ) = [
             model.FileCollection(
-                rf"busco_downloads\/placement_files\/{pattern}",
+                rf"placement_files\/{pattern}",
                 format=BuscoGenericTextFileFmt,
                 optional=True
             )
@@ -122,34 +124,35 @@ class BuscoDatabaseDirFmt(model.DirectoryFormat):
 
     # Others
     supermatrix_aln = model.FileCollection(
-        r'busco_downloads\/placement_files\/supermatrix\.aln\..+\.faa$',
+        r'placement_files\/supermatrix\.aln\..+\.faa$',
         format=AlignedProteinFASTAFormat,
         optional=True
     )
     prfls = model.FileCollection(
-        r'busco_downloads\/lineages\/.+\/prfl\/.+\.prfl$',
+        r'lineages\/.+\/prfl\/.+\.prfl$',
         format=BuscoGenericTextFileFmt,
         optional=True
     )
     version_file = model.File(
-        'busco_downloads/file_versions.tsv', format=BuscoGenericTextFileFmt
+        'file_versions.tsv', format=BuscoGenericTextFileFmt
     )
     refseq_db = model.FileCollection(
-        r'busco_downloads\/lineages\/.+refseq_db\.faa\.gz',
-        format=BuscoGenericBinaryFileFmt
+        r'lineages\/.+refseq_db\.faa(\.gz)?',
+        format=BuscoGenericBinaryFileFmt,
+        optional=True
     )
     information = model.FileCollection(
-        r'busco_downloads\/information\/.+\.txt$',
+        r'information\/.+\.txt$',
         format=BuscoGenericTextFileFmt,
         optional=True
     )
     missing_parasitic = model.File(
-        r'busco_downloads\/lineages\/.+\/missing_in_parasitic\.txt$',
+        r'lineages\/.+\/missing_in_parasitic\.txt$',
         format=BuscoGenericTextFileFmt,
         optional=True
     )
     no_hits = model.File(
-        r'busco_downloads\/lineages\/.+\/no_hits$',
+        r'lineages\/.+\/no_hits$',
         format=BuscoGenericTextFileFmt,
         optional=True
     )

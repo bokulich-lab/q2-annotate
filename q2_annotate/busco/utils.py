@@ -24,14 +24,14 @@ MARKER_COLS = ["single", "duplicated", "fragmented", "missing", "complete"]
 
 
 def _validate_lineage_dataset_input(
-        lineage_dataset: str,
-        auto_lineage: bool,
-        auto_lineage_euk: bool,
-        auto_lineage_prok: bool,
-        busco_db: BuscoDatabaseDirFmt,
-        kwargs
-        ) -> None:
-    # When lineage_dataset is specified all other lineage flags are ignored
+    lineage_dataset: str,
+    auto_lineage: bool,
+    auto_lineage_euk: bool,
+    auto_lineage_prok: bool,
+    busco_db: BuscoDatabaseDirFmt,
+    kwargs
+) -> None:
+    # When lineage_dataset is specified, all other lineage flags are ignored
     if any([auto_lineage, auto_lineage_euk, auto_lineage_prok]):
         warnings.warn(
             f"`--p-lineage-dataset` was specified as '{lineage_dataset}'. "
@@ -41,13 +41,13 @@ def _validate_lineage_dataset_input(
         kwargs["auto_lineage_euk"] = False
         kwargs["auto_lineage_prok"] = False
 
-    # Check that lineage in deed exits inside Busco DB (if provided)
+    # Check that lineage indeed exists inside Busco DB (if provided)
     if busco_db is not None:
         if not os.path.exists(
-            f"{str(busco_db)}/busco_downloads/lineages/{lineage_dataset}"
+            f"{str(busco_db)}/lineages/{lineage_dataset}"
         ):
             present_lineages = os.listdir(
-                os.path.join(str(busco_db), "busco_downloads/lineages/")
+                os.path.join(str(busco_db), "lineages/")
             )
             raise ValueError(
                 f"The specified lineage_dataset ({lineage_dataset}) "
@@ -58,7 +58,7 @@ def _validate_lineage_dataset_input(
 
 
 def _parse_busco_params(arg_key, arg_val) -> List[str]:
-    """Creates a list with argument and its value to be consumed by BUSCO.
+    """Creates a list with an argument and its value to be consumed by BUSCO.
     Argument names will be converted to command line parameters by
     appending a '--' prefix and in some cases replacing "_" for "-"
     (only for e.g. `arguments_with_hyphens`)
