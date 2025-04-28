@@ -312,9 +312,11 @@ def _combine_ncbi_trees(trees):
                         assert tip.name in tip_cache
                         subtree_inserted = True
 
-                if not subtree_inserted:
+                # did we exhaust our parents and still not find ourselves?
+                if not subtree_inserted and not (tip.name == matching.name):
                     # should be impossible. Implies ancestor_found was always
-                    # True but not in tip_cache
+                    # True but not in tip_cache AND the tip is not an
+                    # intermediate node in the tree that already is present.
                     raise AssertionError(f"{tip.name} could not be inserted")
     return full_tree
 
