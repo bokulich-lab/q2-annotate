@@ -285,6 +285,20 @@ def classify_kraken2_helper(
             output_fp, report_fp = _construct_output_paths(
                 _sample, kraken2_outputs_dir, kraken2_reports_dir
             )
+
+            # check for empty fastq file
+            try:
+                for f in fps:
+                    #empty gzipped files have a size of 20 bytes
+                    assert os.path.getsize(f)>20
+            except AssertionError:
+                print(f"At least one of the files for sample {_sample} is empty. Classification will not be run on this sample.")
+                with open(report_fp,'a') as f:
+                    print("0.0\t0\t0\tUnclassified\t0\tUnclassified",file=f)
+                with open(output_fp,'a') as f:
+                    print("U\tNo_sequence\t0\t0\tNone",file=f)
+                continue
+
             cmd = deepcopy(base_cmd)
             cmd.extend(
                 ["--report", report_fp, "--output", output_fp, *fps]
