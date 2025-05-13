@@ -306,7 +306,7 @@ class TestMAGFiltering(TestPluginBase):
         ).return_value = (mock_build_index_result,)
         ctx.make_artifact.return_value = MagicMock()
 
-        # prepare some files which will be used by _combined_fasta_files
+        # prepare some files that will be used by _combined_fasta_files
         open(os.path.join(temp_dir, "pangenome.gfa"), 'w').close()
         shutil.copy(
             self.get_data_path("pangenome/grch38.fasta"),
@@ -321,7 +321,7 @@ class TestMAGFiltering(TestPluginBase):
                    return_value=MagicMock(name='TemporaryDirectory',
                                           __enter__=lambda x: temp_dir,
                                           __exit__=lambda x, y, z, w: None)):
-            generated_index = construct_pangenome_index(ctx=ctx, n_threads=1)
+            generated_index = construct_pangenome_index(ctx=ctx, threads=1)
 
             # Assertions
             ctx.get_action.assert_any_call("rescript", "get_ncbi_genomes")
@@ -381,7 +381,7 @@ class TestMAGFiltering(TestPluginBase):
             ctx=ctx,
             reads=reads,
             index=None,
-            n_threads=1
+            threads=4
         )
 
         # Assertions
@@ -394,7 +394,7 @@ class TestMAGFiltering(TestPluginBase):
             demultiplexed_sequences=reads,
             database=generated_index,
             exclude_seqs=True,
-            n_threads=1,
+            n_threads=4,
             mode='local',
             ref_gap_open_penalty=5,
             ref_gap_ext_penalty=3
