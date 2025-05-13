@@ -138,7 +138,7 @@ class TestClassifyKraken2HasCorrectCalls(TestPluginBase):
         )
 
         annotate.actions._classify_kraken2(
-            seqs=seqs, kraken2_db=db, threads=3, confidence=0.9, quick=True
+            seqs=seqs, db=db, threads=3, confidence=0.9, quick=True
         )
 
         exp_args = [
@@ -547,7 +547,7 @@ class TestClassifyKraken2Reads(TestPluginBase):
         samples = SingleLanePerSamplePairedEndFastqDirFmt(reads_path, 'r')
 
         cls.reports, cls.outputs = _classify_kraken2(samples, cls.db)
-        cls.output_views = list(cls.outputs.reports.iter_views(pd.DataFrame))
+        cls.output_views = list(cls.outputs.outputs.iter_views(pd.DataFrame))
         cls.report_views = list(cls.reports.reports.iter_views(pd.DataFrame))
 
         cls.sample_id_to_ncbi_id = {
@@ -618,12 +618,12 @@ class TestClassifyKraken2Reads(TestPluginBase):
 
         with self.test_config:
             reports, outputs = \
-                self.classify_kraken2.parallel(samples, db)._result()
+                self.classify_kraken2.parallel([samples], db)._result()
 
         reports = reports.view(Kraken2ReportDirectoryFormat)
         outputs = outputs.view(Kraken2OutputDirectoryFormat)
 
-        output_views = outputs.reports.iter_views(pd.DataFrame)
+        output_views = outputs.outputs.iter_views(pd.DataFrame)
         report_views = reports.reports.iter_views(pd.DataFrame)
 
         samples_of_interest = ('ba', 'mm', 'sa', 'se', 'ba-mm-mixed')
@@ -725,7 +725,7 @@ class TestClassifyKraken2Contigs(TestPluginBase):
         cls.samples = ContigSequencesDirFmt(contigs_path, 'r')
 
         cls.reports, cls.outputs = _classify_kraken2(cls.samples, cls.db)
-        cls.output_views = cls.outputs.reports.iter_views(pd.DataFrame)
+        cls.output_views = cls.outputs.outputs.iter_views(pd.DataFrame)
         cls.report_views = cls.reports.reports.iter_views(pd.DataFrame)
 
         cls.sample_id_to_ncbi_id = {
@@ -790,12 +790,12 @@ class TestClassifyKraken2Contigs(TestPluginBase):
 
         with self.test_config:
             reports, outputs = \
-                self.classify_kraken2.parallel(samples, db)._result()
+                self.classify_kraken2.parallel([samples], db)._result()
 
         reports = reports.view(Kraken2ReportDirectoryFormat)
         outputs = outputs.view(Kraken2OutputDirectoryFormat)
 
-        output_views = outputs.reports.iter_views(pd.DataFrame)
+        output_views = outputs.outputs.iter_views(pd.DataFrame)
         report_views = reports.reports.iter_views(pd.DataFrame)
 
         samples_of_interest = ('ba', 'mm', 'sa', 'se', 'ba-mm-mixed')
@@ -854,7 +854,7 @@ class TestClassifyKraken2MAGsDerep(unittest.TestCase):
         samples = MAGSequencesDirFmt(mags_path, 'r')
 
         cls.reports, cls.outputs = _classify_kraken2(samples, db)
-        cls.output_views = cls.outputs.reports.iter_views(pd.DataFrame)
+        cls.output_views = cls.outputs.outputs.iter_views(pd.DataFrame)
         cls.report_views = cls.reports.reports.iter_views(pd.DataFrame)
 
         cls.uuid_to_sample = {
@@ -932,7 +932,7 @@ class TestClassifyKraken2MAGs(TestPluginBase):
         cls.samples = MultiFASTADirectoryFormat(mags_path, 'r')
 
         cls.reports, cls.outputs = _classify_kraken2(cls.samples, cls.db)
-        cls.output_views = cls.outputs.reports.iter_views(pd.DataFrame)
+        cls.output_views = cls.outputs.outputs.iter_views(pd.DataFrame)
         cls.report_views = cls.reports.reports.iter_views(pd.DataFrame)
 
         cls.uuid_to_sample = {
@@ -995,12 +995,12 @@ class TestClassifyKraken2MAGs(TestPluginBase):
 
         with self.test_config:
             reports, outputs = \
-                self.classify_kraken2.parallel(samples, db)._result()
+                self.classify_kraken2.parallel([samples], db)._result()
 
         reports = reports.view(Kraken2ReportDirectoryFormat)
         outputs = outputs.view(Kraken2OutputDirectoryFormat)
 
-        output_views = outputs.reports.iter_views(pd.DataFrame)
+        output_views = outputs.outputs.iter_views(pd.DataFrame)
         report_views = reports.reports.iter_views(pd.DataFrame)
 
         samples_of_interest = self.uuid_to_sample.keys()
@@ -1045,6 +1045,146 @@ class TestClassifyKraken2MAGs(TestPluginBase):
             exp_missing = all_samples - exp
             self.assertEqual(exp & obs, exp)
             self.assertFalse(exp_missing & obs)
+
+
+class TestClassifyMultipleInputArtifacts(TestPluginBase):
+    package = "q2_annotate.kraken2.tests"
+
+    def setUp(self):
+        super().setUp()
+
+        db_fp = self.get_data_path(
+            Path('simulated-sequences') / 'kraken2-db'
+        )
+        db_format = Kraken2DBDirectoryFormat(db_fp, mode='r')
+        self.db = Artifact.import_data('Kraken2DB', db_format)
+
+        self.classify_kraken2 = self.plugin.pipelines['classify_kraken2']
+
+    def test_multiple_reads(self):
+        '''
+        Tests that sequence records with the same sample ID in separate input
+        artifacts have their outputs merged into a single report and output.
+        '''
+        artifact_1_reads_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'reads' /
+            'artifact-1'
+        )
+        artifact_2_reads_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'reads' /
+            'artifact-2'
+        )
+
+        artifact_1_reads = SingleLanePerSamplePairedEndFastqDirFmt(
+            artifact_1_reads_dir, mode='r'
+        )
+        artifact_2_reads = SingleLanePerSamplePairedEndFastqDirFmt(
+            artifact_2_reads_dir, mode='r'
+        )
+
+        artifact_1 = Artifact.import_data(
+            'SampleData[PairedEndSequencesWithQuality]', artifact_1_reads
+        )
+        artifact_2 = Artifact.import_data(
+            'SampleData[PairedEndSequencesWithQuality]', artifact_2_reads
+        )
+
+        reports, outputs = self.classify_kraken2(
+            [artifact_1, artifact_2], self.db
+        )
+
+        reports_dir_format = reports.view(Kraken2ReportDirectoryFormat)
+        outputs_dir_format = outputs.view(Kraken2OutputDirectoryFormat)
+
+        self.assertEqual(
+            set(reports_dir_format.file_dict().keys()), {'ba', 'sa', 'se'}
+        )
+        self.assertEqual(
+            set(outputs_dir_format.file_dict().keys()), {'ba', 'sa', 'se'}
+        )
+
+    def test_multiple_mags(self):
+        '''
+        Tests that mag directories with the same sample ID in separate input
+        artifacts have their constituent mags joined into the same output
+        sample ID directory.
+        '''
+        artifact_1_mags_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'mags' /
+            'artifact-1'
+        )
+        artifact_2_mags_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'mags' /
+            'artifact-2'
+        )
+
+        artifact_1_mags = MultiFASTADirectoryFormat(
+            artifact_1_mags_dir, mode='r'
+        )
+        artifact_2_mags = MultiFASTADirectoryFormat(
+            artifact_2_mags_dir, mode='r'
+        )
+
+        artifact_1 = Artifact.import_data('SampleData[MAGs]', artifact_1_mags)
+        artifact_2 = Artifact.import_data('SampleData[MAGs]', artifact_2_mags)
+
+        reports, outputs = self.classify_kraken2(
+            [artifact_1, artifact_2], self.db
+        )
+
+        reports_dir_format = reports.view(Kraken2ReportDirectoryFormat)
+        outputs_dir_format = outputs.view(Kraken2OutputDirectoryFormat)
+
+        self.assertEqual(
+            set(reports_dir_format.file_dict().keys()),
+            {'sample-1', 'sample-2', 'sample-3'}
+        )
+        self.assertEqual(
+            set(outputs_dir_format.file_dict().keys()),
+            {'sample-1', 'sample-2', 'sample-3'}
+        )
+
+        self.assertEqual(
+            len(reports_dir_format.file_dict()['sample-1']), 2
+        )
+        self.assertEqual(
+            len(outputs_dir_format.file_dict()['sample-1']), 2
+        )
+
+        self.assertEqual(
+            len(reports_dir_format.file_dict()['sample-2']), 1
+        )
+        self.assertEqual(
+            len(outputs_dir_format.file_dict()['sample-2']), 1
+        )
+
+    def test_improperly_mixed_inputs_error(self):
+        '''
+        '''
+        reads_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'reads' /
+            'artifact-1'
+        )
+        reads_format = SingleLanePerSamplePairedEndFastqDirFmt(
+            reads_dir, mode='r'
+        )
+        reads_artifact = Artifact.import_data(
+            'SampleData[PairedEndSequencesWithQuality]', reads_format
+        )
+
+        mags_dir = self.get_data_path(
+            Path('simulated-sequences') / 'multiple-inputs' / 'mags' /
+            'artifact-1'
+        )
+        mags_format = MultiFASTADirectoryFormat(
+            mags_dir, mode='r'
+        )
+        mags_artifact = Artifact.import_data('SampleData[MAGs]', mags_format)
+
+        with self.assertRaises(TypeError):
+            reports, outputs = self.classify_kraken2(
+                [reads_artifact, mags_artifact], self.db
+            )
 
 
 if __name__ == "__main__":

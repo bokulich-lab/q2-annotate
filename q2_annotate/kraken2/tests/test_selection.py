@@ -185,19 +185,98 @@ class TestKrakenSelect(TestPluginBase):
         ):
             kraken2_to_mag_features(reports, hits, 0.0)
 
-    def test_kraken2_to_mag_features_missing_fraction_unclassified(self):
+    def test_kraken2_to_mag_features_unclassified_root(self):
+        reports = Kraken2ReportDirectoryFormat(
+            self.get_data_path("reports-mags-unclassified-root"), "r"
+        )
+        hits = Kraken2OutputDirectoryFormat(
+            self.get_data_path("outputs-mags"), "r"
+        )
+        obs_taxonomy = kraken2_to_mag_features(reports, hits, 0.0)
+        exp_taxonomy = pd.DataFrame(
+            {"Taxon": [
+                "d__Bacteria;k__Bacteria;p__Firmicutes;c__Bacilli",
+                "d__Unclassified"
+            ]},
+            index=pd.Index([
+                "3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa",
+                "8894435a-c836-4c18-b475-8b38a9ab6c6b"
+            ], name="Feature ID")
+        )
+
+        pandas.testing.assert_frame_equal(obs_taxonomy, exp_taxonomy)
+
+    def test_kraken2_to_mag_features_unclassified_root_low_coverage(self):
+        reports = Kraken2ReportDirectoryFormat(
+            self.get_data_path("reports-mags-unclassified-root"), "r"
+        )
+        hits = Kraken2OutputDirectoryFormat(
+            self.get_data_path("outputs-mags"), "r"
+        )
+        obs_taxonomy = kraken2_to_mag_features(reports, hits, 1.0)
+        exp_taxonomy = pd.DataFrame(
+            {"Taxon": [
+                "d__Bacteria;k__Bacteria;p__Firmicutes;c__Bacilli;o__Bacillales;"
+                "f__Staphylococcaceae;g__Staphylococcus;s__Staphylococcus aureus",
+                "d__Unclassified"
+            ]},
+            index=pd.Index([
+                "3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa",
+                "8894435a-c836-4c18-b475-8b38a9ab6c6b"
+            ], name="Feature ID")
+        )
+
+        pandas.testing.assert_frame_equal(obs_taxonomy, exp_taxonomy)
+
+    def test_kraken2_to_mag_features_unclassified_root_only(self):
         reports = Kraken2ReportDirectoryFormat(
             self.get_data_path("reports-mags-unclassified-missing-frac"), "r"
         )
         hits = Kraken2OutputDirectoryFormat(
             self.get_data_path("outputs-mags"), "r"
         )
+        obs_taxonomy = kraken2_to_mag_features(reports, hits, 0.0)
+        exp_taxonomy = pd.DataFrame(
+            {"Taxon": [
+                "d__Bacteria;k__Bacteria;p__Firmicutes;c__Bacilli",
+                "d__Unclassified"
+            ]},
+            index=pd.Index([
+                "3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa",
+                "8894435a-c836-4c18-b475-8b38a9ab6c6b"
+            ], name="Feature ID")
+        )
+
+        pandas.testing.assert_frame_equal(obs_taxonomy, exp_taxonomy)
+
+    def test_kraken2_to_mag_features_unclassified_no_add_up(self):
+        reports = Kraken2ReportDirectoryFormat(
+            self.get_data_path("reports-mags-unclassified-no-add-up"), "r"
+        )
+        hits = Kraken2OutputDirectoryFormat(
+            self.get_data_path("outputs-mags"), "r"
+        )
+
         with self.assertRaisesRegex(
                 ValueError,
-                "line for MAG '8894435a-c836-4c18-b475-8b38a9ab6c6b' "
-                "is missing"
+                "fraction for MAG '8894435a-c836-4c18-b475-8b38a9ab6c6b' "
+                "is not 100.0"
         ):
-            kraken2_to_mag_features(reports, hits, 0.0)
+            kraken2_to_mag_features(reports, hits, 0.1)
+
+    def test_kraken2_to_mag_features_unclassified_all(self):
+        reports = Kraken2ReportDirectoryFormat(
+            self.get_data_path("reports-mags-unclassified-all"), "r"
+        )
+        hits = Kraken2OutputDirectoryFormat(
+            self.get_data_path("outputs-mags"), "r"
+        )
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "The resulting feature table was empty"
+        ):
+            kraken2_to_mag_features(reports, hits, 0.1)
 
     def test_find_lcas_mode_lca(self):
         taxa = [self.taxa_mag1, self.taxa_mag2, self.taxa_mag3, self.taxa_mag4]

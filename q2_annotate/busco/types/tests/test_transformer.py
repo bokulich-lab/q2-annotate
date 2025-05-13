@@ -23,7 +23,7 @@ class TestBUSCOTransformers(TestPluginBase):
         obs = _read_dataframe(self.fp)
 
         self.assertIsInstance(obs, pd.DataFrame)
-        self.assertEqual(obs.shape, (29, 14))
+        self.assertEqual(obs.shape, (3, 16))
         self.assertEqual(obs.index.name, 'id')
 
     def test_result_to_dataframe_transformer(self):
@@ -63,7 +63,8 @@ class TestBUSCOTransformers(TestPluginBase):
         df.index.name = 'id'
         for col in [
             'complete', 'single', 'duplicated', 'fragmented', 'missing',
-            'n_markers', 'scaffold_n50', 'contigs_n50', 'scaffolds', 'length'
+            'n_markers', 'scaffold_n50', 'contigs_n50', 'scaffolds', 'length',
+            'completeness', 'contamination'
         ]:
             df[col] = pd.to_numeric(df[col])
         exp = qiime2.Metadata(df)

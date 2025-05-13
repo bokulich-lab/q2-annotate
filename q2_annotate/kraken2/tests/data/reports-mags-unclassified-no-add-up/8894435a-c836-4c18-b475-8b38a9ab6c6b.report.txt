@@ -1,0 +1,12 @@
+ 99.91	1164	1164	0	0	U	0	unclassified
+  0.08	1	0	20624	20250	R	1	root
+  0.09	1	0	20591	20234	R1	131567	  cellular organisms
+  0.09	1	0	19711	19462	D	2	    Bacteria
+  0.09	1	0	10960	10624	K	1783272	      Bacillati
+  0.09	1	0	6406	6286	P	1239	        Bacillota
+  0.09	1	0	4853	4693	C	909932	          Negativicutes
+  0.09	1	0	792	789	O	1843489	            Veillonellales
+  0.09	1	0	792	789	F	31977	              Veillonellaceae
+  0.09	1	0	536	533	G	906	                Megasphaera
+  0.09	1	0	431	428	S	907	                  Megasphaera elsdenii
+  0.09	1	1	352	352	S1	1458465	                    Megasphaera elsdenii 14-14

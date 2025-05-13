@@ -72,7 +72,8 @@ def build_custom_diamond_db(
     '''
     # Process input parameters
     kwargs = {}
-    for key, value in locals().items():
+    _locals = locals().copy()
+    for key, value in _locals.items():
         if key not in ["seqs", "taxonomy", "kwargs"]:
             kwargs[key] = value
 

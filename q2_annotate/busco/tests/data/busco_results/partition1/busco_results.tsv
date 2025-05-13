@@ -1,0 +1,4 @@
+mag_id	sample_id	input_file	dataset	complete	single	duplicated	fragmented	missing	n_markers	scaffold_n50	contigs_n50	percent_gaps	scaffolds	length	completeness	contamination
+24dee6fe-9b84-45bb-8145-de7b092533a1	sample1	24dee6fe-9b84-45bb-8145-de7b092533a1.fasta	bacteria_odb10	28.2	27.4	0.8	8.9	62.9	124	4785	4785	0.000%	265	1219165	12	45
+ca7012fc-ba65-40c3-84f5-05aa478a7585	sample1	ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta	bacteria_odb10	1.6	1.6	0.0	1.6	96.8	124	3548	3548	0.000%	67	245922	12	45
+fb0bc871-04f6-486b-a10e-8e0cb66f8de3	sample1	fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta	bacteria_odb10	1.6	1.6	0.0	1.6	96.8	124	3548	3548	0.000%	67	245922	12	45

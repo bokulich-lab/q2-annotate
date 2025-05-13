@@ -53,60 +53,151 @@ def _construct_output_paths(
 
 
 def classify_kraken2(
-        ctx,
-        seqs,
-        kraken2_db,
-        threads=1,
-        confidence=0.0,
-        minimum_base_quality=0,
-        memory_mapping=False,
-        minimum_hit_groups=2,
-        quick=False,
-        report_minimizer_data=False,
-        num_partitions=None
+    ctx,
+    seqs,
+    db,
+    threads=1,
+    confidence=0.0,
+    minimum_base_quality=0,
+    memory_mapping=False,
+    minimum_hit_groups=2,
+    quick=False,
+    report_minimizer_data=False,
+    num_partitions=None
 ):
-    kwargs = {k: v for k, v in locals().items()
-              if k not in ["seqs", "kraken2_db", "ctx", "num_partitions"]}
+    '''
+    Parameters
+    ----------
+    ctx : qiime2.sdk.Context
+        The pipeline context object.
+    seqs : list
+        A list of one or more of any of the formats registered to the semantic
+        types SampleData[SequencesWithQuality],
+        SampleData[PairedEndSequencesWithQuality],
+        SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
+        FeatureData[MAGs], SampleData[MAGs]. Note that the list must consist
+        entirely of only contigs, MAGs, or read types.
+    ...
+        See plugin_setup.py for an expalanation of the remainder of the
+        parameters.
 
-    _classify_kraken2 = ctx.get_action("annotate", "_classify_kraken2")
-    collate_kraken2_reports = ctx.get_action("annotate",
-                                             "collate_kraken2_reports")
-    collate_kraken2_outputs = ctx.get_action("annotate",
-                                             "collate_kraken2_outputs")
+    Returns
+    -------
+    tuple[Kraken2ReportDirectoryFromat, Kraken2OutputDirectoryFormat]
+        The kraken2 reports and outputs directory formats.
 
-    if seqs.type <= SampleData[SequencesWithQuality |
-                               JoinedSequencesWithQuality]:
-        partition_method = ctx.get_action("demux", "partition_samples_single")
-    elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
-        partition_method = ctx.get_action("demux", "partition_samples_paired")
-    elif seqs.type <= SampleData[Contigs]:
-        partition_method = ctx.get_action("assembly", "partition_contigs")
-    elif seqs.type <= SampleData[MAGs]:
-        partition_method = ctx.get_action(
-            "types", "partition_sample_data_mags"
+    Raises
+    ------
+    ValueError
+        If more than one type of input occurs in the input list.
+    '''
+    kwargs = {
+        k: v for k, v in locals().items()
+        if k not in ["seqs", "db", "ctx", "num_partitions"]
+    }
+
+    _merge_kraken2_results = ctx.get_action(
+        "annotate", "_merge_kraken2_results"
+    )
+
+    reports = []
+    outputs = []
+    for seqs_artifact in seqs:
+        artifact_reports, artifact_outputs = _classify_single_artifact(
+            ctx, seqs_artifact, db, num_partitions, kwargs
         )
-    # FeatureData[MAG] is not parallelized
-    elif seqs.type <= FeatureData[MAG]:
-        kraken2_reports, kraken2_outputs = \
-                _classify_kraken2(seqs, kraken2_db, **kwargs)
-        return kraken2_reports, kraken2_outputs
+        reports.append(artifact_reports)
+        outputs.append(artifact_outputs)
+
+    reports, outputs = _merge_kraken2_results(reports, outputs)
+
+    return reports, outputs
+
+
+def _classify_single_artifact(ctx, seqs, db, num_partitions, kwargs):
+    '''
+    Runs the kraken2 software on the contents of a single artifact.
+
+    Parameters
+    ----------
+    ctx : qiime2.sdk.Context
+        The pipeline context object.
+    seqs : qiime2.Artifact
+        An artifact of type SampleData[SequencesWithQualtiy],
+        SampleData[PairedEndSequencesWithQuality],
+        SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
+        or SampleData[MAGs].
+    db : Kraken2DBDirectoryFormat
+        The kraken2 database.
+    num_partitions : int | None
+        The number of partitions to create for parallel execution.
+    kwargs : dict
+        The remaining keyword arguments from the `classify_kraken2` pipeline.
+
+    Returns
+    -------
+    tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]
+        The kraken2 reports and outputs directory formats.
+    '''
+    _classify_kraken2 = ctx.get_action("annotate", "_classify_kraken2")
+    collate_kraken2_reports = ctx.get_action(
+        "annotate", "collate_kraken2_reports"
+    )
+    collate_kraken2_outputs = ctx.get_action(
+        "annotate", "collate_kraken2_outputs"
+    )
+
+    if seqs.type <= FeatureData[MAG]:
+        # FeatureData[MAG] is not parallelized
+        return _classify_kraken2(seqs, db, **kwargs)
+    else:
+        partition_action = _get_partition_action(ctx, seqs)
+        (partitioned_seqs,) = partition_action(seqs, num_partitions)
+
+        all_reports = []
+        all_outputs = []
+        for seq in partitioned_seqs.values():
+            reports, outputs = _classify_kraken2(seq, db, **kwargs)
+            all_reports.append(reports)
+            all_outputs.append(outputs)
+
+        collated_reports, = collate_kraken2_reports(all_reports)
+        collated_outputs, = collate_kraken2_outputs(all_outputs)
+
+        return collated_reports, collated_outputs
+
+
+def _get_partition_action(ctx, seqs):
+    '''
+    Returns the proper partition action for the given type of `seqs`.
+
+    Parameters
+    ----------
+    ctx : qiime2.sdk.Context
+        The pipeline context object.
+    seqs : qiime2.Artifact
+        An artifact of type SampleData[SequencesWithQualtiy],
+        SampleData[PairedEndSequencesWithQuality],
+        SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
+        or SampleData[MAGs].
+
+    Returns
+    -------
+    qiime2.sdk.Action
+        The partition action.
+    '''
+    if seqs.type <= SampleData[
+        SequencesWithQuality | JoinedSequencesWithQuality
+    ]:
+        return ctx.get_action("demux", "partition_samples_single")
+    elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
+        return ctx.get_action("demux", "partition_samples_paired")
+    elif seqs.type <= SampleData[Contigs]:
+        return ctx.get_action("assembly", "partition_contigs")
+    elif seqs.type <= SampleData[MAGs]:
+        return ctx.get_action("types", "partition_sample_data_mags")
     else:
         raise NotImplementedError()
-
-    (partitioned_seqs,) = partition_method(seqs, num_partitions)
-
-    kraken2_reports = []
-    kraken2_outputs = []
-    for seq in partitioned_seqs.values():
-        (kraken2_report, kraken2_output) = _classify_kraken2(
-                seq, kraken2_db, **kwargs)
-        kraken2_reports.append(kraken2_report)
-        kraken2_outputs.append(kraken2_output)
-
-    (collated_kraken2_reports,) = collate_kraken2_reports(kraken2_reports)
-    (collated_kraken2_outputs,) = collate_kraken2_outputs(kraken2_outputs)
-
-    return collated_kraken2_reports, collated_kraken2_outputs
 
 
 def _classify_kraken2(
@@ -117,7 +208,7 @@ def _classify_kraken2(
             MAGSequencesDirFmt,
             MultiFASTADirectoryFormat
         ],
-        kraken2_db: Kraken2DBDirectoryFormat,
+        db: Kraken2DBDirectoryFormat,
         threads: int = 1,
         confidence: float = 0.0,
         minimum_base_quality: int = 0,
@@ -130,12 +221,12 @@ def _classify_kraken2(
         Kraken2OutputDirectoryFormat,
 ):
     kwargs = {k: v for k, v in locals().items()
-              if k not in ["seqs", "kraken2_db", "ctx"]}
+              if k not in ["seqs", "db", "ctx"]}
 
     common_args = _process_common_input_params(
         processing_func=_process_kraken2_arg, params=kwargs
     )
-    common_args.extend(["--db", str(kraken2_db.path)])
+    common_args.extend(["--db", str(db.path)])
     return classify_kraken2_helper(seqs, common_args)
 
 

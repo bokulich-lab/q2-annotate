@@ -17,7 +17,7 @@ from q2_types.genome_data import (
 
 
 def predict_genes_prodigal(
-        sequences: Union[
+        seqs: Union[
             MAGSequencesDirFmt, MultiMAGSequencesDirFmt, ContigSequencesDirFmt
         ],
         translation_table_number: str = "11",
@@ -50,16 +50,16 @@ def predict_genes_prodigal(
         ])
         run_command(cmd)
 
-    if isinstance(sequences, MAGSequencesDirFmt):
-        for mag_id, mag_fp in sequences.feature_dict().items():
+    if isinstance(seqs, MAGSequencesDirFmt):
+        for mag_id, mag_fp in seqs.feature_dict().items():
             _run_prodigal(mag_fp, mag_id)
 
-    elif isinstance(sequences, ContigSequencesDirFmt):
-        for sample_id, contigs_fp in sequences.sample_dict().items():
+    elif isinstance(seqs, ContigSequencesDirFmt):
+        for sample_id, contigs_fp in seqs.sample_dict().items():
             _run_prodigal(contigs_fp, sample_id)
 
-    elif isinstance(sequences, MultiMAGSequencesDirFmt):
-        for sample_id, mags_dict in sequences.sample_dict().items():
+    elif isinstance(seqs, MultiMAGSequencesDirFmt):
+        for sample_id, mags_dict in seqs.sample_dict().items():
             # Make sample_id folders in output locations
             for output_object in [loci, genes, proteins]:
                 os.makedirs(os.path.join(output_object.path, sample_id))

@@ -118,7 +118,7 @@ def _combine_fasta_files(*fasta_in_fp, fasta_out_fp):
             os.remove(f_in)
 
 
-def construct_pangenome_index(ctx, n_threads=1):
+def construct_pangenome_index(ctx, threads=1):
     """Constructs the pangenome index.
 
     This action will fetch the human pangenome and GRCh38 reference genome,
@@ -149,13 +149,13 @@ def construct_pangenome_index(ctx, n_threads=1):
             "FeatureData[Sequence]", combined_fasta_fp
         )
         index, = build_index(
-            sequences=combined_reference, n_threads=n_threads
+            sequences=combined_reference, n_threads=threads
         )
     return index
 
 
 def filter_reads_pangenome(
-        ctx, reads, index=None, n_threads=1, mode='local',
+        ctx, reads, index=None, threads=1, mode='local',
         sensitivity='sensitive', ref_gap_open_penalty=5,
         ref_gap_ext_penalty=3,
 ):
@@ -174,17 +174,18 @@ def filter_reads_pangenome(
 
     if index is None:
         print("Reference index was not provided - it will be generated.")
-        index, = construct_index(n_threads)
+        index, = construct_index(threads)
 
     print("Filtering reads against the index...")
     filter_params = {
         k: v for k, v in locals().items() if k in
-        ['n_threads', 'mode', 'ref_gap_open_penalty', 'ref_gap_ext_penalty']
+        ['mode', 'ref_gap_open_penalty', 'ref_gap_ext_penalty']
     }
     filtered_reads, = filter_reads(
         demultiplexed_sequences=reads,
         database=index,
         exclude_seqs=True,
+        n_threads=threads,
         **filter_params
     )
 

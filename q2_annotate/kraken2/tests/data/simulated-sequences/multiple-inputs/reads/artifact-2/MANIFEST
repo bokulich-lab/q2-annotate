@@ -1,0 +1,5 @@
+sample-id,filename,direction
+sa,sa_f_L001_R1_001.fastq.gz,forward
+sa,sa_r_L001_R2_001.fastq.gz,reverse
+se,se_f_L001_R1_001.fastq.gz,forward
+se,se_r_L001_R2_001.fastq.gz,reverse

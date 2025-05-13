@@ -11,7 +11,7 @@ from q2_annotate.busco.types._format import (
     BuscoDatabaseDirFmt, BUSCOResultsDirectoryFormat
 )
 from q2_annotate.busco.types._type import (
-    BUSCOResults, BuscoDB
+    BUSCOResults, BUSCO
 )
 
 
@@ -27,9 +27,9 @@ class TestBuscoTypes(TestPluginBase):
         )
 
     def test_BuscoDatabaseDirFmt_registration(self):
-        self.assertRegisteredSemanticType(BuscoDB)
+        self.assertRegisteredSemanticType(BUSCO)
 
     def test_BuscoDatabaseDirFmt_semantic_type_registered_to_DirFmt(self):
         self.assertSemanticTypeRegisteredToFormat(
-                ReferenceDB[BuscoDB],
-                BuscoDatabaseDirFmt)
+                ReferenceDB[BUSCO], BuscoDatabaseDirFmt
+        )
