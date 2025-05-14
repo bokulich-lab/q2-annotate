@@ -9,11 +9,8 @@ import json
 import os
 import warnings
 import pandas as pd
-from typing import List, Union
-import skbio.io
-from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
+from typing import List
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
-from q2_types.feature_data_mag import MAGSequencesDirFmt
 
 arguments_with_hyphens = {
     "auto_lineage": "auto-lineage",
@@ -27,14 +24,14 @@ MARKER_COLS = ["single", "duplicated", "fragmented", "missing", "complete"]
 
 
 def _validate_lineage_dataset_input(
-        lineage_dataset: str,
-        auto_lineage: bool,
-        auto_lineage_euk: bool,
-        auto_lineage_prok: bool,
-        busco_db: BuscoDatabaseDirFmt,
-        kwargs
-        ) -> None:
-    # When lineage_dataset is specified all other lineage flags are ignored
+    lineage_dataset: str,
+    auto_lineage: bool,
+    auto_lineage_euk: bool,
+    auto_lineage_prok: bool,
+    busco_db: BuscoDatabaseDirFmt,
+    kwargs
+) -> None:
+    # When lineage_dataset is specified, all other lineage flags are ignored
     if any([auto_lineage, auto_lineage_euk, auto_lineage_prok]):
         warnings.warn(
             f"`--p-lineage-dataset` was specified as '{lineage_dataset}'. "
@@ -44,13 +41,13 @@ def _validate_lineage_dataset_input(
         kwargs["auto_lineage_euk"] = False
         kwargs["auto_lineage_prok"] = False
 
-    # Check that lineage in deed exits inside Busco DB (if provided)
+    # Check that lineage indeed exists inside Busco DB (if provided)
     if busco_db is not None:
         if not os.path.exists(
-            f"{str(busco_db)}/busco_downloads/lineages/{lineage_dataset}"
+            f"{str(busco_db)}/lineages/{lineage_dataset}"
         ):
             present_lineages = os.listdir(
-                os.path.join(str(busco_db), "busco_downloads/lineages/")
+                os.path.join(str(busco_db), "lineages/")
             )
             raise ValueError(
                 f"The specified lineage_dataset ({lineage_dataset}) "
@@ -61,7 +58,7 @@ def _validate_lineage_dataset_input(
 
 
 def _parse_busco_params(arg_key, arg_val) -> List[str]:
-    """Creates a list with argument and its value to be consumed by BUSCO.
+    """Creates a list with an argument and its value to be consumed by BUSCO.
     Argument names will be converted to command line parameters by
     appending a '--' prefix and in some cases replacing "_" for "-"
     (only for e.g. `arguments_with_hyphens`)
@@ -138,29 +135,6 @@ def _partition_dataframe(
         return [df[i:i+max_rows] for i in range(0, len(df), max_rows)]
 
 
-def _collect_summaries(run_summaries_fp_map: dict) -> pd.DataFrame:
-    """
-    Reads-in the sample-wise summaries and concatenates them in one
-    pd.DataFrame, which is saved to file.
-
-    Args:
-        run_summaries_fp_map (dict): dict where key is sample id
-            and value is path "tmp/sample_id/batch_summary.txt"
-
-    Returns:
-        all_summaries (pd.DataFrame): DataFrame composed of the individual
-            run summaries.
-    """
-
-    all_summaries = []
-    for sample_id, path_to_summary in run_summaries_fp_map.items():
-        df = pd.read_csv(filepath_or_buffer=path_to_summary, sep="\t")
-        df["sample_id"] = sample_id
-        all_summaries.append(df)
-
-    return pd.concat(all_summaries, ignore_index=True)
-
-
 def _get_feature_table(busco_results: pd.DataFrame):
     df = busco_results.reset_index(inplace=False, drop=False)
 
@@ -205,29 +179,6 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _rename_columns(df):
-    cols = {
-        "Input_file": "input_file", "Dataset": "dataset",
-        "Complete": "complete", "Single": "single",
-        "Duplicated": "duplicated", "Fragmented": "fragmented",
-        "Missing": "missing", "n_markers": "n_markers",
-        "Scaffold N50": "scaffold_n50", "Contigs N50": "contigs_n50",
-        "Percent gaps": "percent_gaps", "Number of scaffolds": "scaffolds",
-        "sample_id": "sample_id"
-    }
-
-    cols_reshuffled = [
-        "mag_id", "sample_id", "input_file", "dataset", "complete",
-        "single", "duplicated", "fragmented", "missing", "n_markers",
-        "scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds",
-    ]
-
-    df = df.rename(columns=cols, inplace=False)
-    df["mag_id"] = df["input_file"].str.split(".", expand=True)[0]
-
-    return df[cols_reshuffled]
-
-
 def _cleanup_bootstrap(output_dir):
     # Remove unwanted files
     # until Bootstrap 3 is replaced with v5, remove the v3 scripts as
@@ -255,16 +206,100 @@ def _calculate_summary_stats(df: pd.DataFrame) -> json:
     return stats.T.to_json(orient='table')
 
 
-def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
-    lengths = {}
-    if isinstance(bins, MultiMAGSequencesDirFmt):
-        for sample, mags in bins.sample_dict().items():
-            for mag_id, mag_fp in mags.items():
-                seq = skbio.io.read(mag_fp, format="fasta")
-                lengths[mag_id] = sum([len(s) for s in seq])
-        return pd.Series(lengths, name="length")
-    else:
-        for mag_id, mag_fp in bins.feature_dict().items():
-            seq = skbio.io.read(mag_fp, format="fasta")
-            lengths[mag_id] = sum([len(s) for s in seq])
-        return pd.Series(lengths, name="length")
+def _extract_json_data(path):
+    """
+    Extracts key metrics and metadata from a BUSCO JSON result file.
+
+    Args:
+        path (str): The path to the BUSCO JSON results file.
+
+    Returns:
+        dict: A dict containing BUSCO results and metadata.
+    """
+    with open(path) as f:
+        data = json.load(f)
+
+    busco_results = {
+        "dataset": data["lineage_dataset"]["name"],
+        "complete": data["results"]["Complete percentage"],
+        "complete_value": data["results"]["Complete BUSCOs"],
+        "single": data["results"]["Single copy percentage"],
+        "duplicated": data["results"]["Multi copy percentage"],
+        "duplicated_value": data["results"]["Multi copy BUSCOs"],
+        "fragmented": data["results"]["Fragmented percentage"],
+        "missing": data["results"]["Missing percentage"],
+        "missing_value": data["results"]["Missing BUSCOs"],
+        "n_markers": data["results"]["n_markers"],
+        "scaffold_n50": data["results"]["Scaffold N50"],
+        "contigs_n50": data["results"]["Contigs N50"],
+        "percent_gaps": data["metrics"]["Percent gaps"],
+        "scaffolds": data["metrics"]["Number of scaffolds"],
+        "length": data["metrics"]["Total length"],
+    }
+
+    return busco_results
+
+
+def _calculate_contamination_completeness(missing, total, duplicated, complete):
+    completeness = round(100 * (1 - (missing / total)), 1)
+
+    try:
+        contamination = round(100 * duplicated / complete, 1)
+    except ZeroDivisionError:
+        contamination = None
+
+    return completeness, contamination
+
+
+def _validate_parameters(lineage_dataset, auto_lineage,
+                         auto_lineage_euk, auto_lineage_prok):
+    if not any([lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok]):
+        raise ValueError(
+            "At least one of these parameters must be provided/set to True: "
+            "'lineage-dataset', 'auto-lineage', 'auto-lineage-euk', "
+            "'auto-lineage-prok'."
+        )
+    if lineage_dataset and any([auto_lineage, auto_lineage_euk, auto_lineage_prok]):
+        raise ValueError(
+            "If 'lineage-dataset' is provided, all the parameters 'auto-lineage', "
+            "'auto-lineage-euk' and 'auto-lineage-prok' must be set to False."
+        )
+
+
+def _process_busco_results(results, sample_id, mag_id, file_name, additional_metrics):
+    """
+    Process BUSCO results by optionally calculating contamination and completeness,
+    removing raw marker counts, and adding metadata identifiers.
+
+    Args:
+        additional_metrics (bool): Whether to add contamination and completeness.
+        results (dict): Dictionary containing BUSCO output metrics.
+        mag_id (str): MAG ID.
+        file_name (str): Name of the input file from which results were derived.
+        sample_id (str): Sample ID.
+
+    Returns:
+        dict: Processed BUSCO results with added metadata and optional
+        completeness/contamination values.
+    """
+    # Add completeness and contamination values if specified
+    if additional_metrics:
+        results["completeness"], results["contamination"] = \
+            _calculate_contamination_completeness(
+                results["missing_value"], results["n_markers"],
+                results["duplicated_value"], results["complete_value"]
+            )
+
+    # Remove whole value keys
+    for key in ["missing_value", "complete_value", "duplicated_value"]:
+        results.pop(key, None)
+
+    # Add MAG ID, sample ID and input file name at the beginning
+    results = {
+        "mag_id": mag_id,
+        "sample_id": "" if sample_id == "feature_data" else sample_id,
+        "input_file": file_name,
+        **results,
+    }
+
+    return results

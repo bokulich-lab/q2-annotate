@@ -41,11 +41,12 @@ requirements:
 test:
   requires:
   - parameterized
+  - pytest-xdist
   imports:
   - q2_annotate
   - qiime2.plugins.annotate
   commands:
-  - pytest --pyargs q2_annotate
+  - pytest --pyargs q2_annotate -n 4
 about:
   home: https://github.com/bokulich-lab/q2-annotate
   license: BSD-3-Clause

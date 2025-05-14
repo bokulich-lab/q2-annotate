@@ -72,8 +72,8 @@ def _run_eggnog_search_pipeline(
         a string) to be executed.
 
     Returns:
-    - collated_hits: The collated ortholog hits.
-    - collated_tables: The collated feature tables.
+    - collated_hits: The results_all ortholog hits.
+    - collated_tables: The results_all feature tables.
     """
     if sequences.type <= FeatureData[MAG]:
         plugin, action_name = "types", "partition_feature_data_mags"

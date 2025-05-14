@@ -77,39 +77,83 @@ def _find_lcas(taxa_list: List[pd.DataFrame], mode: str):
 def _add_unclassified_mags(
         table: pd.DataFrame,
         taxonomy: pd.DataFrame,
-        reports: Kraken2ReportDirectoryFormat
-) -> (pd.DataFrame, pd.Series):
-    # identify which MAGs are entirely unclassified - they will be missing
-    # from the table
+        reports: Kraken2ReportDirectoryFormat,
+        coverage_threshold: float
+) -> pd.DataFrame:
+    """
+    Identify and process MAGs that are entirely unclassified based on
+    Kraken 2 reports.
+
+    Args:
+        table (pd.DataFrame): A DataFrame representing the feature table with
+                              MAGs as rows and assignments as columns.
+        taxonomy (pd.DataFrame): A DataFrame containing taxonomy assignments
+                                 for the features.
+        reports (Kraken2ReportDirectoryFormat): Directory format containing
+                                            Kraken 2 report files for each MAG.
+        coverage_threshold (float): Minimum coverage threshold used to evaluate
+                                    and classify MAGs from the Kraken 2 reports.
+
+    Returns:
+        pd.DataFrame: The updated taxonomy DataFrame with unclassified MAGs added.
+
+    Raises:
+        ValueError: If the unclassified fraction for a MAG is not 100%,
+        indicating incomplete classification or inconsistent inputs.
+    """
     samples = [
         os.path.basename(f).replace(".report.txt", "")
         for f in glob.glob(os.path.join(reports.path, "*.report.txt"))
     ]
     unclassified = set(samples) - set(table.index)
 
+    # For each MAG missing from the table we will look at the original
+    # Kraken 2 report and check whether the unclassified counts add up
+    # by summing up the following fractions:
+    # - line 1: fraction of unclassified
+    # - line 2 (if present): fraction of classified as root (we treat
+    #                        those as practically unclassified); if the
+    #                        fraction is lower than the coverage threshold
+    #                        we stop iterating as at this point we have
+    #                        accounted for all unclassified sequences
+    #                        (everything that follows should have been
+    #                        excluded)
+    # - line 3 on (if present): fraction lower than coverage threshold -
+    #                           as soon as we hit this we stop for the same
+    #                           reason as above
+    # If the report was fine, at this point we should arrive at 100%. If not,
+    # something must have been wrong with the report - we raise an error.
     for mag in unclassified:
         report_fp = os.path.join(reports.path, f"{mag}.report.txt")
+        unclassified_fraction = 0.0
         with open(report_fp, "r") as f:
-            line = f.readline()
-            if "unclassified" in line:
+            for line in f:
                 fraction = float(line.split("\t")[0])
-                if fraction != 100.0:
-                    raise ValueError(
-                        f"Unclassified fraction for MAG '{mag}' is not "
-                        f"100.0%: {fraction:.2f}%."
-                    )
-                taxonomy.loc[mag, "Taxon"] = "d__Unclassified"
-            else:
-                raise ValueError(
-                    f"Unclassified line for MAG '{mag}' is missing from "
-                    f"the Kraken 2 report."
-                )
+                if "unclassified" in line:
+                    unclassified_fraction += fraction
+                elif "root" in line:
+                    unclassified_fraction += fraction
+                    if fraction < coverage_threshold:
+                        break
+                elif fraction < coverage_threshold:
+                    unclassified_fraction += fraction
+                    break
+
+        if unclassified_fraction != 100.0:
+            raise ValueError(
+                f"Unclassified fraction for MAG '{mag}' is not "
+                f"100.0%: {unclassified_fraction:.2f}%. "
+                "Please check the Kraken 2 report."
+            )
+
+        taxonomy.loc[mag, "Taxon"] = "d__Unclassified"
+
     return taxonomy
 
 
 def kraken2_to_mag_features(
         reports: Kraken2ReportDirectoryFormat,
-        hits: Kraken2OutputDirectoryFormat,
+        outputs: Kraken2OutputDirectoryFormat,
         coverage_threshold: float = 0.1,
         # lca_mode: str = 'lca'
 ) -> pd.DataFrame:
@@ -118,7 +162,7 @@ def kraken2_to_mag_features(
     taxa_list = []
     # convert IDs to match MAGs instead of taxids/db ids
     for mag_id in table.index:
-        kraken_table_fp = (hits.path / f'{mag_id}.output.txt')
+        kraken_table_fp = (outputs.path / f'{mag_id}.output.txt')
         hits_df = pd.read_csv(
             kraken_table_fp, sep='\t', header=None, dtype='str'
         )
@@ -136,7 +180,7 @@ def kraken2_to_mag_features(
         taxa_list.append(new_taxa)
 
     taxonomy = _find_lcas(taxa_list, mode='lca')
-    return _add_unclassified_mags(table, taxonomy, reports)
+    return _add_unclassified_mags(table, taxonomy, reports, coverage_threshold)
 
 
 def kraken2_to_features(reports: Kraken2ReportDirectoryFormat,
@@ -166,6 +210,12 @@ def kraken2_to_features(reports: Kraken2ReportDirectoryFormat,
     # filter taxonomy to only IDs in table
     # use list to avoid index name change
     taxonomy = taxonomy.loc[list(table.columns)]
+
+    if table.empty:
+        raise ValueError(
+            "The resulting feature table was empty. Please adjust the "
+            "coverage threshold and try again."
+        )
 
     return table, taxonomy
 
@@ -262,9 +312,11 @@ def _combine_ncbi_trees(trees):
                         assert tip.name in tip_cache
                         subtree_inserted = True
 
-                if not subtree_inserted:
+                # did we exhaust our parents and still not find ourselves?
+                if not subtree_inserted and not (tip.name == matching.name):
                     # should be impossible. Implies ancestor_found was always
-                    # True but not in tip_cache
+                    # True but not in tip_cache AND the tip is not an
+                    # intermediate node in the tree that already is present.
                     raise AssertionError(f"{tip.name} could not be inserted")
     return full_tree
 

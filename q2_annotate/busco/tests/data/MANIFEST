@@ -1,6 +1,0 @@
-sample-id,mag-id,filename
-sample1,bin1,sample1/bin1.fasta
-sample1,bin2,sample1/bin2.fasta
-sample2,bin1,sample2/bin1.fasta
-sample2,bin2,sample2/bin2.fasta
-sample3,bin1,sample3/bin1.fasta

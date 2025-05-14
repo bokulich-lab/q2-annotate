@@ -28,7 +28,7 @@ from q2_types.profile_hmms import PressedProfileHmmsDirectoryFmt
 
 
 def _eggnog_hmmer_search(
-    sequences: Union[
+    seqs: Union[
         ContigSequencesDirFmt,
         MultiMAGSequencesDirFmt,
         MAGSequencesDirFmt
@@ -54,17 +54,17 @@ def _eggnog_hmmer_search(
                 '--genepred', 'prodigal'  # default incompatible with HMMER
             ]
         )
-        result, ft, loci = _eggnog_search(sequences, search_runner, output_loc)
+        result, ft, loci = _eggnog_search(seqs, search_runner, output_loc)
     return result, ft, loci
 
 
 def search_orthologs_hmmer(
-    ctx, sequences, pressed_hmm_db, idmap, seed_alignments,
+    ctx, seqs, pressed_hmm_db, idmap, seed_alignments,
     num_cpus=1, db_in_memory=False, num_partitions=None
 ):
     collated_hits, collated_tables, collated_loci = \
         _run_eggnog_search_pipeline(
-            ctx, sequences, [idmap, pressed_hmm_db, seed_alignments],
+            ctx, seqs, [idmap, pressed_hmm_db, seed_alignments],
             num_cpus, db_in_memory, num_partitions,
             "_eggnog_hmmer_search"
         )
