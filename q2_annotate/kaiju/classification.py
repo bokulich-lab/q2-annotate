@@ -113,7 +113,7 @@ def _construct_feature_table(
     """
     Args:
         table_fp (str): The file path of the table.
-        sample_data_mags (bool): A flag indicating whether the data was created from 
+        sample_data_mags (bool): A flag indicating whether the data was created from
             SampleData[MAGs].
 
     Returns:
@@ -170,7 +170,7 @@ def _process_kaiju_reports(tmpdir, all_args, sample_data_mags):
             are located.
         all_args (dict): A dictionary containing the original arguments
             passed to the classification action.
-        sample_data_mags (bool): A flag indicating whether the data was created from 
+        sample_data_mags (bool): A flag indicating whether the data was created from
             SampleData[MAGs].
 
     Returns:

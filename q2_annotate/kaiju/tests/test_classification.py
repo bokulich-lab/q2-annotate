@@ -82,10 +82,10 @@ class TestKaijuClassification(TestPluginBase):
 
         assert_frame_equal(exp_table, obs_table)
         assert_frame_equal(exp_taxonomy, obs_taxonomy)
-        
+
     def test_construct_feature_table_sample_data_mags(self):
         obs_table, obs_taxonomy = _construct_feature_table(
-            table_fp=self.get_data_path('kaiju-table-sample-mags.tsv'), 
+            table_fp=self.get_data_path('kaiju-table-sample-mags.tsv'),
             sample_data_mags=True
         )
 
