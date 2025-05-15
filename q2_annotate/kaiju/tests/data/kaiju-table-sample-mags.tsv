@@ -1,0 +1,12 @@
+file	percent	reads	taxon_id	taxon_name
+/a/b/sample1/bin1.out	35.165920	35165920	1236	Bacteria;Proteobacteria;Gammaproteobacteria;NA;NA;NA;NA;
+/a/b/sample1/bin2.out	20.825439	20825439	91061	Bacteria;Firmicutes;Bacilli;NA;NA;NA;NA;
+/a/b/sample1/bin3.out	8.122760	8122760	1773	Bacteria;Actinobacteria;Actinomycetia;Corynebacteriales;Mycobacteriaceae;Mycobacterium;Mycobacterium tuberculosis;
+/a/b/sample1/bin4.out	0.002240	2240	128975	Viruses;NA;NA;NA;NA;NA;Salmonella phage Fels-1;
+/a/b/sample1/bin5.out	31.581949	31581949	NA	cannot be assigned to a (non-viral) class
+/a/b/sample1/bin6.out	4.301692	4301692	NA	unclassified
+/a/b/sample2/bin7.out	80.122760	80122760	1773	Bacteria;Actinobacteria;Actinomycetia;Corynebacteriales;Mycobacteriaceae;Mycobacterium;Mycobacterium tuberculosis;
+/a/b/sample2/bin8.out	6.232240	6232240	128975	Viruses;NA;NA;NA;NA;NA;Salmonella phage Fels-1;
+/a/b/sample2/bin9.out	5.165920	5165920	1236	Bacteria;Proteobacteria;Gammaproteobacteria;NA;NA;NA;NA;
+/a/b/sample2/bin10.out	2.581949	2581949	NA	cannot be assigned to a (non-viral) class
+/a/b/sample2/bin11.out	5.897131	5897131	NA	unclassified

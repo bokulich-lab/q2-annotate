@@ -69,7 +69,24 @@ class TestKaijuClassification(TestPluginBase):
 
     def test_construct_feature_table(self):
         obs_table, obs_taxonomy = _construct_feature_table(
-            table_fp=self.get_data_path('kaiju-table.tsv')
+            table_fp=self.get_data_path('kaiju-table.tsv'), sample_data_mags=False
+        )
+
+        exp_table = pd.read_csv(
+            self.get_data_path('kaiju-ft-ok.csv'), index_col=0
+        )
+        exp_table.columns.name = "taxon_id"
+        exp_taxonomy = pd.read_csv(
+            self.get_data_path('kaiju-taxonomy-ok.csv'), index_col=0
+        )
+
+        assert_frame_equal(exp_table, obs_table)
+        assert_frame_equal(exp_taxonomy, obs_taxonomy)
+        
+    def test_construct_feature_table_sample_data_mags(self):
+        obs_table, obs_taxonomy = _construct_feature_table(
+            table_fp=self.get_data_path('kaiju-table-sample-mags.tsv'), 
+            sample_data_mags=True
         )
 
         exp_table = pd.read_csv(
@@ -143,11 +160,13 @@ class TestKaijuClassification(TestPluginBase):
     @patch("subprocess.run")
     @patch("q2_annotate.kaiju.classification._construct_feature_table")
     def test_process_kaiju_reports_c_float(self, p1, p2):
+        os.mkdir(os.path.join(self.temp_dir.name, "sample1"))
         open(
-            os.path.join(str(self.temp_dir.name), "sample1.out"), "w"
+            os.path.join(str(self.temp_dir.name), "sample1", "bin1.out"), "w"
         ).close()
+        os.mkdir(os.path.join(self.temp_dir.name, "sample2"))
         open(
-            os.path.join(str(self.temp_dir.name), "sample2.out"), "w"
+            os.path.join(str(self.temp_dir.name), "sample2", "bin2.out"), "w"
         ).close()
         args = {
             "r": "species",
@@ -157,7 +176,7 @@ class TestKaijuClassification(TestPluginBase):
             "c": 0.6
         }
 
-        _process_kaiju_reports(self.temp_dir.name, args)
+        _process_kaiju_reports(self.temp_dir.name, args, False)
 
         exp_cmd = [
             "kaiju2table", "-v", "-o",
@@ -167,11 +186,11 @@ class TestKaijuClassification(TestPluginBase):
             "-n", f"{self.temp_dir.name}/names.dmp",
             "-l", "superkingdom,phylum,class,order,family,genus,species",
             "-e", "-u", "-m", "0.6",
-            f"{self.temp_dir.name}/sample1.out",
-            f"{self.temp_dir.name}/sample2.out"
+            f"{self.temp_dir.name}/sample1/bin1.out",
+            f"{self.temp_dir.name}/sample2/bin2.out"
         ]
 
-        p1.assert_called_once_with(f"{self.temp_dir.name}/results.tsv")
+        p1.assert_called_once_with(f"{self.temp_dir.name}/results.tsv", False)
         p2.assert_called_once_with(exp_cmd, check=True)
 
     @patch("subprocess.run")
@@ -191,7 +210,7 @@ class TestKaijuClassification(TestPluginBase):
             "c": 2
         }
 
-        _process_kaiju_reports(self.temp_dir.name, args)
+        _process_kaiju_reports(self.temp_dir.name, args, False)
 
         exp_cmd = [
             "kaiju2table", "-v", "-o",
@@ -205,7 +224,7 @@ class TestKaijuClassification(TestPluginBase):
             f"{self.temp_dir.name}/sample2.out"
         ]
 
-        p1.assert_called_once_with(f"{self.temp_dir.name}/results.tsv")
+        p1.assert_called_once_with(f"{self.temp_dir.name}/results.tsv", False)
         p2.assert_called_once_with(exp_cmd, check=True)
 
     @patch("subprocess.run")

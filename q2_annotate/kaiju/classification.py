@@ -107,7 +107,9 @@ def _fix_id_types(table: pd.DataFrame) -> pd.DataFrame:
     return table
 
 
-def _construct_feature_table(table_fp: str) -> (pd.DataFrame, pd.DataFrame):
+def _construct_feature_table(
+        table_fp: str, sample_data_mags
+) -> (pd.DataFrame, pd.DataFrame):
     """
     Args:
         table_fp (str): The file path of the table.
@@ -126,7 +128,10 @@ def _construct_feature_table(table_fp: str) -> (pd.DataFrame, pd.DataFrame):
     table = _fix_id_types(table)
 
     # extract sample name from the file path
-    table["sample"] = table["file"].map(lambda x: Path(x).stem)
+    if sample_data_mags:
+        table["sample"] = table["file"].map(lambda x: Path(x).parent.name)
+    else:
+        table["sample"] = table["file"].map(lambda x: Path(x).stem)
 
     # clean up all the NAs
     table["taxon_name"] = table["taxon_name"].str.replace("NA", "Unspecified")
@@ -156,7 +161,7 @@ def _construct_feature_table(table_fp: str) -> (pd.DataFrame, pd.DataFrame):
     return table, taxonomy
 
 
-def _process_kaiju_reports(tmpdir, all_args):
+def _process_kaiju_reports(tmpdir, all_args, sample_data_mags):
     """
     Args:
         tmpdir (str): The temporary directory where the Kaiju report files
@@ -183,7 +188,11 @@ def _process_kaiju_reports(tmpdir, all_args):
     else:
         table_args.extend(["-c", str(all_args["c"])])
 
-    report_fps = sorted(glob.glob(os.path.join(tmpdir, "*.out")))
+    report_fps = sorted(
+        glob.glob(os.path.join(tmpdir, "*.out")) +
+        glob.glob(os.path.join(tmpdir, "*/", "*.out"))
+    )
+
     table_fp = os.path.join(tmpdir, "results.tsv")
 
     cmd = [
@@ -198,7 +207,7 @@ def _process_kaiju_reports(tmpdir, all_args):
             "stdout and stderr to learn more."
         )
 
-    return _construct_feature_table(table_fp)
+    return _construct_feature_table(table_fp, sample_data_mags)
 
 
 def _classify_kaiju_helper(
@@ -240,6 +249,7 @@ def _classify_kaiju_helper(
     )
     files_fwd, files_rev, output_fps = [], [], []
     paired = False
+    sample_data_mags = False
 
     with tempfile.TemporaryDirectory() as tmpdir:
         if isinstance(seqs, read_types):
@@ -260,12 +270,14 @@ def _classify_kaiju_helper(
 
         elif isinstance(seqs, MultiFASTADirectoryFormat):
             outer_dict = seqs.sample_dict()
+            sample_data_mags = True
 
         if not isinstance(seqs, read_types):
             for outer_id, inner_dict in outer_dict.items():
+                os.makedirs(os.path.join(tmpdir, outer_id), exist_ok=True)
                 for inner_id, full_path in inner_dict.items():
                     files_fwd.append(full_path)
-                    output_fps.append(f"{os.path.join(tmpdir, inner_id)}.out")
+                    output_fps.append(f"{os.path.join(tmpdir, outer_id, inner_id)}.out")
 
         base_cmd.extend(["-i", ",".join(files_fwd)])
         if paired:
@@ -281,7 +293,7 @@ def _classify_kaiju_helper(
                 "stdout and stderr to learn more."
             )
 
-        table, taxonomy = _process_kaiju_reports(tmpdir, all_args)
+        table, taxonomy = _process_kaiju_reports(tmpdir, all_args, sample_data_mags)
 
     return table, taxonomy
 
