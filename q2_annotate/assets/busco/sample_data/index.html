@@ -27,7 +27,7 @@
                     <p>
                         The table below shows the summary statistics of the BUSCO marker count
                         fractions for the categories <b>Single</b>, <b>Duplicated</b>, <b>Fragmented</b>,
-                        <b>Missing</b>, and <b>Complete</b>. The statistics are calculated for
+                        <b>Missing</b>, <b>Complete</b>, <b>Completeness</b> and <b>Contamination</b>. The statistics are calculated for
                         the categories across <b>all MAGs</b> in <b>all samples</b>.
                     </p>
                     <table id="summaryTable" class="table table-hover">
@@ -39,6 +39,8 @@
                             <th scope="col">% fragmented</th>
                             <th scope="col">% missing</th>
                             <th scope="col">% complete</th>
+                            <th scope="col">% completeness</th>
+                            <th scope="col">% contamination</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -111,6 +113,20 @@
             </div>
         </div>
     </div>
+    <div class="row" style="margin-bottom: 10px">
+        <div class="col-lg-12">
+            <div class="card">
+                <h5 class="card-header">Completeness vs Contamination</h5>
+                <div class="card-body">
+                    <p>
+                        This scatterplot shows the relationship between BUSCO completeness and contamination
+                        for each MAG across your dataset. Each point is colored by sample ID.
+                    </p>
+                    <div id="scatterPlotDiv" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script id="vega_summary_json" type="application/json">
@@ -137,6 +153,10 @@
     }}
 </script>
 
+<script id="scatter_json" type="application/json">
+    {{ scatter_json | safe }}
+</script>
+
 <script type="text/javascript">
     $(document).ready(function () {
         // temporary hack to make it look good with Bootstrap 5
@@ -147,7 +167,7 @@
 
         const rows = ['rowMinimum', 'rowMedian', 'rowMean', 'rowMaximum', 'rowTotal'];
         const indices = ['min', 'median', 'mean', 'max', 'count'];
-        const cols = ['single', 'duplicated', 'fragmented', 'missing', 'complete'];
+        const cols = ['single', 'duplicated', 'fragmented', 'missing', 'complete', 'completeness', 'contamination'];
         rows.forEach((rowId, index) => {
             let rowElement = document.getElementById(rowId)
             let colVals = summarySpec.data[index]
@@ -201,6 +221,16 @@
                 plotSelectableControls.appendChild(vegaBindings[0])
             }
         );
+        const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
+        vegaEmbed("#scatterPlotDiv", scatterSpec).then(
+            function (result) {
+                result.view.logLevel(vega.Warn);
+            }
+        ).catch(
+            function (error) {
+                handleErrors([error], $("#scatterPlotDiv"));
+    }
+);
     });
 </script>
 

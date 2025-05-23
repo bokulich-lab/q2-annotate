@@ -57,16 +57,56 @@ def _draw_marker_summary_histograms(data: pd.DataFrame) -> dict:
         dict: Dictionary containing the Vega spec.
     """
     chart = _draw_horizontal_histograms(
-        data, columns=["single", "duplicated", "fragmented", "missing"]
+        data, columns=["single", "duplicated", "fragmented", "missing", "completeness"]
     )
     chart2 = _draw_horizontal_histograms(
-        data, columns=["scaffolds", "contigs_n50", "scaffold_n50", "length"]
+        data, columns=[
+            "contamination", "scaffolds", "contigs_n50", "scaffold_n50", "length"
+        ]
     )
 
     chart = alt.vconcat(chart, chart2).configure_axis(
         labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
     ).configure_legend(
         labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
+    ).configure_header(
+        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
+    )
+
+    return chart.to_dict()
+
+
+def _draw_completeness_vs_contamination(df: pd.DataFrame):
+    """
+    Displays a scatterplot of completeness vs contamination,
+    colored by sample_id for sample data and by mag_id for feature data.
+    """
+    tooltip = []
+    for col in df.columns:
+        if pd.api.types.is_numeric_dtype(df[col]):
+            tooltip.append(f'{col}:Q')
+        else:
+            tooltip.append(f'{col}:N')
+
+    encoding = {
+        'x': alt.X('completeness:Q', title='Completeness'),
+        'y': alt.Y('contamination:Q', title='Contamination'),
+        'tooltip': tooltip
+    }
+
+    # Use sample ID to color points for sample data and MAG ID for feature data
+    if df['sample_id'].notnull().all():
+        encoding['color'] = alt.Color('sample_id:N', title='Sample ID')
+    else:
+        encoding['color'] = alt.Color('mag_id:N', title='MAG ID')
+
+    chart = alt.Chart(df).mark_circle(size=60).encode(**encoding).properties(
+        width=600,
+        height=400
+    ).configure_axis(
+        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
+    ).configure_legend(
+        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE, labelLimit=1000
     ).configure_header(
         labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
     )
@@ -83,8 +123,8 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
         dict: Dictionary containing the Vega spec.
     """
     metrics = [
-        'single', 'duplicated', 'fragmented', 'missing',
-        'scaffolds', 'contigs_n50', 'length'
+        'single', 'duplicated', 'fragmented', 'missing', 'completeness',
+        'contamination', 'scaffolds', 'contigs_n50', 'length'
     ]
     data = pd.melt(
         data,
