@@ -71,6 +71,10 @@ class TestBUSCOFeatureData(TestPluginBase):
         return_value={"fake3": {"plot": "spec"}}
     )
     @patch(
+        "q2_annotate.busco.busco._draw_completeness_vs_contamination",
+        return_value={"fake4": {"plot": "spec"}}
+    )
+    @patch(
         "q2_annotate.busco.busco._get_feature_table", return_value="table1"
     )
     @patch(
@@ -81,7 +85,7 @@ class TestBUSCOFeatureData(TestPluginBase):
     @patch("q2_annotate.busco.busco._cleanup_bootstrap")
     def test_visualize_busco(
             self, mock_clean, mock_render, mock_stats, mock_table,
-            mock_selectable, mock_marker, mock_detailed
+            mock_scatter, mock_selectable, mock_marker, mock_detailed
     ):
         _visualize_busco(
             output_dir=self.temp_dir.name,
@@ -116,6 +120,7 @@ class TestBUSCOFeatureData(TestPluginBase):
             "vega_summary_json": json.dumps({"fake2": {"plot": "spec"}}),
             "table": "table1",
             "summary_stats_json": "stats1",
+            "scatter_json": json.dumps({"fake4": {"plot": "spec"}}),
             "page_size": 100
         }
         mock_render.assert_called_with(

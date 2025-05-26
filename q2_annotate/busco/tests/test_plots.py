@@ -5,13 +5,14 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import json
 import tempfile
 import pandas as pd
 from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.busco.plots_detailed import _draw_detailed_plots
 from q2_annotate.busco.plots_summary import _draw_marker_summary_histograms, \
-    _draw_selectable_summary_histograms
+    _draw_selectable_summary_histograms, _draw_completeness_vs_contamination
 
 
 class TestBUSCOPlots(TestPluginBase):
@@ -106,17 +107,19 @@ class TestBUSCOPlots(TestPluginBase):
         self.assertIsInstance(obs, dict)
         self.assertIn('config', obs)
         self.assertIn('vconcat', obs)
-        self.assertEqual(len(obs['vconcat'][0]['hconcat']), 4)
-        self.assertEqual(len(obs['vconcat'][1]['hconcat']), 4)
+        self.assertEqual(len(obs['vconcat'][0]['hconcat']), 5)
+        self.assertEqual(len(obs['vconcat'][1]['hconcat']), 5)
 
-        exp_titles = ['Single', 'Duplicated', 'Fragmented', 'Missing']
+        exp_titles = ['Single', 'Duplicated', 'Fragmented', 'Missing', 'Completeness']
         obs_titles = [
             x['encoding']['x']['title']
             for x in obs['vconcat'][0]['hconcat']
         ]
         self.assertListEqual(exp_titles, obs_titles)
 
-        exp_titles = ['Scaffolds', 'Contigs n50', 'Scaffold n50', 'Length']
+        exp_titles = [
+            'Contamination', 'Scaffolds', 'Contigs n50', 'Scaffold n50', 'Length'
+        ]
         obs_titles = [
             x['encoding']['x']['title']
             for x in obs['vconcat'][1]['hconcat']
@@ -142,3 +145,15 @@ class TestBUSCOPlots(TestPluginBase):
         for key in ['axis', 'header', 'legend']:
             self.assertEqual(config[key]['labelFontSize'], 12)
             self.assertEqual(config[key]['titleFontSize'], 15)
+
+    def test_scatter_sample_data(self):
+        obs = _draw_completeness_vs_contamination(self.df_sample_data)
+        with open(self.get_data_path("scatterplot/sample_data.json"), "r") as f:
+            exp = json.load(f)
+        self.assertEqual(obs, exp)
+
+    def test_scatter_feature_data(self):
+        obs = _draw_completeness_vs_contamination(self.df_feature_data)
+        with open(self.get_data_path("scatterplot/feature_data.json"), "r") as f:
+            exp = json.load(f)
+        self.assertEqual(obs, exp)

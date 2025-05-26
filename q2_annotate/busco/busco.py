@@ -18,7 +18,7 @@ import q2templates
 
 from q2_annotate.busco.plots_detailed import _draw_detailed_plots
 from q2_annotate.busco.plots_summary import _draw_marker_summary_histograms, \
-    _draw_selectable_summary_histograms
+    _draw_selectable_summary_histograms, _draw_completeness_vs_contamination
 
 from q2_annotate.busco.utils import (
     _parse_busco_params,
@@ -214,12 +214,14 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         })
 
     # Render
+    results = results.where(pd.notnull(results), None)
     vega_json = json.dumps(context)
     vega_json_summary = json.dumps(
         _draw_marker_summary_histograms(results)
     )
     table_json = _get_feature_table(results)
     stats_json = _calculate_summary_stats(results)
+    scatter_json = json.dumps(_draw_completeness_vs_contamination(results))
     tabbed_context.update({
         "tabs": [
             {"title": "QC overview", "url": "index.html"},
@@ -230,6 +232,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         "vega_summary_json": vega_json_summary,
         "table": table_json,
         "summary_stats_json": stats_json,
+        "scatter_json": scatter_json,
         "page_size": 100
     })
     q2templates.render(templates, output_dir, context=tabbed_context)

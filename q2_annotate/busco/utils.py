@@ -20,7 +20,8 @@ arguments_with_hyphens = {
     "update_data": "update-data",
 }
 
-MARKER_COLS = ["single", "duplicated", "fragmented", "missing", "complete"]
+MARKER_COLS = ["single", "duplicated", "fragmented", "missing",
+               "complete", "completeness", "contamination"]
 
 
 def _validate_lineage_dataset_input(
@@ -142,7 +143,8 @@ def _get_feature_table(busco_results: pd.DataFrame):
         "mag_id": "MAG", "sample_id": "Sample", "dataset": "Dataset",
         "single": "% single", "duplicated": "% duplicated",
         "fragmented": "% fragmented", "missing": "% missing",
-        "complete": "% complete", "n_markers": "Total markers",
+        "complete": "% complete", "completeness": "% completeness",
+        "contamination": "% contamination", "n_markers": "Total markers",
         "contigs_n50": "N50 contigs", "percent_gaps": "Percent gaps",
         "scaffolds": "Contigs", "length": "Length (bp)"
     }
