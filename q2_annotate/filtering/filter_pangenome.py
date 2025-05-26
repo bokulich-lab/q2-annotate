@@ -79,7 +79,7 @@ def _fetch_and_extract_grch38(get_ncbi_genomes: callable, dest_dir: str):
         dest_dir (str): The directory where the genome data will be saved.
     """
     results = get_ncbi_genomes(
-        taxon='Homo sapiens',
+        taxa=['Homo sapiens'],
         only_reference=True,
         assembly_levels=['chromosome'],
         assembly_source='refseq',

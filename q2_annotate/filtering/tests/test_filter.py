@@ -184,7 +184,7 @@ class TestMAGFiltering(TestPluginBase):
         _fetch_and_extract_grch38(fake_callable, "/some/where")
 
         fake_callable.assert_called_once_with(
-            taxon='Homo sapiens',
+            taxa=['Homo sapiens'],
             only_reference=True,
             assembly_levels=['chromosome'],
             assembly_source='refseq',
