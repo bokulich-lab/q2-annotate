@@ -49,21 +49,21 @@ def _draw_horizontal_histograms(data: pd.DataFrame, columns: List[str]):
     return chart
 
 
-def _draw_marker_summary_histograms(data: pd.DataFrame) -> dict:
+def _draw_marker_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
     """
     Draws summary histograms for the BUSCO marker results of all samples.
 
     Returns:
         dict: Dictionary containing the Vega spec.
     """
-    chart = _draw_horizontal_histograms(
-        data, columns=["single", "duplicated", "fragmented", "missing", "completeness"]
-    )
-    chart2 = _draw_horizontal_histograms(
-        data, columns=[
-            "contamination", "scaffolds", "contigs_n50", "scaffold_n50", "length"
-        ]
-    )
+    cols = [["single", "duplicated", "fragmented", "missing", "completeness"],
+            ["contamination", "scaffolds", "contigs_n50", "scaffold_n50", "length"]]
+    if not comp_cont:
+        cols[0].remove("completeness")
+        cols[1].remove("contamination")
+        
+    chart = _draw_horizontal_histograms(data, columns=cols[0])
+    chart2 = _draw_horizontal_histograms(data, columns=cols[1])
 
     chart = alt.vconcat(chart, chart2).configure_axis(
         labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
@@ -89,8 +89,10 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
             tooltip.append(f'{col}:N')
 
     encoding = {
-        'x': alt.X('completeness:Q', title='Completeness'),
-        'y': alt.Y('contamination:Q', title='Contamination'),
+        'x': alt.X('completeness:Q', title='Completeness',
+                   scale=alt.Scale(domain=[0, 100])),
+        'y': alt.Y('contamination:Q', title='Contamination',
+                   scale=alt.Scale(domain=[0, 100])),
         'tooltip': tooltip
     }
 
@@ -104,7 +106,7 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
 
     chart = alt.Chart(df).mark_circle(size=60).encode(**encoding).properties(
         width=600,
-        height=400
+        height=600
     ).configure_axis(
         labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
     ).configure_legend(
@@ -116,7 +118,7 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
     return chart.to_dict()
 
 
-def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
+def _draw_selectable_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
     """
     Draws summary histograms for the MAG assembly metrics where users
     can indicate which metric and for which sample they want to see.
@@ -124,10 +126,12 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
     Returns:
         dict: Dictionary containing the Vega spec.
     """
-    metrics = [
-        'single', 'duplicated', 'fragmented', 'missing', 'completeness',
-        'contamination', 'scaffolds', 'contigs_n50', 'length'
-    ]
+    metrics = ["single", "duplicated", "fragmented", "missing", "completeness",
+               "contamination", "scaffolds", "contigs_n50", "scaffold_n50", "length"]
+    if not comp_cont:
+        metrics.remove("completeness")
+        metrics.remove("contamination")
+    
     data = pd.melt(
         data,
         id_vars=["sample_id", "mag_id", "dataset", "n_markers"],
