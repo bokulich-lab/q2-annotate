@@ -96,9 +96,11 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
 
     # Use sample ID to color points for sample data and MAG ID for feature data
     if df['sample_id'].notnull().all():
-        encoding['color'] = alt.Color('sample_id:N', title='Sample ID')
+        encoding['color'] = alt.Color('sample_id:N', title='Sample ID', 
+                                      scale=alt.Scale(scheme='viridis'))
     else:
-        encoding['color'] = alt.Color('mag_id:N', title='MAG ID')
+        encoding['color'] = alt.Color('mag_id:N', title='MAG ID', 
+                                      scale=alt.Scale(scheme='viridis'))
 
     chart = alt.Chart(df).mark_circle(size=60).encode(**encoding).properties(
         width=600,
