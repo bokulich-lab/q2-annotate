@@ -109,7 +109,7 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
         labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE, labelLimit=1000
     ).configure_header(
         labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
-    )
+    ).interactive()
 
     return chart.to_dict()
 
