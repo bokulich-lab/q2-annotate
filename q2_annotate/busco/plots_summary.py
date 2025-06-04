@@ -77,34 +77,40 @@ def _draw_marker_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
 
 
 def _draw_completeness_vs_contamination(df: pd.DataFrame):
-    """
-    Displays a scatterplot of completeness vs contamination,
-    colored by sample_id for sample data and by mag_id for feature data.
-    """
-    tooltip = []
-    for col in df.columns:
-        if pd.api.types.is_numeric_dtype(df[col]):
-            tooltip.append(f'{col}:Q')
-        else:
-            tooltip.append(f'{col}:N')
+    import altair as alt
 
-    encoding = {
-        'x': alt.X('completeness:Q', title='Completeness',
-                   scale=alt.Scale(domain=[0, 100])),
-        'y': alt.Y('contamination:Q', title='Contamination',
-                   scale=alt.Scale(domain=[0, 100])),
-        'tooltip': tooltip
-    }
+    color_field = 'sample_id' if df['sample_id'].notnull().all() else 'mag_id'
+    color_title = 'Sample ID' if color_field == 'sample_id' else 'MAG ID'
 
-    # Use sample ID to color points for sample data and MAG ID for feature data
-    if df['sample_id'].notnull().all():
-        encoding['color'] = alt.Color('sample_id:N', title='Sample ID', 
-                                      scale=alt.Scale(scheme='viridis'))
-    else:
-        encoding['color'] = alt.Color('mag_id:N', title='MAG ID', 
-                                      scale=alt.Scale(scheme='viridis'))
+    tooltip = [
+        f'{col}:Q' if pd.api.types.is_numeric_dtype(df[col]) else f'{col}:N'
+        for col in df.columns
+    ]
 
-    chart = alt.Chart(df).mark_circle(size=60).encode(**encoding).properties(
+    chart = alt.Chart(df)
+
+    # If coloring by sample_id, include dropdown filter
+    if color_field == 'sample_id':
+        unique_ids = sorted(df[color_field].dropna().unique().tolist())
+
+        selection = alt.param(
+            name='selected_id',
+            bind=alt.binding_select(options=['All'] + unique_ids, name=f'{color_title}: '),
+            value='All'
+        )
+
+        chart = chart.transform_filter(
+            f"(selected_id == 'All') || (datum.{color_field} == selected_id)"
+        ).add_params(
+            selection
+        )
+
+    chart = chart.mark_circle(size=60).encode(
+        x=alt.X('completeness:Q', title='Completeness', scale=alt.Scale(domain=[0, 100])),
+        y=alt.Y('contamination:Q', title='Contamination', scale=alt.Scale(domain=[0, 100])),
+        color=alt.Color(f'{color_field}:N', title=color_title, scale=alt.Scale(scheme='viridis')),
+        tooltip=tooltip
+    ).properties(
         width=600,
         height=600
     ).configure_axis(
@@ -116,6 +122,8 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
     ).interactive()
 
     return chart.to_dict()
+
+
 
 
 def _draw_selectable_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:

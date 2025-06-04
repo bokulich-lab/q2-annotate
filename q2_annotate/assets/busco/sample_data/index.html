@@ -126,7 +126,9 @@
                         This scatterplot shows the relationship between BUSCO completeness and contamination
                         for each MAG across your dataset. Each point is colored by sample ID.
                     </p>
+                    <div class="col-lg-12" id="scatterDropdownControls" style="margin-bottom: 10px;"></div>
                     <div id="scatterPlotDiv" style="margin-top: 10px;"></div>
+                    
                 </div>
             </div>
         </div>
@@ -227,15 +229,23 @@
             }
         );
         const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
-        vegaEmbed("#scatterPlotDiv", scatterSpec).then(
-            function (result) {
-                result.view.logLevel(vega.Warn);
-            }
-        ).catch(
-            function (error) {
-                handleErrors([error], $("#scatterPlotDiv"));
+vegaEmbed("#scatterPlotDiv", scatterSpec).then(
+    function (result) {
+        result.view.logLevel(vega.Warn);
+
+        // Move dropdown to custom location using document query
+        const dropdownWrapper = document.querySelector("#scatterPlotDiv .vega-bindings");
+        const target = document.getElementById('scatterDropdownControls');
+        if (dropdownWrapper && target) {
+            target.appendChild(dropdownWrapper);
+        }
+    }
+).catch(
+    function (error) {
+        handleErrors([error], $("#scatterPlotDiv"));
     }
 );
+
     });
 </script>
 
