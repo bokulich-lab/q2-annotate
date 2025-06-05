@@ -93,7 +93,7 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
 
         selection = alt.param(
             name='selected_id',
-            bind=alt.binding_select(options=['All'] + unique_ids, 
+            bind=alt.binding_select(options=['All'] + unique_ids,
                                     name=f'{color_title}: '),
             value='All'
         )
@@ -105,11 +105,11 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
         )
 
     chart = chart.mark_circle(size=60).encode(
-        x=alt.X('completeness:Q', title='Completeness', 
+        x=alt.X('completeness:Q', title='Completeness',
                 scale=alt.Scale(domain=[0, 100])),
-        y=alt.Y('contamination:Q', title='Contamination', 
+        y=alt.Y('contamination:Q', title='Contamination',
                 scale=alt.Scale(domain=[0, 100])),
-        color=alt.Color(f'{color_field}:N', title=color_title, 
+        color=alt.Color(f'{color_field}:N', title=color_title,
                         scale=alt.Scale(scheme='viridis')),
         tooltip=tooltip
     ).properties(
