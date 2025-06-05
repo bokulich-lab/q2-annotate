@@ -77,8 +77,6 @@ def _draw_marker_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
 
 
 def _draw_completeness_vs_contamination(df: pd.DataFrame):
-    import altair as alt
-
     color_field = 'sample_id' if df['sample_id'].notnull().all() else 'mag_id'
     color_title = 'Sample ID' if color_field == 'sample_id' else 'MAG ID'
 
@@ -122,7 +120,6 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
     ).interactive()
 
     return chart.to_dict()
-
 
 
 

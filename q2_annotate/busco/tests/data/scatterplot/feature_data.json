@@ -28,6 +28,9 @@
     "encoding": {
         "color": {
             "field": "sample_id",
+            "scale": {
+                "scheme": "viridis"
+            },
             "title": "Sample ID",
             "type": "nominal"
         },
@@ -103,16 +106,58 @@
         ],
         "x": {
             "field": "completeness",
+            "scale": {
+                "domain": [
+                    0,
+                    100
+                ]
+            },
             "title": "Completeness",
             "type": "quantitative"
         },
         "y": {
             "field": "contamination",
+            "scale": {
+                "domain": [
+                    0,
+                    100
+                ]
+            },
             "title": "Contamination",
             "type": "quantitative"
         }
     },
-    "height": 400,
+    "height": 600,
+    "params": [
+        {
+            "name": "selected_id",
+            "bind": {
+                "input": "select",
+                "options": [
+                    "All",
+                    "data"
+                ],
+                "name": "Sample ID: "
+            },
+            "value": "All"
+        },
+        {
+            "name": "param_1",
+            "select": {
+                "type": "interval",
+                "encodings": [
+                    "x",
+                    "y"
+                ]
+            },
+            "bind": "scales"
+        }
+    ],
+    "transform": [
+        {
+            "filter": "(selected_id == 'All') || (datum.sample_id == selected_id)"
+        }
+    ],
     "width": 600,
     "$schema": "https://vega.github.io/schema/vega-lite/v5.20.1.json",
     "datasets": {

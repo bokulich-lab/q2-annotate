@@ -102,7 +102,7 @@ class TestBUSCOPlots(TestPluginBase):
         self.assertEqual(facet_row['header']['labelFontSize'], 0)
 
     def test_draw_marker_summary_histograms(self):
-        obs = _draw_marker_summary_histograms(data=self.df_sample_data)
+        obs = _draw_marker_summary_histograms(data=self.df_sample_data, comp_cont=True)
 
         self.assertIsInstance(obs, dict)
         self.assertIn('config', obs)
@@ -130,9 +130,38 @@ class TestBUSCOPlots(TestPluginBase):
         for key in ['axis', 'header', 'legend']:
             self.assertEqual(config[key]['labelFontSize'], 12)
             self.assertEqual(config[key]['titleFontSize'], 15)
+    
+    def test_draw_marker_summary_histograms_no_additional_metrics(self):
+        obs = _draw_marker_summary_histograms(data=self.df_sample_data, comp_cont=False)
+
+        self.assertIsInstance(obs, dict)
+        self.assertIn('config', obs)
+        self.assertIn('vconcat', obs)
+        self.assertEqual(len(obs['vconcat'][0]['hconcat']), 4)
+        self.assertEqual(len(obs['vconcat'][1]['hconcat']), 4)
+
+        exp_titles = ['Single', 'Duplicated', 'Fragmented', 'Missing']
+        obs_titles = [
+            x['encoding']['x']['title']
+            for x in obs['vconcat'][0]['hconcat']
+        ]
+        self.assertListEqual(exp_titles, obs_titles)
+
+        exp_titles = ['Scaffolds', 'Contigs n50', 'Scaffold n50', 'Length']
+        obs_titles = [
+            x['encoding']['x']['title']
+            for x in obs['vconcat'][1]['hconcat']
+        ]
+        self.assertListEqual(exp_titles, obs_titles)
+
+        config = obs['config']
+        for key in ['axis', 'header', 'legend']:
+            self.assertEqual(config[key]['labelFontSize'], 12)
+            self.assertEqual(config[key]['titleFontSize'], 15)
 
     def test_draw_selectable_summary_histograms(self):
-        obs = _draw_selectable_summary_histograms(data=self.df_sample_data)
+        obs = _draw_selectable_summary_histograms(data=self.df_sample_data, 
+                                                  comp_cont=True)
 
         self.assertIsInstance(obs, dict)
         self.assertIn('config', obs)
@@ -148,12 +177,16 @@ class TestBUSCOPlots(TestPluginBase):
 
     def test_scatter_sample_data(self):
         obs = _draw_completeness_vs_contamination(self.df_sample_data)
+        # altair .interactive() adds parameter name that increments with each call
+        obs["params"][1]["name"] = "param_1"
         with open(self.get_data_path("scatterplot/sample_data.json"), "r") as f:
             exp = json.load(f)
         self.assertEqual(obs, exp)
 
     def test_scatter_feature_data(self):
         obs = _draw_completeness_vs_contamination(self.df_feature_data)
+        # altair .interactive() adds parameter name that increments with each call
+        obs["params"][1]["name"] = "param_1"
         with open(self.get_data_path("scatterplot/feature_data.json"), "r") as f:
             exp = json.load(f)
         self.assertEqual(obs, exp)

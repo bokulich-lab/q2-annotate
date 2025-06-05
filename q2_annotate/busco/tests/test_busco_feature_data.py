@@ -121,6 +121,7 @@ class TestBUSCOFeatureData(TestPluginBase):
             "table": "table1",
             "summary_stats_json": "stats1",
             "scatter_json": json.dumps({"fake4": {"plot": "null"}}),
+            'comp_cont': True,
             "page_size": 100
         }
         mock_render.assert_called_with(
