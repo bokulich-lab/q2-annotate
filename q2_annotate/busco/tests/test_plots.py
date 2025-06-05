@@ -175,6 +175,30 @@ class TestBUSCOPlots(TestPluginBase):
             self.assertEqual(config[key]['labelFontSize'], 12)
             self.assertEqual(config[key]['titleFontSize'], 15)
 
+        cat = {entry['category'] for entry in obs['datasets'][obs['data']['name']]}
+        self.assertTrue('completeness' in cat)
+        self.assertTrue('contamination' in cat)
+            
+    def test_draw_selectable_summary_histograms_no_additional_metrics(self):
+        obs = _draw_selectable_summary_histograms(data=self.df_sample_data, 
+                                                  comp_cont=False)
+
+        self.assertIsInstance(obs, dict)
+        self.assertIn('config', obs)
+        self.assertIn('mark', obs)
+        self.assertIn('transform', obs)
+        self.assertIn('filter', obs['transform'][0])
+        self.assertEqual(obs['mark']['type'], 'bar')
+
+        config = obs['config']
+        for key in ['axis', 'header', 'legend']:
+            self.assertEqual(config[key]['labelFontSize'], 12)
+            self.assertEqual(config[key]['titleFontSize'], 15)
+        
+        cat = {entry['category'] for entry in obs['datasets'][obs['data']['name']]}
+        self.assertFalse('completeness' in cat)
+        self.assertFalse('contamination' in cat)
+
     def test_scatter_sample_data(self):
         obs = _draw_completeness_vs_contamination(self.df_sample_data)
         # altair .interactive() adds parameter name that increments with each call
