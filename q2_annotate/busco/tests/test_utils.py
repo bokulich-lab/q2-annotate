@@ -129,7 +129,7 @@ class TestBUSCOUtils(TestPluginBase):
         obs = _parse_df_columns(self.df4, comp_cont=True)
         exp = self.df5
         pd.testing.assert_frame_equal(obs, exp)
-    
+
     def test_parse_df_columns_no_additional_metrics(self):
         data = self.df4.drop(columns=["completeness", "contamination"])
         obs = _parse_df_columns(data, comp_cont=False)
@@ -299,7 +299,7 @@ class TestBUSCOUtils(TestPluginBase):
         }).T.to_json(orient='table')
 
         self.assertEqual(obs, exp)
-        
+
     def test_calculate_summary_stats_no_additional_metrics(self):
         obs = _calculate_summary_stats(self.df3, comp_cont=False)
         exp = pd.DataFrame({

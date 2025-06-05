@@ -61,7 +61,7 @@ def _draw_marker_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
     if not comp_cont:
         cols[0].remove("completeness")
         cols[1].remove("contamination")
-        
+
     chart = _draw_horizontal_histograms(data, columns=cols[0])
     chart2 = _draw_horizontal_histograms(data, columns=cols[1])
 
@@ -93,7 +93,8 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
 
         selection = alt.param(
             name='selected_id',
-            bind=alt.binding_select(options=['All'] + unique_ids, name=f'{color_title}: '),
+            bind=alt.binding_select(options=['All'] + unique_ids, 
+                                    name=f'{color_title}: '),
             value='All'
         )
 
@@ -104,9 +105,12 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
         )
 
     chart = chart.mark_circle(size=60).encode(
-        x=alt.X('completeness:Q', title='Completeness', scale=alt.Scale(domain=[0, 100])),
-        y=alt.Y('contamination:Q', title='Contamination', scale=alt.Scale(domain=[0, 100])),
-        color=alt.Color(f'{color_field}:N', title=color_title, scale=alt.Scale(scheme='viridis')),
+        x=alt.X('completeness:Q', title='Completeness', 
+                scale=alt.Scale(domain=[0, 100])),
+        y=alt.Y('contamination:Q', title='Contamination', 
+                scale=alt.Scale(domain=[0, 100])),
+        color=alt.Color(f'{color_field}:N', title=color_title, 
+                        scale=alt.Scale(scheme='viridis')),
         tooltip=tooltip
     ).properties(
         width=600,
@@ -122,7 +126,6 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
     return chart.to_dict()
 
 
-
 def _draw_selectable_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
     """
     Draws summary histograms for the MAG assembly metrics where users
@@ -136,7 +139,7 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
     if not comp_cont:
         metrics.remove("completeness")
         metrics.remove("contamination")
-    
+
     data = pd.melt(
         data,
         id_vars=["sample_id", "mag_id", "dataset", "n_markers"],

@@ -141,7 +141,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     )
 
     comp_cont = "completeness" in results.columns and "contamination" in results.columns
-    
+
     # Outputs different df for sample and feature data
     results = _parse_df_columns(results, comp_cont)
     max_rows = 100

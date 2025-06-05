@@ -173,7 +173,7 @@ def _parse_df_columns(df: pd.DataFrame, comp_cont) -> pd.DataFrame:
     cols = MARKER_COLS.copy()
     if not comp_cont:
         cols = [col for col in cols if col not in {"completeness", "contamination"}]
-        
+
     df = df.reset_index(drop=False, inplace=False)
     df = df.rename(columns={"id": "mag_id"}, inplace=False)
 

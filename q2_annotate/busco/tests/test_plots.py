@@ -130,7 +130,7 @@ class TestBUSCOPlots(TestPluginBase):
         for key in ['axis', 'header', 'legend']:
             self.assertEqual(config[key]['labelFontSize'], 12)
             self.assertEqual(config[key]['titleFontSize'], 15)
-    
+
     def test_draw_marker_summary_histograms_no_additional_metrics(self):
         obs = _draw_marker_summary_histograms(data=self.df_sample_data, comp_cont=False)
 
@@ -160,7 +160,7 @@ class TestBUSCOPlots(TestPluginBase):
             self.assertEqual(config[key]['titleFontSize'], 15)
 
     def test_draw_selectable_summary_histograms(self):
-        obs = _draw_selectable_summary_histograms(data=self.df_sample_data, 
+        obs = _draw_selectable_summary_histograms(data=self.df_sample_data,
                                                   comp_cont=True)
 
         self.assertIsInstance(obs, dict)
@@ -178,9 +178,9 @@ class TestBUSCOPlots(TestPluginBase):
         cat = {entry['category'] for entry in obs['datasets'][obs['data']['name']]}
         self.assertTrue('completeness' in cat)
         self.assertTrue('contamination' in cat)
-            
+
     def test_draw_selectable_summary_histograms_no_additional_metrics(self):
-        obs = _draw_selectable_summary_histograms(data=self.df_sample_data, 
+        obs = _draw_selectable_summary_histograms(data=self.df_sample_data,
                                                   comp_cont=False)
 
         self.assertIsInstance(obs, dict)
@@ -194,7 +194,7 @@ class TestBUSCOPlots(TestPluginBase):
         for key in ['axis', 'header', 'legend']:
             self.assertEqual(config[key]['labelFontSize'], 12)
             self.assertEqual(config[key]['titleFontSize'], 15)
-        
+
         cat = {entry['category'] for entry in obs['datasets'][obs['data']['name']]}
         self.assertFalse('completeness' in cat)
         self.assertFalse('contamination' in cat)
