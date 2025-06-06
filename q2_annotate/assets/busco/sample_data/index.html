@@ -128,7 +128,6 @@
                     </p>
                     <div class="col-lg-12" id="scatterDropdownControls" style="margin-bottom: 10px;"></div>
                     <div id="scatterPlotDiv" style="margin-top: 10px;"></div>
-                    
                 </div>
             </div>
         </div>
@@ -233,7 +232,6 @@ vegaEmbed("#scatterPlotDiv", scatterSpec).then(
     function (result) {
         result.view.logLevel(vega.Warn);
 
-        // Move dropdown to custom location using document query
         const dropdownWrapper = document.querySelector("#scatterPlotDiv .vega-bindings");
         const target = document.getElementById('scatterDropdownControls');
         if (dropdownWrapper && target) {
@@ -245,7 +243,6 @@ vegaEmbed("#scatterPlotDiv", scatterSpec).then(
         handleErrors([error], $("#scatterPlotDiv"));
     }
 );
-
     });
 </script>
 

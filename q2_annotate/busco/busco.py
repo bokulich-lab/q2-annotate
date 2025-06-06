@@ -219,7 +219,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         })
 
     # Render
-    vega_json = json.dumps(context)
+    vega_json = json.dumps(context).replace("NaN", "null")
     vega_json_summary = json.dumps(
         _draw_marker_summary_histograms(results, comp_cont)
     ).replace("NaN", "null")
