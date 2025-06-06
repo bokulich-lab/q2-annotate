@@ -83,7 +83,7 @@ def _draw_marker_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
 
 def _draw_completeness_vs_contamination(data: pd.DataFrame):
     """
-    Draws scatterplot of completeness vs. contamination. The user can choose to 
+    Draws scatterplot of completeness vs. contamination. The user can choose to
     display all MAGs or choose one with a dropdown menu.
 
     Returns:
@@ -139,7 +139,7 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
     """
     Draws summary histograms for the MAG assembly metrics where users
     can indicate which metric and for which sample they want to see.
-    
+
     Args:
         data (pd.DataFrame): The input DataFrame.
         comp_cont (bool): Indicates whether the 'completeness' and 'contamination'
