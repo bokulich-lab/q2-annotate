@@ -53,6 +53,11 @@ def _draw_marker_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
     """
     Draws summary histograms for the BUSCO marker results of all samples.
 
+    Args:
+        data (pd.DataFrame): The input DataFrame.
+        comp_cont (bool): Indicates whether the 'completeness' and 'contamination'
+                          columns are present in the data.
+
     Returns:
         dict: Dictionary containing the Vega spec.
     """
@@ -76,18 +81,25 @@ def _draw_marker_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
     return chart.to_dict()
 
 
-def _draw_completeness_vs_contamination(df: pd.DataFrame):
-    color_field = 'sample_id' if df['sample_id'].notnull().all() else 'mag_id'
+def _draw_completeness_vs_contamination(data: pd.DataFrame):
+    """
+    Draws scatterplot of completeness vs. contamination. The user can choose to 
+    display all MAGs or choose one with a dropdown menu.
+
+    Returns:
+        dict: Dictionary containing the Vega spec.
+    """
+    color_field = 'sample_id' if data['sample_id'].notnull().all() else 'mag_id'
     color_title = 'Sample ID' if color_field == 'sample_id' else 'MAG ID'
 
     tooltip = [
-        f'{col}:Q' if pd.api.types.is_numeric_dtype(df[col]) else f'{col}:N'
-        for col in df.columns
+        f'{col}:Q' if pd.api.types.is_numeric_dtype(data[col]) else f'{col}:N'
+        for col in data.columns
     ]
 
-    chart = alt.Chart(df)
+    chart = alt.Chart(data)
 
-    unique_ids = sorted(df[color_field].dropna().unique().tolist())
+    unique_ids = sorted(data[color_field].dropna().unique().tolist())
     selection = alt.param(
         name='selected_id',
         bind=alt.binding_select(options=['All'] + unique_ids,
@@ -127,7 +139,11 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
     """
     Draws summary histograms for the MAG assembly metrics where users
     can indicate which metric and for which sample they want to see.
-
+    
+    Args:
+        data (pd.DataFrame): The input DataFrame.
+        comp_cont (bool): Indicates whether the 'completeness' and 'contamination'
+                          columns are present in the data.
     Returns:
         dict: Dictionary containing the Vega spec.
     """
