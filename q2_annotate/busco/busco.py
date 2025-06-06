@@ -18,7 +18,7 @@ import q2templates
 
 from q2_annotate.busco.plots_detailed import _draw_detailed_plots
 from q2_annotate.busco.plots_summary import _draw_marker_summary_histograms, \
-    _draw_selectable_summary_histograms
+    _draw_selectable_summary_histograms, _draw_completeness_vs_contamination
 
 from q2_annotate.busco.utils import (
     _parse_busco_params,
@@ -139,8 +139,11 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         os.path.join(output_dir, "busco_results.csv"),
         index=False
     )
+
+    comp_cont = "completeness" in results.columns and "contamination" in results.columns
+
     # Outputs different df for sample and feature data
-    results = _parse_df_columns(results)
+    results = _parse_df_columns(results, comp_cont)
     max_rows = 100
 
     # Partition data frames
@@ -153,7 +156,9 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         # Draw selectable histograms (only for sample data mags)
         tabbed_context = {
             "vega_summary_selectable_json":
-            json.dumps(_draw_selectable_summary_histograms(results))
+            json.dumps(
+                _draw_selectable_summary_histograms(results, comp_cont)
+            ).replace("NaN", "null")
         }
     else:
         counter_col = "mag_id"
@@ -214,12 +219,15 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         })
 
     # Render
-    vega_json = json.dumps(context)
+    vega_json = json.dumps(context).replace("NaN", "null")
     vega_json_summary = json.dumps(
-        _draw_marker_summary_histograms(results)
-    )
-    table_json = _get_feature_table(results)
-    stats_json = _calculate_summary_stats(results)
+        _draw_marker_summary_histograms(results, comp_cont)
+    ).replace("NaN", "null")
+    table_json = _get_feature_table(results, comp_cont)
+    stats_json = _calculate_summary_stats(results, comp_cont)
+    scatter_json = json.dumps(_draw_completeness_vs_contamination(results)).replace(
+        "NaN", "null") if comp_cont else None
+
     tabbed_context.update({
         "tabs": [
             {"title": "QC overview", "url": "index.html"},
@@ -230,6 +238,8 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         "vega_summary_json": vega_json_summary,
         "table": table_json,
         "summary_stats_json": stats_json,
+        "scatter_json": scatter_json,
+        "comp_cont": comp_cont,
         "page_size": 100
     })
     q2templates.render(templates, output_dir, context=tabbed_context)

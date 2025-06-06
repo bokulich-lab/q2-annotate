@@ -5,13 +5,14 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import json
 import tempfile
 import pandas as pd
 from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.busco.plots_detailed import _draw_detailed_plots
 from q2_annotate.busco.plots_summary import _draw_marker_summary_histograms, \
-    _draw_selectable_summary_histograms
+    _draw_selectable_summary_histograms, _draw_completeness_vs_contamination
 
 
 class TestBUSCOPlots(TestPluginBase):
@@ -101,7 +102,37 @@ class TestBUSCOPlots(TestPluginBase):
         self.assertEqual(facet_row['header']['labelFontSize'], 0)
 
     def test_draw_marker_summary_histograms(self):
-        obs = _draw_marker_summary_histograms(data=self.df_sample_data)
+        obs = _draw_marker_summary_histograms(data=self.df_sample_data, comp_cont=True)
+
+        self.assertIsInstance(obs, dict)
+        self.assertIn('config', obs)
+        self.assertIn('vconcat', obs)
+        self.assertEqual(len(obs['vconcat'][0]['hconcat']), 5)
+        self.assertEqual(len(obs['vconcat'][1]['hconcat']), 5)
+
+        exp_titles = ['Single', 'Duplicated', 'Fragmented', 'Missing', 'Completeness']
+        obs_titles = [
+            x['encoding']['x']['title']
+            for x in obs['vconcat'][0]['hconcat']
+        ]
+        self.assertListEqual(exp_titles, obs_titles)
+
+        exp_titles = [
+            'Contamination', 'Scaffolds', 'Contigs n50', 'Scaffold n50', 'Length'
+        ]
+        obs_titles = [
+            x['encoding']['x']['title']
+            for x in obs['vconcat'][1]['hconcat']
+        ]
+        self.assertListEqual(exp_titles, obs_titles)
+
+        config = obs['config']
+        for key in ['axis', 'header', 'legend']:
+            self.assertEqual(config[key]['labelFontSize'], 12)
+            self.assertEqual(config[key]['titleFontSize'], 15)
+
+    def test_draw_marker_summary_histograms_no_additional_metrics(self):
+        obs = _draw_marker_summary_histograms(data=self.df_sample_data, comp_cont=False)
 
         self.assertIsInstance(obs, dict)
         self.assertIn('config', obs)
@@ -129,7 +160,8 @@ class TestBUSCOPlots(TestPluginBase):
             self.assertEqual(config[key]['titleFontSize'], 15)
 
     def test_draw_selectable_summary_histograms(self):
-        obs = _draw_selectable_summary_histograms(data=self.df_sample_data)
+        obs = _draw_selectable_summary_histograms(data=self.df_sample_data,
+                                                  comp_cont=True)
 
         self.assertIsInstance(obs, dict)
         self.assertIn('config', obs)
@@ -142,3 +174,43 @@ class TestBUSCOPlots(TestPluginBase):
         for key in ['axis', 'header', 'legend']:
             self.assertEqual(config[key]['labelFontSize'], 12)
             self.assertEqual(config[key]['titleFontSize'], 15)
+
+        cat = {entry['category'] for entry in obs['datasets'][obs['data']['name']]}
+        self.assertTrue('completeness' in cat)
+        self.assertTrue('contamination' in cat)
+
+    def test_draw_selectable_summary_histograms_no_additional_metrics(self):
+        obs = _draw_selectable_summary_histograms(data=self.df_sample_data,
+                                                  comp_cont=False)
+
+        self.assertIsInstance(obs, dict)
+        self.assertIn('config', obs)
+        self.assertIn('mark', obs)
+        self.assertIn('transform', obs)
+        self.assertIn('filter', obs['transform'][0])
+        self.assertEqual(obs['mark']['type'], 'bar')
+
+        config = obs['config']
+        for key in ['axis', 'header', 'legend']:
+            self.assertEqual(config[key]['labelFontSize'], 12)
+            self.assertEqual(config[key]['titleFontSize'], 15)
+
+        cat = {entry['category'] for entry in obs['datasets'][obs['data']['name']]}
+        self.assertFalse('completeness' in cat)
+        self.assertFalse('contamination' in cat)
+
+    def test_scatter_sample_data(self):
+        obs = _draw_completeness_vs_contamination(self.df_sample_data)
+        # altair .interactive() adds parameter name that increments with each call
+        obs["params"][1]["name"] = "param_1"
+        with open(self.get_data_path("scatterplot/sample_data.json"), "r") as f:
+            exp = json.load(f)
+        self.assertEqual(obs, exp)
+
+    def test_scatter_feature_data(self):
+        obs = _draw_completeness_vs_contamination(self.df_feature_data)
+        # altair .interactive() adds parameter name that increments with each call
+        obs["params"][1]["name"] = "param_1"
+        with open(self.get_data_path("scatterplot/feature_data.json"), "r") as f:
+            exp = json.load(f)
+        self.assertEqual(obs, exp)
