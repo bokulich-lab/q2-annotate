@@ -117,7 +117,7 @@ class TestBUSCOSampleData(TestPluginBase):
 
     @patch(
         "q2_annotate.busco.busco._draw_detailed_plots",
-        return_value={"fake1": {"plot": "spec"}}
+        return_value={"fake1": {"plot": "NaN"}}
     )
     @patch(
         "q2_annotate.busco.busco._draw_marker_summary_histograms",
@@ -163,7 +163,7 @@ class TestBUSCOSampleData(TestPluginBase):
             ],
             "vega_json": json.dumps(
                 {"partition_0": {
-                    "subcontext": {"fake1": {"plot": "spec"}},
+                    "subcontext": {"fake1": {"plot": "null"}},
                     "counters": {"from": 1, "to": 2},
                     "ids": ["sample1", "sample2"]}}
             ),

@@ -19,7 +19,7 @@
         }
     },
     "data": {
-        "name": "data-6274bab1131b4091dfa27590d089f626"
+        "name": "data-e1fe2abe6612eea557a9af55bd617fae"
     },
     "mark": {
         "type": "circle",
@@ -27,11 +27,11 @@
     },
     "encoding": {
         "color": {
-            "field": "sample_id",
+            "field": "mag_id",
             "scale": {
                 "scheme": "viridis"
             },
-            "title": "Sample ID",
+            "title": "MAG ID",
             "type": "nominal"
         },
         "tooltip": [
@@ -41,7 +41,7 @@
             },
             {
                 "field": "sample_id",
-                "type": "nominal"
+                "type": "quantitative"
             },
             {
                 "field": "input_file",
@@ -135,9 +135,10 @@
                 "input": "select",
                 "options": [
                     "All",
-                    "data"
+                    "0e514d88-16c4-4273-a1df-1a360eb2c823",
+                    "ab23d75d-547d-455a-8b51-16b46ddf7496"
                 ],
-                "name": "Sample ID: "
+                "name": "MAG ID: "
             },
             "value": "All"
         },
@@ -155,16 +156,16 @@
     ],
     "transform": [
         {
-            "filter": "(selected_id == 'All') || (datum.sample_id == selected_id)"
+            "filter": "(selected_id == 'All') || (datum.mag_id == selected_id)"
         }
     ],
     "width": 600,
     "$schema": "https://vega.github.io/schema/vega-lite/v5.20.1.json",
     "datasets": {
-        "data-6274bab1131b4091dfa27590d089f626": [
+        "data-e1fe2abe6612eea557a9af55bd617fae": [
             {
                 "mag_id": "ab23d75d-547d-455a-8b51-16b46ddf7496",
-                "sample_id": "data",
+                "sample_id": null,
                 "input_file": "ab23d75d-547d-455a-8b51-16b46ddf7496.fasta",
                 "dataset": "bacteria_odb10",
                 "complete": 80.6,
@@ -183,7 +184,7 @@
             },
             {
                 "mag_id": "0e514d88-16c4-4273-a1df-1a360eb2c823",
-                "sample_id": "data",
+                "sample_id": null,
                 "input_file": "0e514d88-16c4-4273-a1df-1a360eb2c823.fasta",
                 "dataset": "bacteria_odb10",
                 "complete": 100.0,

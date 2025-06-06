@@ -87,9 +87,7 @@ def _draw_completeness_vs_contamination(df: pd.DataFrame):
 
     chart = alt.Chart(df)
 
-    # If coloring by sample_id, include dropdown filter
     unique_ids = sorted(df[color_field].dropna().unique().tolist())
-
     selection = alt.param(
         name='selected_id',
         bind=alt.binding_select(options=['All'] + unique_ids,
