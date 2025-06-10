@@ -225,7 +225,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     ).replace("NaN", "null")
     table_json = _get_feature_table(results)
     stats_json = _calculate_summary_stats(results)
-    
+
     if "completeness" in results.columns and "contamination" in results.columns:
         scatter_json = json.dumps(_draw_completeness_vs_contamination(results)).replace(
             "NaN", "null")

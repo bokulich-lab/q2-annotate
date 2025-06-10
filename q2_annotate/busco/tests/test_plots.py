@@ -132,7 +132,7 @@ class TestBUSCOPlots(TestPluginBase):
             self.assertEqual(config[key]['titleFontSize'], 15)
 
     def test_draw_marker_summary_histograms_no_additional_metrics(self):
-        self.df_sample_data.drop(columns=["completeness", "contamination"], 
+        self.df_sample_data.drop(columns=["completeness", "contamination"],
                                  inplace=True)
         obs = _draw_marker_summary_histograms(data=self.df_sample_data)
 
@@ -181,7 +181,7 @@ class TestBUSCOPlots(TestPluginBase):
         self.assertTrue('contamination' in cat)
 
     def test_draw_selectable_summary_histograms_no_additional_metrics(self):
-        self.df_sample_data.drop(columns=["completeness", "contamination"], 
+        self.df_sample_data.drop(columns=["completeness", "contamination"],
                                  inplace=True)
         obs = _draw_selectable_summary_histograms(data=self.df_sample_data)
 

@@ -58,7 +58,7 @@ def _draw_marker_summary_histograms(data: pd.DataFrame) -> dict:
     """
     cols = [["single", "duplicated", "fragmented", "missing", "completeness"],
             ["contamination", "scaffolds", "contigs_n50", "scaffold_n50", "length"]]
-    
+
     if not ("completeness" in data.columns and "contamination" in data.columns):
         cols[0].remove("completeness")
         cols[1].remove("contamination")
@@ -141,7 +141,7 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
     """
     metrics = ["single", "duplicated", "fragmented", "missing", "completeness",
                "contamination", "scaffolds", "contigs_n50", "scaffold_n50", "length"]
-    
+
     if not ("completeness" in data.columns and "contamination" in data.columns):
         metrics.remove("completeness")
         metrics.remove("contamination")
