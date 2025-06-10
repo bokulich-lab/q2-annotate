@@ -49,21 +49,17 @@ def _draw_horizontal_histograms(data: pd.DataFrame, columns: List[str]):
     return chart
 
 
-def _draw_marker_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
+def _draw_marker_summary_histograms(data: pd.DataFrame) -> dict:
     """
     Draws summary histograms for the BUSCO marker results of all samples.
-
-    Args:
-        data (pd.DataFrame): The input DataFrame.
-        comp_cont (bool): Indicates whether the 'completeness' and 'contamination'
-                          columns are present in the data.
 
     Returns:
         dict: Dictionary containing the Vega spec.
     """
     cols = [["single", "duplicated", "fragmented", "missing", "completeness"],
             ["contamination", "scaffolds", "contigs_n50", "scaffold_n50", "length"]]
-    if not comp_cont:
+    
+    if not ("completeness" in data.columns and "contamination" in data.columns):
         cols[0].remove("completeness")
         cols[1].remove("contamination")
 
@@ -135,21 +131,18 @@ def _draw_completeness_vs_contamination(data: pd.DataFrame):
     return chart.to_dict()
 
 
-def _draw_selectable_summary_histograms(data: pd.DataFrame, comp_cont) -> dict:
+def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
     """
     Draws summary histograms for the MAG assembly metrics where users
     can indicate which metric and for which sample they want to see.
 
-    Args:
-        data (pd.DataFrame): The input DataFrame.
-        comp_cont (bool): Indicates whether the 'completeness' and 'contamination'
-                          columns are present in the data.
     Returns:
         dict: Dictionary containing the Vega spec.
     """
     metrics = ["single", "duplicated", "fragmented", "missing", "completeness",
                "contamination", "scaffolds", "contigs_n50", "scaffold_n50", "length"]
-    if not comp_cont:
+    
+    if not ("completeness" in data.columns and "contamination" in data.columns):
         metrics.remove("completeness")
         metrics.remove("contamination")
 

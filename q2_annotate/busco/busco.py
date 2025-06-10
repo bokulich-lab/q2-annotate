@@ -143,7 +143,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     comp_cont = "completeness" in results.columns and "contamination" in results.columns
 
     # Outputs different df for sample and feature data
-    results = _parse_df_columns(results, comp_cont)
+    results = _parse_df_columns(results)
     max_rows = 100
 
     # Partition data frames
@@ -157,7 +157,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         tabbed_context = {
             "vega_summary_selectable_json":
             json.dumps(
-                _draw_selectable_summary_histograms(results, comp_cont)
+                _draw_selectable_summary_histograms(results)
             ).replace("NaN", "null")
         }
     else:
@@ -221,12 +221,18 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     # Render
     vega_json = json.dumps(context).replace("NaN", "null")
     vega_json_summary = json.dumps(
-        _draw_marker_summary_histograms(results, comp_cont)
+        _draw_marker_summary_histograms(results)
     ).replace("NaN", "null")
-    table_json = _get_feature_table(results, comp_cont)
-    stats_json = _calculate_summary_stats(results, comp_cont)
-    scatter_json = json.dumps(_draw_completeness_vs_contamination(results)).replace(
-        "NaN", "null") if comp_cont else None
+    table_json = _get_feature_table(results)
+    stats_json = _calculate_summary_stats(results)
+    
+    if "completeness" in results.columns and "contamination" in results.columns:
+        scatter_json = json.dumps(_draw_completeness_vs_contamination(results)).replace(
+            "NaN", "null")
+        comp_cont = True
+    else:
+        scatter_json = None
+        comp_cont = False
 
     tabbed_context.update({
         "tabs": [

@@ -102,7 +102,7 @@ class TestBUSCOPlots(TestPluginBase):
         self.assertEqual(facet_row['header']['labelFontSize'], 0)
 
     def test_draw_marker_summary_histograms(self):
-        obs = _draw_marker_summary_histograms(data=self.df_sample_data, comp_cont=True)
+        obs = _draw_marker_summary_histograms(data=self.df_sample_data)
 
         self.assertIsInstance(obs, dict)
         self.assertIn('config', obs)
@@ -132,7 +132,9 @@ class TestBUSCOPlots(TestPluginBase):
             self.assertEqual(config[key]['titleFontSize'], 15)
 
     def test_draw_marker_summary_histograms_no_additional_metrics(self):
-        obs = _draw_marker_summary_histograms(data=self.df_sample_data, comp_cont=False)
+        self.df_sample_data.drop(columns=["completeness", "contamination"], 
+                                 inplace=True)
+        obs = _draw_marker_summary_histograms(data=self.df_sample_data)
 
         self.assertIsInstance(obs, dict)
         self.assertIn('config', obs)
@@ -160,8 +162,7 @@ class TestBUSCOPlots(TestPluginBase):
             self.assertEqual(config[key]['titleFontSize'], 15)
 
     def test_draw_selectable_summary_histograms(self):
-        obs = _draw_selectable_summary_histograms(data=self.df_sample_data,
-                                                  comp_cont=True)
+        obs = _draw_selectable_summary_histograms(data=self.df_sample_data)
 
         self.assertIsInstance(obs, dict)
         self.assertIn('config', obs)
@@ -180,8 +181,9 @@ class TestBUSCOPlots(TestPluginBase):
         self.assertTrue('contamination' in cat)
 
     def test_draw_selectable_summary_histograms_no_additional_metrics(self):
-        obs = _draw_selectable_summary_histograms(data=self.df_sample_data,
-                                                  comp_cont=False)
+        self.df_sample_data.drop(columns=["completeness", "contamination"], 
+                                 inplace=True)
+        obs = _draw_selectable_summary_histograms(data=self.df_sample_data)
 
         self.assertIsInstance(obs, dict)
         self.assertIn('config', obs)

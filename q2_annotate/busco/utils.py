@@ -136,7 +136,7 @@ def _partition_dataframe(
         return [df[i:i+max_rows] for i in range(0, len(df), max_rows)]
 
 
-def _get_feature_table(busco_results: pd.DataFrame, comp_cont) -> str:
+def _get_feature_table(busco_results: pd.DataFrame) -> str:
     df = busco_results.reset_index(inplace=False, drop=False)
 
     new_cols = {
@@ -148,7 +148,7 @@ def _get_feature_table(busco_results: pd.DataFrame, comp_cont) -> str:
         "contigs_n50": "N50 contigs", "percent_gaps": "Percent gaps",
         "scaffolds": "Contigs", "length": "Length (bp)"
     }
-    if not comp_cont:
+    if not ("completeness" in df.columns and "contamination" in df.columns):
         new_cols.pop("completeness")
         new_cols.pop("contamination")
 
@@ -159,7 +159,7 @@ def _get_feature_table(busco_results: pd.DataFrame, comp_cont) -> str:
     return df.to_json(orient='split')
 
 
-def _parse_df_columns(df: pd.DataFrame, comp_cont) -> pd.DataFrame:
+def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Adds several columns required for generation of downloadable
     BUSCO plots.
@@ -171,8 +171,9 @@ def _parse_df_columns(df: pd.DataFrame, comp_cont) -> pd.DataFrame:
         df (pd.DataFrame): Formatted DataFrame
     """
     cols = MARKER_COLS.copy()
-    if not comp_cont:
-        cols = [col for col in cols if col not in {"completeness", "contamination"}]
+    if not ("completeness" in df.columns and "contamination" in df.columns):
+        cols.remove("completeness")
+        cols.remove("contamination")
 
     df = df.reset_index(drop=False, inplace=False)
     df = df.rename(columns={"id": "mag_id"}, inplace=False)
@@ -204,10 +205,11 @@ def _cleanup_bootstrap(output_dir):
     )
 
 
-def _calculate_summary_stats(df: pd.DataFrame, comp_cont) -> json:
+def _calculate_summary_stats(df: pd.DataFrame) -> json:
     cols = MARKER_COLS.copy()
-    if not comp_cont:
-        cols = [col for col in cols if col not in {"completeness", "contamination"}]
+    if not ("completeness" in df.columns and "contamination" in df.columns):
+        cols.remove("completeness")
+        cols.remove("contamination")
 
     stats = pd.DataFrame({
         "min": df[cols].min(),
