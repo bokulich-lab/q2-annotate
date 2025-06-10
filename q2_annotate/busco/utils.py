@@ -20,7 +20,8 @@ arguments_with_hyphens = {
     "update_data": "update-data",
 }
 
-MARKER_COLS = ["single", "duplicated", "fragmented", "missing", "complete"]
+MARKER_COLS = ["single", "duplicated", "fragmented", "missing",
+               "complete", "completeness", "contamination"]
 
 
 def _validate_lineage_dataset_input(
@@ -135,17 +136,21 @@ def _partition_dataframe(
         return [df[i:i+max_rows] for i in range(0, len(df), max_rows)]
 
 
-def _get_feature_table(busco_results: pd.DataFrame):
+def _get_feature_table(busco_results: pd.DataFrame) -> str:
     df = busco_results.reset_index(inplace=False, drop=False)
 
     new_cols = {
         "mag_id": "MAG", "sample_id": "Sample", "dataset": "Dataset",
         "single": "% single", "duplicated": "% duplicated",
         "fragmented": "% fragmented", "missing": "% missing",
-        "complete": "% complete", "n_markers": "Total markers",
+        "complete": "% complete", "completeness": "% completeness",
+        "contamination": "% contamination", "n_markers": "Total markers",
         "contigs_n50": "N50 contigs", "percent_gaps": "Percent gaps",
         "scaffolds": "Contigs", "length": "Length (bp)"
     }
+    if not ("completeness" in df.columns and "contamination" in df.columns):
+        new_cols.pop("completeness")
+        new_cols.pop("contamination")
 
     if len(busco_results["sample_id"].unique()) < 2:
         del new_cols["sample_id"]
@@ -165,6 +170,11 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         df (pd.DataFrame): Formatted DataFrame
     """
+    cols = MARKER_COLS.copy()
+    if not ("completeness" in df.columns and "contamination" in df.columns):
+        cols.remove("completeness")
+        cols.remove("contamination")
+
     df = df.reset_index(drop=False, inplace=False)
     df = df.rename(columns={"id": "mag_id"}, inplace=False)
 
@@ -172,7 +182,7 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     df["percent_gaps"] = df["percent_gaps"].str.split(
         '%', expand=True
     )[0].map(float)
-    for col in MARKER_COLS:
+    for col in cols:
         df[col] = df[col].map(float)
     df["n_markers"] = df["n_markers"].map(int)
 
@@ -196,12 +206,17 @@ def _cleanup_bootstrap(output_dir):
 
 
 def _calculate_summary_stats(df: pd.DataFrame) -> json:
+    cols = MARKER_COLS.copy()
+    if not ("completeness" in df.columns and "contamination" in df.columns):
+        cols.remove("completeness")
+        cols.remove("contamination")
+
     stats = pd.DataFrame({
-        "min": df[MARKER_COLS].min(),
-        "median": df[MARKER_COLS].median(),
-        "mean": df[MARKER_COLS].mean(),
-        "max": df[MARKER_COLS].max(),
-        "count": df[MARKER_COLS].count()
+        "min": df[cols].min(),
+        "median": df[cols].median(),
+        "mean": df[cols].mean(),
+        "max": df[cols].max(),
+        "count": df[cols].count()
     })
     return stats.T.to_json(orient='table')
 

@@ -58,7 +58,9 @@ class TestBUSCOUtils(TestPluginBase):
             'contigs_n50': [19, 20, 21],
             'percent_gaps': [22, 23, 24],
             'scaffolds': [25, 26, 27],
-            'length': [28, 29, 30]
+            'length': [28, 29, 30],
+            'completeness': [31, 32, 33],
+            'contamination': [34, 35, 36]
         })
         self.df4 = pd.DataFrame({
             'id': ['mag1', 'mag2', 'mag3'],
@@ -68,7 +70,9 @@ class TestBUSCOUtils(TestPluginBase):
             'fragmented': ['7.0', '8.0', '9.0'],
             'missing': ['10.0', '11.0', '12.0'],
             'complete': ['13.0', '14.0', '15.0'],
-            'n_markers': ['16', '17', '18']
+            'n_markers': ['16', '17', '18'],
+            'completeness': ['31.0', '32.0', '33.0'],
+            'contamination': ['34.0', '35.0', '36.0']
         })
         self.df5 = pd.DataFrame({
             'index': [0, 1, 2],
@@ -79,7 +83,9 @@ class TestBUSCOUtils(TestPluginBase):
             'fragmented': [7.0, 8.0, 9.0],
             'missing': [10.0, 11.0, 12.0],
             'complete': [13.0, 14.0, 15.0],
-            'n_markers': [16, 17, 18]
+            'n_markers': [16, 17, 18],
+            'completeness': [31.0, 32.0, 33.0],
+            'contamination': [34.0, 35.0, 36.0]
         })
         self.busco_results = {
             "dataset": "bacteria_odb10",
@@ -122,6 +128,13 @@ class TestBUSCOUtils(TestPluginBase):
     def test_parse_df_columns(self):
         obs = _parse_df_columns(self.df4)
         exp = self.df5
+        pd.testing.assert_frame_equal(obs, exp)
+
+    def test_parse_df_columns_no_additional_metrics(self):
+        self.df4.drop(columns=["completeness", "contamination"], inplace=True)
+        obs = _parse_df_columns(self.df4)
+        exp = self.df5
+        exp = exp.drop(columns=["completeness", "contamination"])
         pd.testing.assert_frame_equal(obs, exp)
 
     def test_partition_dataframe_sample_data_max_rows_5(self):
@@ -218,9 +231,7 @@ class TestBUSCOUtils(TestPluginBase):
         self.assertListEqual(obs_shapes, exp_shapes)
 
     def test_get_feature_table_sample_data(self):
-        obs = json.loads(
-            _get_feature_table(self.df3)
-        )
+        obs = json.loads(_get_feature_table(self.df3))
         with open(
             self.get_data_path('feature_table_sample_data.json'), 'r'
         ) as f:
@@ -230,9 +241,7 @@ class TestBUSCOUtils(TestPluginBase):
     def test_get_feature_table_feature_data(self):
         df3 = self.df3.copy()
         df3 = df3.loc[df3["sample_id"] == "sample1"]
-        obs = json.loads(
-            _get_feature_table(df3)
-        )
+        obs = json.loads(_get_feature_table(df3))
         with open(
             self.get_data_path('feature_table_feature_data.json'), 'r'
         ) as f:
@@ -247,35 +256,88 @@ class TestBUSCOUtils(TestPluginBase):
                 'duplicated': 4,
                 'fragmented': 7,
                 'missing': 10,
-                'complete': 13
+                'complete': 13,
+                "completeness": 31.0,
+                "contamination": 34.0
             }),
             "median": pd.Series({
                 'single': 2.0,
                 'duplicated': 5.0,
                 'fragmented': 8.0,
                 'missing': 11.0,
-                'complete': 14.0
+                'complete': 14.0,
+                "completeness": 32.0,
+                "contamination": 35.0
             }),
             "mean": pd.Series({
                 'single': 2.0,
                 'duplicated': 5.0,
                 'fragmented': 8.0,
                 'missing': 11.0,
-                'complete': 14.0
+                'complete': 14.0,
+                "completeness": 32.0,
+                "contamination": 35.0
             }),
             "max": pd.Series({
                 'single': 3,
                 'duplicated': 6,
                 'fragmented': 9,
                 'missing': 12,
-                'complete': 15
+                'complete': 15,
+                "completeness": 33.0,
+                "contamination": 36.0
             }),
             "count": pd.Series({
                 'single': 3,
                 'duplicated': 3,
                 'fragmented': 3,
                 'missing': 3,
-                'complete': 3
+                'complete': 3,
+                "completeness": 3.0,
+                "contamination": 3.0
+            })
+        }).T.to_json(orient='table')
+
+        self.assertEqual(obs, exp)
+
+    def test_calculate_summary_stats_no_additional_metrics(self):
+        self.df3.drop(columns=["completeness", "contamination"], inplace=True)
+        obs = _calculate_summary_stats(self.df3)
+        exp = pd.DataFrame({
+            "min": pd.Series({
+                'single': 1,
+                'duplicated': 4,
+                'fragmented': 7,
+                'missing': 10,
+                'complete': 13,
+            }),
+            "median": pd.Series({
+                'single': 2.0,
+                'duplicated': 5.0,
+                'fragmented': 8.0,
+                'missing': 11.0,
+                'complete': 14.0,
+            }),
+            "mean": pd.Series({
+                'single': 2.0,
+                'duplicated': 5.0,
+                'fragmented': 8.0,
+                'missing': 11.0,
+                'complete': 14.0,
+            }),
+            "max": pd.Series({
+                'single': 3,
+                'duplicated': 6,
+                'fragmented': 9,
+                'missing': 12,
+                'complete': 15,
+            }),
+            "count": pd.Series({
+                'single': 3,
+                'duplicated': 3,
+                'fragmented': 3,
+                'missing': 3,
+                'complete': 3,
             })
         }).T.to_json(orient='table')
 

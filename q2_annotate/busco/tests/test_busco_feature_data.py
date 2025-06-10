@@ -60,15 +60,19 @@ class TestBUSCOFeatureData(TestPluginBase):
 
     @patch(
         "q2_annotate.busco.busco._draw_detailed_plots",
-        return_value={"fake1": {"plot": "spec"}}
+        return_value={"fake1": {"plot": "NaN"}}
     )
     @patch(
         "q2_annotate.busco.busco._draw_marker_summary_histograms",
-        return_value={"fake2": {"plot": "spec"}}
+        return_value={"fake2": {"plot": "NaN"}}
     )
     @patch(
         "q2_annotate.busco.busco._draw_selectable_summary_histograms",
         return_value={"fake3": {"plot": "spec"}}
+    )
+    @patch(
+        "q2_annotate.busco.busco._draw_completeness_vs_contamination",
+        return_value={"fake4": {"plot": "NaN"}}
     )
     @patch(
         "q2_annotate.busco.busco._get_feature_table", return_value="table1"
@@ -81,7 +85,7 @@ class TestBUSCOFeatureData(TestPluginBase):
     @patch("q2_annotate.busco.busco._cleanup_bootstrap")
     def test_visualize_busco(
             self, mock_clean, mock_render, mock_stats, mock_table,
-            mock_selectable, mock_marker, mock_detailed
+            mock_scatter, mock_selectable, mock_marker, mock_detailed
     ):
         _visualize_busco(
             output_dir=self.temp_dir.name,
@@ -104,7 +108,7 @@ class TestBUSCOFeatureData(TestPluginBase):
             "vega_json": json.dumps(
                 {
                     "partition_0": {
-                        "subcontext": {"fake1": {"plot": "spec"}},
+                        "subcontext": {"fake1": {"plot": "null"}},
                         "counters": {"from": 1, "to": 2},
                         "ids": [
                             "ab23d75d-547d-455a-8b51-16b46ddf7496",
@@ -113,9 +117,11 @@ class TestBUSCOFeatureData(TestPluginBase):
                     }
                 }
             ),
-            "vega_summary_json": json.dumps({"fake2": {"plot": "spec"}}),
+            "vega_summary_json": json.dumps({"fake2": {"plot": "null"}}),
             "table": "table1",
             "summary_stats_json": "stats1",
+            "scatter_json": json.dumps({"fake4": {"plot": "null"}}),
+            'comp_cont': True,
             "page_size": 100
         }
         mock_render.assert_called_with(
