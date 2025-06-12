@@ -79,7 +79,7 @@ def _fetch_and_extract_grch38(get_ncbi_genomes: callable, dest_dir: str):
         dest_dir (str): The directory where the genome data will be saved.
     """
     results = get_ncbi_genomes(
-        taxon='Homo sapiens',
+        taxa=['Homo sapiens'],
         only_reference=True,
         assembly_levels=['chromosome'],
         assembly_source='refseq',
@@ -118,8 +118,44 @@ def _combine_fasta_files(*fasta_in_fp, fasta_out_fp):
             os.remove(f_in)
 
 
+def construct_pangenome_index(ctx, threads=1):
+    """Constructs the pangenome index.
+
+    This action will fetch the human pangenome and GRCh38 reference genome,
+    combine them into a single FASTA file, and generate a Bowtie 2 index.
+    """
+    get_ncbi_genomes = ctx.get_action("rescript", "get_ncbi_genomes")
+    build_index = ctx.get_action("quality_control", "bowtie2_build")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        print("Fetching the human pangenome GFA file...")
+        _fetch_and_extract_pangenome(EBI_SERVER_URL, tmp)
+
+        print("Fetching the human GRCh38 reference genome...")
+        _fetch_and_extract_grch38(get_ncbi_genomes, tmp)
+
+        print("Converting pangenome GFA to FASTA...")
+        gfa_fp = glob.glob(os.path.join(tmp, "*.gfa"))[0]
+        pan_fasta_fp = os.path.join(tmp, "pangenome.fasta")
+        _extract_fasta_from_gfa(gfa_fp, pan_fasta_fp)
+
+        print("Generating an index of the combined reference...")
+        combined_fasta_fp = os.path.join(tmp, "combined.fasta")
+        _combine_fasta_files(
+            pan_fasta_fp, os.path.join(tmp, "grch38.fasta"),
+            fasta_out_fp=combined_fasta_fp
+        )
+        combined_reference = ctx.make_artifact(
+            "FeatureData[Sequence]", combined_fasta_fp
+        )
+        index, = build_index(
+            sequences=combined_reference, n_threads=threads
+        )
+    return index
+
+
 def filter_reads_pangenome(
-        ctx, reads, index=None, n_threads=1, mode='local',
+        ctx, reads, index=None, threads=1, mode='local',
         sensitivity='sensitive', ref_gap_open_penalty=5,
         ref_gap_ext_penalty=3,
 ):
@@ -132,48 +168,25 @@ def filter_reads_pangenome(
     generates a Bowtie 2 index if not already provided. It then filters
     reads against this index according to the specified sensitivity.
     """
-    get_ncbi_genomes = ctx.get_action("rescript", "get_ncbi_genomes")
-    build_index = ctx.get_action("quality_control", "bowtie2_build")
+
     filter_reads = ctx.get_action("quality_control", "filter_reads")
+    construct_index = ctx.get_action("annotate", "construct_pangenome_index")
 
-    with tempfile.TemporaryDirectory() as tmp:
-        if index is None:
-            print("Reference index was not provided - it will be generated.")
-            print("Fetching the human pangenome GFA file...")
-            _fetch_and_extract_pangenome(EBI_SERVER_URL, tmp)
+    if index is None:
+        print("Reference index was not provided - it will be generated.")
+        index, = construct_index(threads)
 
-            print("Fetching the human GRCh38 reference genome...")
-            _fetch_and_extract_grch38(get_ncbi_genomes, tmp)
-
-            print("Converting pangenome GFA to FASTA...")
-            gfa_fp = glob.glob(os.path.join(tmp, "*.gfa"))[0]
-            pan_fasta_fp = os.path.join(tmp, "pangenome.fasta")
-            _extract_fasta_from_gfa(gfa_fp, pan_fasta_fp)
-
-            print("Generating an index of the combined reference...")
-            combined_fasta_fp = os.path.join(tmp, "combined.fasta")
-            _combine_fasta_files(
-                pan_fasta_fp, os.path.join(tmp, "grch38.fasta"),
-                fasta_out_fp=combined_fasta_fp
-            )
-            combined_reference = ctx.make_artifact(
-                "FeatureData[Sequence]", combined_fasta_fp
-            )
-            index, = build_index(
-                sequences=combined_reference, n_threads=n_threads
-            )
-
-        print("Filtering reads against the index...")
-        filter_params = {
-            k: v for k, v in locals().items() if k in
-            ['n_threads', 'mode', 'ref_gap_open_penalty',
-             'ref_gap_ext_penalty']
-        }
-        filtered_reads, = filter_reads(
-            demultiplexed_sequences=reads,
-            database=index,
-            exclude_seqs=True,
-            **filter_params
-        )
+    print("Filtering reads against the index...")
+    filter_params = {
+        k: v for k, v in locals().items() if k in
+        ['mode', 'ref_gap_open_penalty', 'ref_gap_ext_penalty']
+    }
+    filtered_reads, = filter_reads(
+        demultiplexed_sequences=reads,
+        database=index,
+        exclude_seqs=True,
+        n_threads=threads,
+        **filter_params
+    )
 
     return filtered_reads, index

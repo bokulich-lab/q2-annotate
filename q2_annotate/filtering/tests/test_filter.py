@@ -18,7 +18,7 @@ import qiime2
 from q2_annotate.filtering.filter_pangenome import (
     _fetch_and_extract_grch38, _extract_fasta_from_gfa,
     _fetch_and_extract_pangenome, filter_reads_pangenome,
-    _combine_fasta_files, EBI_SERVER_URL
+    _combine_fasta_files, EBI_SERVER_URL, construct_pangenome_index
 )
 from qiime2.plugin.testing import TestPluginBase
 
@@ -184,7 +184,7 @@ class TestMAGFiltering(TestPluginBase):
         _fetch_and_extract_grch38(fake_callable, "/some/where")
 
         fake_callable.assert_called_once_with(
-            taxon='Homo sapiens',
+            taxa=['Homo sapiens'],
             only_reference=True,
             assembly_levels=['chromosome'],
             assembly_source='refseq',
@@ -287,7 +287,7 @@ class TestMAGFiltering(TestPluginBase):
     )
     @patch('q2_annotate.filtering.filter_pangenome._fetch_and_extract_grch38')
     @patch('q2_annotate.filtering.filter_pangenome._extract_fasta_from_gfa')
-    def test_filter_reads_pangenome(
+    def test_construct_pangenome_index(
             self, mock_extract_fasta, mock_fetch_grch38, mock_fetch_pangenome
     ):
         # we don't use the temp_dir from the test class as its content
@@ -304,16 +304,9 @@ class TestMAGFiltering(TestPluginBase):
         ctx.get_action(
             "quality_control", "bowtie2_build"
         ).return_value = (mock_build_index_result,)
-
-        mock_filtered_reads_result = MagicMock()
-        ctx.get_action(
-            "quality_control", "filter_reads"
-        ).return_value = (mock_filtered_reads_result,)
         ctx.make_artifact.return_value = MagicMock()
 
-        reads = MagicMock()
-
-        # prepare some files which will be used by _combined_fasta_files
+        # prepare some files that will be used by _combined_fasta_files
         open(os.path.join(temp_dir, "pangenome.gfa"), 'w').close()
         shutil.copy(
             self.get_data_path("pangenome/grch38.fasta"),
@@ -328,17 +321,11 @@ class TestMAGFiltering(TestPluginBase):
                    return_value=MagicMock(name='TemporaryDirectory',
                                           __enter__=lambda x: temp_dir,
                                           __exit__=lambda x, y, z, w: None)):
-            filtered_reads, generated_index = filter_reads_pangenome(
-                ctx=ctx,
-                reads=reads,
-                index=None,
-                n_threads=1
-            )
+            generated_index = construct_pangenome_index(ctx=ctx, threads=1)
 
             # Assertions
             ctx.get_action.assert_any_call("rescript", "get_ncbi_genomes")
             ctx.get_action.assert_any_call("quality_control", "bowtie2_build")
-            ctx.get_action.assert_any_call("quality_control", "filter_reads")
 
             mock_fetch_pangenome.assert_called_once_with(
                 EBI_SERVER_URL, temp_dir
@@ -368,21 +355,51 @@ class TestMAGFiltering(TestPluginBase):
             ).assert_has_calls(
                 [call(sequences=ANY, n_threads=1)], any_order=True
             )
-            ctx.get_action(
-                'quality_control', 'filter_reads'
-            ).assert_has_calls([call(
-                    demultiplexed_sequences=reads,
-                    database=generated_index,
-                    exclude_seqs=True,
-                    n_threads=1,
-                    mode='local',
-                    ref_gap_open_penalty=5,
-                    ref_gap_ext_penalty=3
-                )], any_order=True)
+
             self.assertIsNotNone(generated_index)
 
         # clean up
         shutil.rmtree(temp_dir)
+
+    def test_filter_reads_pangenome(self):
+        # we construct our own context so that we can control each "action"
+        # being retrieved from it
+        ctx = MagicMock()
+        ctx.get_action.return_value = MagicMock()
+        mock_filtered_reads_result = MagicMock()
+        ctx.get_action(
+            "quality_control", "filter_reads"
+        ).return_value = (mock_filtered_reads_result,)
+        mock_index = MagicMock()
+        ctx.get_action(
+            "annotate", "construct_pangenome_index"
+        ).return_value = (mock_index,)
+
+        reads = MagicMock()
+
+        filtered_reads, generated_index = filter_reads_pangenome(
+            ctx=ctx,
+            reads=reads,
+            index=None,
+            threads=4
+        )
+
+        # Assertions
+        ctx.get_action.assert_any_call("annotate", "construct_pangenome_index")
+        ctx.get_action.assert_any_call("quality_control", "filter_reads")
+
+        ctx.get_action(
+            'quality_control', 'filter_reads'
+        ).assert_has_calls([call(
+            demultiplexed_sequences=reads,
+            database=generated_index,
+            exclude_seqs=True,
+            n_threads=4,
+            mode='local',
+            ref_gap_open_penalty=5,
+            ref_gap_ext_penalty=3
+        )], any_order=True)
+        self.assertIsNotNone(generated_index)
 
 
 if __name__ == "__main__":
