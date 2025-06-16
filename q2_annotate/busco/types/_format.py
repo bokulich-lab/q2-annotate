@@ -16,21 +16,50 @@ class BUSCOResultsFormat(model.TextFileFormat):
         "mag_id", "sample_id", "input_file", "dataset", "complete",
         "single", "duplicated", "fragmented", "missing", "n_markers",
         "scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds",
-        "length","unbinned_percentage", "unbinned_count"
+        "length"
     ]
-
+    ### NEW Optional extra columns allowed at the end
+    OPTIONAL_COLUMNS = ["unbinned_percentage", "absolute_unbinned_count"]
     def _validate(self, n_records=None):
         with self.open() as fh:
             reader = csv.reader(fh, delimiter='\t')
             headers = next(reader)
-
-            if set(headers) != set(self.HEADER):
+#change this statement!! subset + additional check 1-set
+            expected_full_header = self.HEADER + self.OPTIONAL_COLUMNS
+            # Check if headers are a subset of the full expected list,
+            # and that the first required part matches exactly in order
+            #use set / HEADER must be a subset of the header file/don't care about the order 
+            
+            if set(headers[:len(self.HEADER)]) != set(self.HEADER):
                 raise ValidationError(
                     f'Invalid header: {headers}, expected: {self.HEADER}'
                 )
+            # if set(headers) != set(self.HEADER):
+            #     raise ValidationError(
+            #         f'Invalid header: {headers}, expected: {self.HEADER}'
+            #     )
+            #optional columns update len  
+            extra_cols = headers[len(self.HEADER):]
+            # In case of additional columns, check if appropriate ones 
+            if extra_cols and set(extra_cols) != set(self.OPTIONAL_COLUMNS):
+                raise ValidationError(
+                    f"Unexpected columns found: {extra_cols}. "
+                    f"Only allowed optional columns are: {self.OPTIONAL_COLUMNS}"
+                )
+            if set(extra_cols) == set(self.OPTIONAL_COLUMNS):
+                header_legth = len(self.HEADER) + len(self.OPTIONAL_COLUMNS)
+            else:
+                header_legth = len(self.HEADER)
 
+#also check the #col
+            # if len(headers) not in (len(self.HEADER), len(self.HEADER) + len(self.OPTIONAL_COLUMNS)):
+            #     raise ValidationError(
+            #         f"Header has {len(headers)} columns, expected {len(self.HEADER)} "
+            #         f"or {len(self.HEADER) + len(self.OPTIONAL_COLUMNS)}"
+            #     )
+#new ends
             for i, row in enumerate(reader, start=2):
-                if len(row) != len(self.HEADER):
+                if len(row) != header_legth:
                     raise ValidationError(
                         f'Line {i} has {len(row)} columns, '
                         f'expected {len(self.HEADER)}'
@@ -38,6 +67,15 @@ class BUSCOResultsFormat(model.TextFileFormat):
 
                 if n_records is not None and i - 1 >= n_records:
                     break
+            # for i, row in enumerate(reader, start=2):
+            #     if len(row) != len(self.HEADER):
+            #         raise ValidationError(
+            #             f'Line {i} has {len(row)} columns, '
+            #             f'expected {len(self.HEADER)}'
+            #         )
+
+            #     if n_records is not None and i - 1 >= n_records:
+            #         break
 
     def _validate_(self, level):
         record_count_map = {'min': 100, 'max': None}

@@ -43,7 +43,7 @@ class TestBUSCOFeatureData(TestPluginBase):
 
         obs = _run_busco(
             output_dir=self.temp_dir.name,
-            mags=self.mags,
+            mags=self.mags, # add unbinned
             params=['--lineage_dataset', 'bacteria_odb10', '--cpu', '7']
         )
         exp = {
@@ -125,16 +125,18 @@ class TestBUSCOFeatureData(TestPluginBase):
     # TODO: maybe this could be turned into an actual test
     def test_evaluate_busco_action(self):
         mock_action = MagicMock(side_effect=[
-            lambda x, **kwargs: (0, ),
-            lambda x: ("collated_result", ),
-            lambda x: ("visualization", ),
-            lambda x, y: ({"mag1": {}, "mag2": {}}, )
+            lambda x, y, **kwargs: (0,), # evaluate_busco 
+            lambda x: ("collated_result",),  # collate
+            lambda x: ("visualization",),  # visualize
+            lambda *args, **kwargs: ("filtered_unbinned",),  # filter_contigs
+            lambda *args, **kwargs: ({"mag1": {}, "mag2": {}},)  # partition
         ])
-        mock_ctx = MagicMock(get_action=mock_action)
+        mock_ctx = MagicMock(get_action=mock_action) #? 
         mags = qiime2.Artifact.import_data(
             'FeatureData[MAG]',
             self.get_data_path('mags/sample2')
         )
+
         busco_db = qiime2.Artifact.import_data(
             'ReferenceDB[BuscoDB]',
             self.get_data_path('busco_db')
@@ -142,6 +144,7 @@ class TestBUSCOFeatureData(TestPluginBase):
         obs = evaluate_busco(
             ctx=mock_ctx,
             bins=mags,
+            unbinned_contigs = None, #none
             busco_db=busco_db,
             num_partitions=2
         )

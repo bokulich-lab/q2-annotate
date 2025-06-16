@@ -20,7 +20,13 @@ class TestBUSCOFormats(TestPluginBase):
         )
         results.validate(level='min')
         results.validate(level='max')
-
+#extra test to check the optional columns 
+    def test_busco_results_format_with_optional_columns(self):
+        results = BUSCOResultsFormat(
+            self.get_data_path('unbinned_res.tsv'),
+            mode='r'
+        )
+        results.validate()
     def test_busco_results_format_error_header(self):
         results = BUSCOResultsFormat(
             self.get_data_path('busco_results_broken_header.tsv'),

@@ -37,6 +37,83 @@ from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequenc
 # from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequencesDirFmt
 from q2_types.per_sample_sequences import MultiFASTADirectoryFormat
 
+#####for partition
+# import shutil
+import numpy as np
+# import pandas as pd
+from qiime2.util import duplicate
+# from q2_types._util import _validate_num_partitions
+### new for filter_contigs
+from q2_assembly.filter import filter_contigs
+from qiime2 import Metadata
+import warnings
+#####
+def partition_filtered_unbinned(
+    unbinned: ContigSequencesDirFmt, mags_partitioned: MultiMAGSequencesDirFmt
+) ->ContigSequencesDirFmt:
+    """
+    Partition unbinned contigs to match the partitioning of MAGs.
+    
+    Args:
+        unbinned (ContigSequencesDirFmt): The unbinned contigs directory.
+        mags_partitioned (MultiMAGSequencesDirFmt): The partitioned MAGs structure.
+        
+    Returns:
+        Dict[str, ContigSequencesDirFmt]: Mapping of partitions to unbinned contigs.
+    """
+    # unbinned = Artifact.load(unbinned_qza).view(ContigSequencesDirFmt)
+    partitioned_unbinned = {}
+
+    for partition_id, mag_partition in mags_partitioned.items():
+        sample_ids = list(mags_partitioned.keys())
+        index = pd.Index(sample_ids, name="ID")
+        metadata = Metadata(pd.DataFrame(index=index))
+        # Build the WHERE string manually
+        id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
+        where = f"ID IN ({id_list})"
+        # Filter unbinned using metadata
+        filtered_unbinned = filter_contigs(
+            contigs=unbinned,
+            metadata=metadata,
+            where=where
+        )
+
+        # Save this filtered subset
+        partitioned_unbinned[partition_id] = filtered_unbinned
+    # print("\nFinal Partitioned unbinned Structure:")
+    # print(partitioned_unbinned)
+    return partitioned_unbinned
+def partition_sample_data_unbinned(
+    unbinned: ContigSequencesDirFmt, mags_partitioned: MultiMAGSequencesDirFmt
+) ->ContigSequencesDirFmt:
+    """
+    Partition unbinned contigs to match the partitioning of MAGs.
+    
+    Args:
+        unbinned (ContigSequencesDirFmt): The unbinned contigs directory.
+        mags_partitioned (MultiMAGSequencesDirFmt): The partitioned MAGs structure.
+        
+    Returns:
+        Dict[str, ContigSequencesDirFmt]: Mapping of partitions to unbinned contigs.
+    """
+    # unbinned = Artifact.load(unbinned_qza).view(ContigSequencesDirFmt)
+    partitioned_unbinned = {}
+
+    for partition_id, mag_partition in mags_partitioned.items():  # Loop over MAG partitions
+        result = ContigSequencesDirFmt()  # Temporary storage for partitioned unbinned contigs
+        for sample_id in mag_partition.sample_dict().keys():  # Extract sample names from MAGs
+            expected_unbinned_filename = f"{sample_id}_contigs.fa"
+            unbinned_sample_dict = unbinned.sample_dict()  # Get unbinned sample mapping
+            
+            if sample_id in unbinned_sample_dict:  # Check if unbinned contigs exist for this sample
+                unbinned_fp = unbinned_sample_dict[sample_id]
+                os.makedirs(result.path, exist_ok=True)
+                duplicate(unbinned_fp, result.path / expected_unbinned_filename)
+        
+        partitioned_unbinned[partition_id] = result  # Store the partitioned unbinned contigs
+    print("\nFinal Partitioned unbinned Structure:")
+    print(partitioned_unbinned)
+    return partitioned_unbinned
 def count_binned_contigs(bins) -> int:
     """Counts sequences in all FASTA files inside a MultiFASTADirectoryFormat using DNAIterator."""
     
@@ -55,7 +132,7 @@ def count_unbinned_contigs(unbinned_contigs) -> int:
     
     total_sequences = 0
 
-    for fasta_fp, dna_iterator in unbinned.sequences.iter_views(DNAIterator):
+    for fasta_fp, dna_iterator in unbinned_contigs.sequences.iter_views(DNAIterator):
         sequence_count = sum(1 for _ in dna_iterator)  # Count sequences
         # print(f"{fasta_fp} contains {sequence_count} sequences")  # Debugging output
         total_sequences += sequence_count
@@ -207,18 +284,31 @@ def _evaluate_busco(
     )
 
     busco_results = _busco_helper(bins, common_args)
-
+    unbinned_percentage = {}
+    unbinned_count = {}   
     # ### NEW Calculate unbinned percentage AFTER BUSCO RESULTS 
     #add absolute count of unbinned contigs
-    unbinned_percentage, unbinned_count = calculate_unbinned_percentage(bins, unbinned_contigs)
-    print(f"Unbinned Contigs Percentage: {unbinned_percentage:.2f}%")
-    # ### NEW Add unbinned percentage 
-    busco_results["unbinned_percentage"] = unbinned_percentage
-    busco_results["unbinned_count"] = unbinned_count
+    if issubclass(type(bins), MultiMAGSequencesDirFmt):
+        ### NEW Add unbinned percentage per sample
+        if "unbinned_percentage" not in busco_results.columns:
+            busco_results["unbinned_percentage"] = pd.NA
+        if "absolute_unbinned_count" not in busco_results.columns:
+            busco_results["absolute_unbinned_count"] = pd.NA
+        # for unbinned_id, unbinned_values in unbinned_contigs.items():
+        # #bins once
+        for unbinned_id, unbinned_path in unbinned_contigs.sample_dict().items(): # inside function
+            # percentage, count =  calculate_unbinned_percentage(bins, unbinned_values)
+            percentage, count = calculate_unbinned_percentage(bins, ContigSequencesDirFmt(unbinned_path, mode='r')) #calc whole dataframe then merge with busco results
+            busco_results.loc[busco_results["unbinned_id"] == unbinned_id, "unbinned_percentage"] = percentage
+            busco_results.loc[busco_results["unbinned_id"] == unbinned_id, "absolute_unbinned_count"] = count
+
+        ## loc -no dictionary
+        busco_results["unbinned_percentage"] = unbinned_percentage
+        busco_results["absolute_unbinned_count"] = unbinned_count
 
     return busco_results
-    # ### NEW ends 
-    
+    # NEW ends 
+    ###old return
     # return _busco_helper(bins, common_args)
 
 
@@ -329,7 +419,7 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
 def evaluate_busco(
     ctx,
     bins,
-    unbinned_contigs, ### NEW unbinned input dont forget to add to setup 
+    unbinned_contigs, ### NEW unbinned input dont forget to add to setup (ADDED TO plugin_setup)
     busco_db,
     mode="genome",
     lineage_dataset=None,
@@ -361,22 +451,57 @@ def evaluate_busco(
     _evaluate_busco = ctx.get_action("annotate", "_evaluate_busco")
     collate_busco_results = ctx.get_action("annotate", "collate_busco_results")
     _visualize_busco = ctx.get_action("annotate", "_visualize_busco")
+    _filter_contigs = ctx.get_action("assembly", "filter_contigs")
     #add partition cases for unbinned this is possible/ makes sense to have unbinned only when we partition one mag per sample
-    if issubclass(bins.format, MultiMAGSequencesDirFmt):
+    if issubclass(type(bins), MultiMAGSequencesDirFmt):
         partition_action = "partition_sample_data_mags"
-        # partition_unbinned_action = "partition_sample_data_contigs"
-        #unbinned 
     else:
-        partition_action = "partition_feature_data_mags" #here unbined does not make sense!
-        # partition_unbinned_action = "partition_feature_data_contigs"
+        partition_action = "partition_feature_data_mags" #here unbined does not make sense! CREATE A WARNING
+        warnings.warn("Unbinned contigs will not be partitioned because partitioning by MAG is active.")
 
     partition_mags = ctx.get_action("types", partition_action)
+    #####NEW 
+    # if unbinned_action is not None:
+    #     partition_unbinned = ctx.get_action("types", unbinned_action)
+    #     (partitioned_unbinned,) = partition_unbinned(unbinned_contigs, num_partitions)
+    # else:
+        
+    #     warnings.warn("Unbinned contigs will not be partitioned because partitioning by feature is active.")
+    #     partitioned_unbinned = None  # Unused later, or handled conditionally   
+    #####NEW ENDS 
 
     (partitioned_mags, ) = partition_mags(bins, num_partitions)
+   
+    #####new go through mags but also partition unbinned contigs
     results = []
-    for mag in partitioned_mags.values(): # each mag is a subset of bins
-        (busco_result, ) = _evaluate_busco(mag, **kwargs)
-        results.append(busco_result)
+    total_binned = 0  # Initialize outside the loop
+    total_unbinned = 0
+    percentage_unbinned = None
+    if issubclass(type(bins), MultiMAGSequencesDirFmt):
+        for partition_id, mag_partition in partitioned_mags.items():
+            # Get the actual sample IDs in this partition
+            sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
+
+            # Create metadata for filtering unbinned contigs
+            index = pd.Index(sample_ids, name="ID")
+            metadata = Metadata(pd.DataFrame(index=index))
+            id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
+            where = f"ID IN ({id_list})"
+
+            # Filter the unbinned contigs for this partition
+            filtered_unbinned, = _filter_contigs(
+                contigs=unbinned_contigs,
+                metadata=metadata,
+                where=where
+            )
+            # Run BUSCO for this partition of MAGs (with filtered unbinned if needed)
+            # If you're calculating unbinned percentages inside `_evaluate_busco`, pass it in
+            (busco_result,) = _evaluate_busco(mag_partition, filtered_unbinned, **kwargs)
+            results.append(busco_result)
+    else:
+        for mag in partitioned_mags.values(): # each mag is a subset of bins
+            (busco_result, ) = _evaluate_busco(mag, unbinned_contigs, **kwargs)
+            results.append(busco_result)
 
     collated_results, = collate_busco_results(results)
     visualization, = _visualize_busco(collated_results)

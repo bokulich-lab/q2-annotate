@@ -1153,7 +1153,7 @@ plugin.methods.register_function(
     function=q2_annotate.busco._evaluate_busco,
     inputs={
         "bins": SampleData[MAGs] | FeatureData[MAG],
-        "unbinned_contigs": SampleData[Contigs % Properties('unbinned')],  ### NEW add unbinned
+        "unbinned_contigs": SampleData[Contigs],  ### NEW add unbinned SampleData[Contigs % Properties('unbinned')]
         "busco_db": i_busco_db
     },
     parameters=busco_params,
@@ -1180,7 +1180,7 @@ plugin.pipelines.register_function(
     function=q2_annotate.busco.evaluate_busco,
     inputs={
         "bins": SampleData[MAGs] | FeatureData[MAG],
-        "unbinned_contigs": SampleData[Contigs % Properties('unbinned')],  ### NEW add unbinned why % ??
+        "unbinned_contigs": SampleData[Contigs],  ### NEW add unbinned why % ??
         "busco_db": i_busco_db
     },
     parameters={**busco_params, **partition_params},

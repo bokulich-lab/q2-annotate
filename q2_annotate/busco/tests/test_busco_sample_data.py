@@ -16,7 +16,7 @@ from q2_annotate.busco.busco import (
 )
 from unittest.mock import patch, ANY, call, MagicMock
 from qiime2.plugin.testing import TestPluginBase
-from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
+from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequencesDirFmt
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
 
 
@@ -29,6 +29,11 @@ class TestBUSCOSampleData(TestPluginBase):
             path=self.get_data_path('mags'),
             mode="r",
         )
+        self.unbinned = ContigSequencesDirFmt(
+            path=self.get_data_path('unbinned'),
+            mode='r'
+        )
+
         self.busco_db = BuscoDatabaseDirFmt(
             path=self.get_data_path("busco_db"),
             mode="r"
@@ -99,6 +104,11 @@ class TestBUSCOSampleData(TestPluginBase):
         obs = _busco_helper(
             self.mags, ['--lineage_dataset', 'bacteria_odb10']
         )
+        #new
+        unbinned = ContigSequencesDirFmt(
+            path=self.get_data_path('unbinned'),
+            mode='r' 
+        )
         exp = pd.read_csv(
             self.get_data_path('summaries/all_renamed_with_lengths.csv'),
         )
@@ -113,6 +123,7 @@ class TestBUSCOSampleData(TestPluginBase):
     def test_evaluate_busco_offline(self, mock_helper):
         _evaluate_busco(
             bins=self.mags,
+            unbinned_contigs= self.unbinned,#new
             busco_db=self.busco_db,
             mode="some_mode",
             lineage_dataset="lineage_1"
@@ -191,15 +202,22 @@ class TestBUSCOSampleData(TestPluginBase):
     # TODO: maybe this could be turned into an actual test
     def test_evaluate_busco_action(self):
         mock_action = MagicMock(side_effect=[
-            lambda x, **kwargs: (0, ),
+            lambda x, y, **kwargs: (0,), # evaluate_busco
             lambda x: ("collated_result", ),
             lambda x: ("visualization", ),
-            lambda x, y: ({"mag1": {}, "mag2": {}}, )
+            lambda *args, **kwargs: ("filtered_unbinned",),  # filter_contigs
+            lambda x, y: ({"sample1": {}, "sample2": {}}, ) #map id to fasta file in data dir
         ])
-        mock_ctx = MagicMock(get_action=mock_action)
+       
+        mock_ctx = MagicMock()
+        mock_ctx.get_action = mock_action 
         mags = qiime2.Artifact.import_data(
             'SampleData[MAGs]',
             self.get_data_path('mags')
+        )
+        unbinned = qiime2.Artifact.import_data(
+            'SampleData[Contigs]',
+            self.get_data_path('unbinned')
         )
         busco_db = qiime2.Artifact.import_data(
             'ReferenceDB[BuscoDB]',
@@ -208,6 +226,7 @@ class TestBUSCOSampleData(TestPluginBase):
         obs = evaluate_busco(
             ctx=mock_ctx,
             bins=mags,
+            unbinned_contigs = unbinned,
             busco_db=busco_db,
             num_partitions=2
         )
