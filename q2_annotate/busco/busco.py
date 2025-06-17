@@ -53,11 +53,11 @@ def partition_filtered_unbinned(
 ) ->ContigSequencesDirFmt:
     """
     Partition unbinned contigs to match the partitioning of MAGs.
-    
+
     Args:
         unbinned (ContigSequencesDirFmt): The unbinned contigs directory.
         mags_partitioned (MultiMAGSequencesDirFmt): The partitioned MAGs structure.
-        
+
     Returns:
         Dict[str, ContigSequencesDirFmt]: Mapping of partitions to unbinned contigs.
     """
@@ -83,6 +83,8 @@ def partition_filtered_unbinned(
     # print("\nFinal Partitioned unbinned Structure:")
     # print(partitioned_unbinned)
     return partitioned_unbinned
+
+
 def partition_sample_data_unbinned(
     unbinned: ContigSequencesDirFmt, mags_partitioned: MultiMAGSequencesDirFmt
 ) ->ContigSequencesDirFmt:
@@ -114,6 +116,8 @@ def partition_sample_data_unbinned(
     print("\nFinal Partitioned unbinned Structure:")
     print(partitioned_unbinned)
     return partitioned_unbinned
+
+
 def count_binned_contigs(bins) -> int:
     """Counts sequences in all FASTA files inside a MultiFASTADirectoryFormat using DNAIterator."""
     
@@ -121,11 +125,11 @@ def count_binned_contigs(bins) -> int:
 
     #Iterate over sequences directly using QIIME 2's DNAIterator
     for fasta_fp, dna_iterator in bins.sequences.iter_views(DNAIterator):
-        sequence_count = sum(1 for _ in dna_iterator)  # Count sequences
         # print(f"{fasta_fp} contains {sequence_count} sequences")  # Debugging output
-        total_sequences += sequence_count
+        total_sequences += sum(1 for _ in dna_iterator)
 
     return total_sequences
+
 
 def count_unbinned_contigs(unbinned_contigs) -> int:
     """Counts sequences in the unbinned FASTA file using DNAIterator."""
@@ -244,8 +248,8 @@ def _busco_helper(bins, common_args):
 
 def _evaluate_busco(
     bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt],
-    unbinned_contigs: ContigSequencesDirFmt, ### NEW unbinned
     busco_db: BuscoDatabaseDirFmt,
+    unbinned_contigs: ContigSequencesDirFmt = None, ### NEW unbinned
     mode: str = "genome",
     lineage_dataset: str = None,
     augustus: bool = False,
@@ -457,7 +461,7 @@ def evaluate_busco(
         partition_action = "partition_sample_data_mags"
     else:
         partition_action = "partition_feature_data_mags" #here unbined does not make sense! CREATE A WARNING
-        warnings.warn("Unbinned contigs will not be partitioned because partitioning by MAG is active.")
+        warnings.warn("FeatureData[MAG] artifact was provided - unbinned contigs will be ignored.")
 
     partition_mags = ctx.get_action("types", partition_action)
     #####NEW 
@@ -474,25 +478,15 @@ def evaluate_busco(
    
     #####new go through mags but also partition unbinned contigs
     results = []
-    total_binned = 0  # Initialize outside the loop
-    total_unbinned = 0
-    percentage_unbinned = None
     if issubclass(type(bins), MultiMAGSequencesDirFmt):
         for partition_id, mag_partition in partitioned_mags.items():
             # Get the sample IDs in this partition
             sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
 
-            # Create metadata for filtering unbinned contigs
-            index = pd.Index(sample_ids, name="ID")
-            metadata = Metadata(pd.DataFrame(index=index))
-            id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
-            where = f"ID IN ({id_list})"
-
             # Filter the unbinned contigs for this partition
-            filtered_unbinned, = filter_contigs(
-                contigs=unbinned_contigs,
-                metadata=metadata,
-                where=where
+            metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
+            filtered_unbinned, = _filter_contigs(
+                contigs=unbinned_contigs, metadata=metadata
             )
             # Run BUSCO for this partition of MAGs (with filtered unbinned if needed)
             # If you're calculating unbinned percentages inside `_evaluate_busco`, pass it in
