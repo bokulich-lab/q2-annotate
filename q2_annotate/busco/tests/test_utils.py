@@ -19,6 +19,11 @@ from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
 from q2_annotate.busco.busco import calculate_unbinned_percentage
 from q2_types.per_sample_sequences import ContigSequencesDirFmt
+#?
+from q2_types.per_sample_sequences._methods import partition_sample_data_mags
+from q2_assembly.filter import filter_contigs
+from qiime2 import Metadata
+import warnings
 
 class TestBUSCOUtils(TestPluginBase):
     package = "q2_annotate.busco.tests"
@@ -367,7 +372,7 @@ class TestBUSCOUtils(TestPluginBase):
             }
         )
 
-    def test_calculate_unbinned_percentage_simple(self):
+    def test_calculate_unbinned_percentage(self):
 
         mags = MultiMAGSequencesDirFmt(
             path=self.get_data_path('mags'),
@@ -380,30 +385,109 @@ class TestBUSCOUtils(TestPluginBase):
 
         percentage, count = calculate_unbinned_percentage(mags, unbinned)
 
-        # Check output range and type ???? actual percentage result?
+        # Type checks
         self.assertIsInstance(percentage, float)
         self.assertIsInstance(count, int)
-        self.assertGreaterEqual(percentage, 0)
-        self.assertLessEqual(percentage, 100)
-    #synthetic data only import
+
+        expected_count = 5
+        expected_percentage = (5 / (5 + 15)) * 100  
+
+        self.assertEqual(count, expected_count)
+        self.assertEqual(percentage, expected_percentage)
+    #synthetic data nly import
     #TEST: check case no unbinned + sample data case 1 sample no unbinned contigs 
-    # def test_no_unbinned_percentage(self):
-    # def test_sample_data_no_unbinned(self):
-    #     # Run evaluate_busco with unbinned_contigs=None
-    #     result = evaluate_busco(ctx=..., bins=..., unbinned_contigs=None, ...)
-    #     # assert it returns normally and produces expected output structure
-    #     self.assertEqual(result, ("collated_result", "visualization"))
+    def test_no_unbinned(self):
+        mags = MultiMAGSequencesDirFmt(
+            path=self.get_data_path('mags'),  # Folder with real binned FASTAs
+            mode='r'
+        )
+        unbinned = ContigSequencesDirFmt(
+            path=self.get_data_path('unbinned_empty'),  # Folder with empty FASTAs
+            mode='r'
+        )
+
+        percentage, count = calculate_unbinned_percentage(mags, unbinned)
+
+        # Type and range checks
+        self.assertIsInstance(percentage, float)
+        self.assertIsInstance(count, int)
+        self.assertEqual(count, 0)
+        self.assertEqual(percentage, 0.0)
+
+    def test_partial_unbinned(self):
+        mags = MultiMAGSequencesDirFmt(
+            path=self.get_data_path('mags'),  # Folder with real binned FASTAs
+            mode='r'
+        )
+        unbinned = ContigSequencesDirFmt(
+            path=self.get_data_path('unbinned_partial'),  # Folder with empty FASTAs
+            mode='r'
+        )
+
+        percentage, count = calculate_unbinned_percentage(mags, unbinned)
+
+        expected_count = 3
+        expected_percentage = (3 / (3 + 15)) * 100  
+
+        self.assertEqual(count, expected_count)
+        self.assertEqual(percentage, expected_percentage)
+    
+    def test_no_contigs_at_all(self):
+        mags = MultiMAGSequencesDirFmt(
+            path=self.get_data_path('mags_empty'),  # no .fasta files
+            mode='r'
+        )
+        unbinned = ContigSequencesDirFmt(
+            path=self.get_data_path('unbinned_empty'),  # empty .fasta files
+            mode='r'
+        )
+
+        percentage, count = calculate_unbinned_percentage(mags, unbinned)
+
+        self.assertEqual(count, 0)
+        self.assertEqual(percentage, 0.0)
+
+    def test_only_unbinned(self):
+        mags = MultiMAGSequencesDirFmt(
+            path=self.get_data_path('mags_empty'),
+            mode='r'
+        )
+        unbinned = ContigSequencesDirFmt(
+            path=self.get_data_path('unbinned'),
+            mode='r'
+        )
+
+        percentage, count = calculate_unbinned_percentage(mags, unbinned)
+        expected_count = 5
+        self.assertEqual(count, expected_count)
+        self.assertEqual(percentage, 100)
+
+    
+    def test_unbinned_matches_partition_samples(self):
+    # Load full MAGs dataset (unpartitioned)
+        mags = MultiMAGSequencesDirFmt(
+            path=self.get_data_path("mags"),  # e.g., contains sampleA/, sampleB/, ...
+            mode="r"
+        )
+
+        # Partition the MAGs into 2 groups
+        partitioned_mags = partition_sample_data_mags(mags, num_partitions=2)
+
+        # Load unbinned contigs (contains sampleA_contigs.fa, sampleB_contigs.fa, etc.)
+        unbinned = ContigSequencesDirFmt(
+            path=self.get_data_path("unbinned"),
+            mode="r"
+        )
 
 
-
-    # def test_partition_alignment_unbinned_mags(self):
+    # 
     #     #mags_partition = mock partition with sample1, sample2
     #     #unbinned = mock ContigSequencesDirFmt with matching samples
 
     # filtered = filter_contigs( 
     # self.assertEqual(set(filtered.sample_dict().keys()), {"sample1", "sample2"})
-
     # #TEST: check wheter partition of unfiltered contigs matches the partition of mags 
+
     # def test_partitioned_unbinned_matches_mags(self):
     # mags = MultiMAGSequencesDirFmt(
     #     path=self.get_data_path('mags'),

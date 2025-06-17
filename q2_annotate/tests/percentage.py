@@ -195,4 +195,5 @@ def partition_filtered_unbinned(
 # # Run test
 # calculate_unbinned_percentage("./data/mags.qza", "./data/unbinned_contigs.qza")
 mags_partitioned = partition_sample_data_mags("./data/mags.qza", 2)
+
 partition_filtered_unbinned("./data/unbinned_contigs.qza", mags_partitioned)

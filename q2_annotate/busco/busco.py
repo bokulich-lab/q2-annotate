@@ -479,7 +479,7 @@ def evaluate_busco(
     percentage_unbinned = None
     if issubclass(type(bins), MultiMAGSequencesDirFmt):
         for partition_id, mag_partition in partitioned_mags.items():
-            # Get the actual sample IDs in this partition
+            # Get the sample IDs in this partition
             sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
 
             # Create metadata for filtering unbinned contigs
@@ -489,7 +489,7 @@ def evaluate_busco(
             where = f"ID IN ({id_list})"
 
             # Filter the unbinned contigs for this partition
-            filtered_unbinned, = _filter_contigs(
+            filtered_unbinned, = filter_contigs(
                 contigs=unbinned_contigs,
                 metadata=metadata,
                 where=where
