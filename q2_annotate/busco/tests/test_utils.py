@@ -17,7 +17,7 @@ from q2_annotate.busco.utils import (
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
-from q2_annotate.busco.busco import calculate_unbinned_percentage
+from q2_annotate.busco.busco import calculate_unbinned_percentage, count_binned_contigs, count_unbinned_contigs
 from q2_types.per_sample_sequences import ContigSequencesDirFmt
 #?
 from q2_types.per_sample_sequences._methods import partition_sample_data_mags
@@ -463,15 +463,12 @@ class TestBUSCOUtils(TestPluginBase):
         self.assertEqual(percentage, 100)
 
     
-    def test_unbinned_matches_partition_samples(self):
+    def test_filtered_unbinned_matches_partition_sample_1(self):
     # Load full MAGs dataset (unpartitioned)
         partitioned_mags = MultiMAGSequencesDirFmt(
-            path=self.get_data_path("mags"),  # e.g., contains sampleA/, sampleB/, ...
+            path=self.get_data_path("partition_1_sample"),  # e.g., contains sampleA/, sampleB/, ...
             mode="r"
         )
-
-        # Partition the MAGs into 2 groups
-        partitioned_mags = partition_sample_data_mags(mags, num_partitions=2)
 
         # Load unbinned contigs (contains sampleA_contigs.fa, sampleB_contigs.fa, etc.)
         unbinned = ContigSequencesDirFmt(
@@ -479,41 +476,64 @@ class TestBUSCOUtils(TestPluginBase):
             mode="r"
         )
 
-        sample_ids = list(partitioned_mags.view(MultiMAGSequencesDirFmt).sample_dict().keys())
+        sample_ids = list(partitioned_mags.sample_dict().keys())
+        index = pd.Index(sample_ids, name="ID")
+        metadata = Metadata(pd.DataFrame(index=index))
+        # Build the WHERE string manually
+        id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
+        where = f"ID IN ({id_list})"
+        # Filter unbinned using metadata
+        filtered_unbinned = filter_contigs(
+            contigs=unbinned,
+            metadata=metadata,
+            where=where
+        )
+        self.assertEqual(set(filtered_unbinned.sample_dict().keys()), set(sample_ids))
+
+    def test_filtered_unbinned_matches_partition_sample_1(self):
+    # Load full MAGs dataset (unpartitioned)
+        partitioned_mags = MultiMAGSequencesDirFmt(
+            path=self.get_data_path("partition_2_samples"),  # e.g., contains sampleA/, sampleB/, ...
+            mode="r"
+        )
+
+        # Load unbinned contigs (contains sampleA_contigs.fa, sampleB_contigs.fa, etc.)
+        unbinned = ContigSequencesDirFmt(
+            path=self.get_data_path("unbinned"),
+            mode="r"
+        )
+
+        sample_ids = list(partitioned_mags.sample_dict().keys())
         metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
-        filtered_unbinned, = filter_contigs(unbinned, metadata)
+        id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
+        where = f"ID IN ({id_list})"
+        filtered_unbinned = filter_contigs(
+            contigs=unbinned,
+            metadata=metadata,
+            where=where
+        )
+        # filtered_unbinned = filter_contigs(
+        #         contigs=unbinned, metadata=metadata
+        #     )
+        # Check if the filtered unbinned contigs match the partitioned MAGs
+        self.assertEqual(set(filtered_unbinned.sample_dict().keys()), set(sample_ids))
 
+    def test_count_binned_contigs(self):
+        # Load synthetic test data with known number of contigs
+        bins = MultiMAGSequencesDirFmt(
+            path=self.get_data_path("mags"), mode='r'
+        )
 
-    # 
-    #     #mags_partition = mock partition with sample1, sample2
-    #     #unbinned = mock ContigSequencesDirFmt with matching samples
+        count = count_binned_contigs(bins)
+        #2+3+2 + 3+2+3 = 15
+        self.assertEqual(count, 15)
 
-    # filtered = filter_contigs( 
-    # self.assertEqual(set(filtered.sample_dict().keys()), {"sample1", "sample2"})
-    # #TEST: check wheter partition of unfiltered contigs matches the partition of mags 
+    def test_count_unbinned_contigs(self):
+        # Load synthetic test data with known number of contigs
+        bins = MultiMAGSequencesDirFmt(
+            path=self.get_data_path("unbinned"), mode='r'
+        )
 
-    # def test_partitioned_unbinned_matches_mags(self):
-    # mags = MultiMAGSequencesDirFmt(
-    #     path=self.get_data_path('mags'),
-    #     mode="r"
-    # )
-    # unbinned = ContigSequencesDirFmt(
-    #     path=self.get_data_path('unbinned'),
-    #     mode="r"
-    # )
-
-    # partitioned_unbinned = partition_sample_data_unbinned(unbinned, mags)
-
-    # # For each partition, check sample IDs match
-    # for partition_id, unbinned_fmt in partitioned_unbinned.items():
-    #     mags_sample_ids = set(mags.sample_dict().keys())
-    #     unbinned_sample_ids = set(unbinned_fmt.sample_dict().keys())
-
-    #     self.assertTrue(
-    #         unbinned_sample_ids.issubset(mags_sample_ids),
-    #         f"Partition {partition_id} contains unbinned contigs for unexpected samples"
-    #     )
-
-    #TEST: only unbinned and check total>0 and 2nd total==0
-    #TEST: count_binned_contigs
-    #TEST: count_unbinned_contigs
+        count = count_unbinned_contigs(bins)
+        #3+2=5
+        self.assertEqual(count, 5)  

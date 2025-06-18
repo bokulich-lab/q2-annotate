@@ -485,7 +485,7 @@ def evaluate_busco(
 
             # Filter the unbinned contigs for this partition
             metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
-            filtered_unbinned, = filter_contigs(
+            filtered_unbinned, = _filter_contigs(
                 contigs=unbinned_contigs, metadata=metadata
             )
             # Run BUSCO for this partition of MAGs (with filtered unbinned if needed)
