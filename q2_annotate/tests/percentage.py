@@ -196,4 +196,8 @@ def partition_filtered_unbinned(
 # calculate_unbinned_percentage("./data/mags.qza", "./data/unbinned_contigs.qza")
 mags_partitioned = partition_sample_data_mags("./data/mags.qza", 2)
 
-partition_filtered_unbinned("./data/unbinned_contigs.qza", mags_partitioned)
+# for partition_id, mag_partition in mags_partitioned.items():
+#     output_path = f"./partitioned_output/partition_{partition_id}"
+#     mag_partition.save(output_path)
+
+# partition_filtered_unbinned("./data/unbinned_contigs.qza", mags_partitioned)

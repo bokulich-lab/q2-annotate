@@ -465,7 +465,7 @@ class TestBUSCOUtils(TestPluginBase):
     
     def test_unbinned_matches_partition_samples(self):
     # Load full MAGs dataset (unpartitioned)
-        mags = MultiMAGSequencesDirFmt(
+        partitioned_mags = MultiMAGSequencesDirFmt(
             path=self.get_data_path("mags"),  # e.g., contains sampleA/, sampleB/, ...
             mode="r"
         )
@@ -478,6 +478,10 @@ class TestBUSCOUtils(TestPluginBase):
             path=self.get_data_path("unbinned"),
             mode="r"
         )
+
+        sample_ids = list(partitioned_mags.view(MultiMAGSequencesDirFmt).sample_dict().keys())
+        metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
+        filtered_unbinned, = filter_contigs(unbinned, metadata)
 
 
     # 
