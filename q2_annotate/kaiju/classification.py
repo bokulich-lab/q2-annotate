@@ -14,11 +14,14 @@ from pathlib import Path
 from typing import Union
 
 import pandas as pd
+from q2_types.feature_data import FeatureData
+from q2_types.feature_data_mag import MAGSequencesDirFmt, MAG
 from q2_types.per_sample_sequences import (
     SingleLanePerSamplePairedEndFastqDirFmt,
     SingleLanePerSampleSingleEndFastqDirFmt,
     SequencesWithQuality,
-    PairedEndSequencesWithQuality,
+    PairedEndSequencesWithQuality, ContigSequencesDirFmt, MultiFASTADirectoryFormat,
+    Contigs, MAGs, JoinedSequencesWithQuality,
 )
 
 from q2_annotate._utils import run_command
@@ -104,10 +107,14 @@ def _fix_id_types(table: pd.DataFrame) -> pd.DataFrame:
     return table
 
 
-def _construct_feature_table(table_fp: str) -> (pd.DataFrame, pd.DataFrame):
+def _construct_feature_table(
+        table_fp: str, sample_data_mags
+) -> (pd.DataFrame, pd.DataFrame):
     """
     Args:
         table_fp (str): The file path of the table.
+        sample_data_mags (bool): A flag indicating whether the data was created from
+            SampleData[MAGs].
 
     Returns:
         pd.DataFrame, pd.DataFrame: A tuple containing two pandas DataFrames.
@@ -123,7 +130,10 @@ def _construct_feature_table(table_fp: str) -> (pd.DataFrame, pd.DataFrame):
     table = _fix_id_types(table)
 
     # extract sample name from the file path
-    table["sample"] = table["file"].map(lambda x: Path(x).stem)
+    if sample_data_mags:
+        table["sample"] = table["file"].map(lambda x: Path(x).parent.name)
+    else:
+        table["sample"] = table["file"].map(lambda x: Path(x).stem)
 
     # clean up all the NAs
     table["taxon_name"] = table["taxon_name"].str.replace("NA", "Unspecified")
@@ -153,13 +163,15 @@ def _construct_feature_table(table_fp: str) -> (pd.DataFrame, pd.DataFrame):
     return table, taxonomy
 
 
-def _process_kaiju_reports(tmpdir, all_args):
+def _process_kaiju_reports(tmpdir, all_args, sample_data_mags):
     """
     Args:
         tmpdir (str): The temporary directory where the Kaiju report files
             are located.
         all_args (dict): A dictionary containing the original arguments
             passed to the classification action.
+        sample_data_mags (bool): A flag indicating whether the data was created from
+            SampleData[MAGs].
 
     Returns:
         pd.DataFrame: The feature table constructed from all reports.
@@ -180,7 +192,11 @@ def _process_kaiju_reports(tmpdir, all_args):
     else:
         table_args.extend(["-c", str(all_args["c"])])
 
-    report_fps = sorted(glob.glob(os.path.join(tmpdir, "*.out")))
+    report_fps = sorted(
+        glob.glob(os.path.join(tmpdir, "*.out")) +
+        glob.glob(os.path.join(tmpdir, "*/", "*.out"))
+    )
+
     table_fp = os.path.join(tmpdir, "results.tsv")
 
     cmd = [
@@ -195,15 +211,17 @@ def _process_kaiju_reports(tmpdir, all_args):
             "stdout and stderr to learn more."
         )
 
-    return _construct_feature_table(table_fp)
+    return _construct_feature_table(table_fp, sample_data_mags)
 
 
 def _classify_kaiju_helper(
-        manifest: pd.DataFrame, all_args: dict
+        seqs, all_args: dict
 ) -> (pd.DataFrame, pd.DataFrame):
     """
     Args:
-        manifest (pd.DataFrame): A DataFrame containing sample information.
+        seqs: Sequences object, can be of class SingleLanePerSampleSingleEndFastqDirFmt,
+              SingleLanePerSamplePairedEndFastqDirFmt, ContigSequencesDirFmt,
+              MAGSequencesDirFmt or MultiFASTADirectoryFormat.
         all_args (dict): A dictionary containing arguments for running Kaiju.
 
     Returns:
@@ -229,19 +247,45 @@ def _classify_kaiju_helper(
     ]
 
     base_cmd = ["kaiju-multi", "-v", *kaiju_args]
-    paired = "reverse" in manifest.columns
+    read_types = (
+        SingleLanePerSampleSingleEndFastqDirFmt,
+        SingleLanePerSamplePairedEndFastqDirFmt
+    )
+    files_fwd, files_rev, output_fps = [], [], []
+    paired = False
+    sample_data_mags = False
 
-    samples_fwd, samples_rev, output_fps = [], [], []
     with tempfile.TemporaryDirectory() as tmpdir:
-        for index, row in manifest.iterrows():
-            sample_name, fps = _get_sample_paths(index, row, paired)
-            samples_fwd.append(fps[0])
-            samples_rev.append(fps[1])
-            output_fps.append(f"{os.path.join(tmpdir, sample_name)}.out")
+        if isinstance(seqs, read_types):
+            manifest: [pd.DataFrame] = seqs.manifest.view(pd.DataFrame)
+            paired = "reverse" in manifest.columns
 
-        base_cmd.extend(["-i", ",".join(samples_fwd)])
+            for index, row in manifest.iterrows():
+                sample_name, fps = _get_sample_paths(index, row, paired)
+                files_fwd.append(fps[0])
+                files_rev.append(fps[1])
+                output_fps.append(f"{os.path.join(tmpdir, sample_name)}.out")
+
+        elif isinstance(seqs, ContigSequencesDirFmt):
+            outer_dict = {"": seqs.sample_dict()}
+
+        elif isinstance(seqs, MAGSequencesDirFmt):
+            outer_dict = {"": seqs.feature_dict()}
+
+        elif isinstance(seqs, MultiFASTADirectoryFormat):
+            outer_dict = seqs.sample_dict()
+            sample_data_mags = True
+
+        if not isinstance(seqs, read_types):
+            for outer_id, inner_dict in outer_dict.items():
+                os.makedirs(os.path.join(tmpdir, outer_id), exist_ok=True)
+                for inner_id, full_path in inner_dict.items():
+                    files_fwd.append(full_path)
+                    output_fps.append(f"{os.path.join(tmpdir, outer_id, inner_id)}.out")
+
+        base_cmd.extend(["-i", ",".join(files_fwd)])
         if paired:
-            base_cmd.extend(["-j", ",".join(samples_rev)])
+            base_cmd.extend(["-j", ",".join(files_rev)])
         base_cmd.extend(["-o", ",".join(output_fps)])
 
         try:
@@ -253,31 +297,34 @@ def _classify_kaiju_helper(
                 "stdout and stderr to learn more."
             )
 
-        table, taxonomy = _process_kaiju_reports(tmpdir, all_args)
+        table, taxonomy = _process_kaiju_reports(tmpdir, all_args, sample_data_mags)
 
     return table, taxonomy
 
 
 def _classify_kaiju(
-    seqs: Union[
-        SingleLanePerSamplePairedEndFastqDirFmt,
-        SingleLanePerSampleSingleEndFastqDirFmt,
-    ],
-    db: KaijuDBDirectoryFormat,
-    z: int = 1,
-    a: str = "greedy",
-    e: int = 3,
-    m: int = 11,
-    s: int = 65,
-    evalue: float = 0.01,
-    x: bool = True,
-    r: str = "species",
-    c: float = 0.0,
-    exp: bool = False,
-    u: bool = False,
+        seqs: Union[
+            SingleLanePerSamplePairedEndFastqDirFmt,
+            SingleLanePerSampleSingleEndFastqDirFmt,
+            ContigSequencesDirFmt,
+            MAGSequencesDirFmt,
+            MultiFASTADirectoryFormat
+        ],
+        db: KaijuDBDirectoryFormat,
+        z: int = 1,
+        a: str = "greedy",
+        e: int = 3,
+        m: int = 11,
+        s: int = 65,
+        evalue: float = 0.01,
+        x: bool = True,
+        r: str = "species",
+        c: float = 0.0,
+        exp: bool = False,
+        u: bool = False,
 ) -> (pd.DataFrame, pd.DataFrame):
-    manifest: pd.DataFrame = seqs.manifest.view(pd.DataFrame)
-    return _classify_kaiju_helper(manifest, dict(locals().items()))
+
+    return _classify_kaiju_helper(seqs, dict(locals().items()))
 
 
 def classify_kaiju(
@@ -304,10 +351,22 @@ def classify_kaiju(
     collate_feature_tables = ctx.get_action("feature_table", "merge")
     collate_taxonomies = ctx.get_action("feature_table", "merge_taxa")
 
-    if seqs.type <= SampleData[SequencesWithQuality]:
+    if seqs.type <= SampleData[SequencesWithQuality |
+                               JoinedSequencesWithQuality]:
         partition_method = ctx.get_action("demux", "partition_samples_single")
     elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
         partition_method = ctx.get_action("demux", "partition_samples_paired")
+    elif seqs.type <= SampleData[Contigs]:
+        partition_method = ctx.get_action("assembly", "partition_contigs")
+    elif seqs.type <= SampleData[MAGs]:
+        partition_method = ctx.get_action(
+            "types", "partition_sample_data_mags"
+        )
+
+    # FeatureData[MAG] is not parallelized
+    elif seqs.type <= FeatureData[MAG]:
+        (table, taxonomy) = _classify_kaiju(seqs, db, **kwargs)
+        return table, taxonomy
     else:
         raise NotImplementedError()
 
