@@ -1,0 +1,206 @@
+{
+    "config": {
+        "view": {
+            "continuousWidth": 300,
+            "continuousHeight": 300
+        },
+        "axis": {
+            "labelFontSize": 12,
+            "titleFontSize": 15
+        },
+        "header": {
+            "labelFontSize": 12,
+            "titleFontSize": 15
+        },
+        "legend": {
+            "labelFontSize": 12,
+            "labelLimit": 1000,
+            "titleFontSize": 15
+        }
+    },
+    "data": {
+        "name": "data-e1fe2abe6612eea557a9af55bd617fae"
+    },
+    "mark": {
+        "type": "circle",
+        "size": 60
+    },
+    "encoding": {
+        "color": {
+            "field": "mag_id",
+            "scale": {
+                "scheme": "viridis"
+            },
+            "title": "MAG ID",
+            "type": "nominal"
+        },
+        "tooltip": [
+            {
+                "field": "mag_id",
+                "type": "nominal"
+            },
+            {
+                "field": "sample_id",
+                "type": "quantitative"
+            },
+            {
+                "field": "input_file",
+                "type": "nominal"
+            },
+            {
+                "field": "dataset",
+                "type": "nominal"
+            },
+            {
+                "field": "complete",
+                "type": "quantitative"
+            },
+            {
+                "field": "single",
+                "type": "quantitative"
+            },
+            {
+                "field": "duplicated",
+                "type": "quantitative"
+            },
+            {
+                "field": "fragmented",
+                "type": "quantitative"
+            },
+            {
+                "field": "missing",
+                "type": "quantitative"
+            },
+            {
+                "field": "n_markers",
+                "type": "quantitative"
+            },
+            {
+                "field": "scaffold_n50",
+                "type": "quantitative"
+            },
+            {
+                "field": "contigs_n50",
+                "type": "quantitative"
+            },
+            {
+                "field": "percent_gaps",
+                "type": "nominal"
+            },
+            {
+                "field": "scaffolds",
+                "type": "quantitative"
+            },
+            {
+                "field": "completeness",
+                "type": "quantitative"
+            },
+            {
+                "field": "contamination",
+                "type": "quantitative"
+            },
+            {
+                "field": "length",
+                "type": "quantitative"
+            }
+        ],
+        "x": {
+            "field": "completeness",
+            "scale": {
+                "domain": [
+                    0,
+                    100
+                ]
+            },
+            "title": "Completeness",
+            "type": "quantitative"
+        },
+        "y": {
+            "field": "contamination",
+            "scale": {
+                "domain": [
+                    0,
+                    100
+                ]
+            },
+            "title": "Contamination",
+            "type": "quantitative"
+        }
+    },
+    "height": 600,
+    "params": [
+        {
+            "name": "selected_id",
+            "bind": {
+                "input": "select",
+                "options": [
+                    "All",
+                    "0e514d88-16c4-4273-a1df-1a360eb2c823",
+                    "ab23d75d-547d-455a-8b51-16b46ddf7496"
+                ],
+                "name": "MAG ID: "
+            },
+            "value": "All"
+        },
+        {
+            "name": "param_1",
+            "select": {
+                "type": "interval",
+                "encodings": [
+                    "x",
+                    "y"
+                ]
+            },
+            "bind": "scales"
+        }
+    ],
+    "transform": [
+        {
+            "filter": "(selected_id == 'All') || (datum.mag_id == selected_id)"
+        }
+    ],
+    "width": 600,
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.20.1.json",
+    "datasets": {
+        "data-e1fe2abe6612eea557a9af55bd617fae": [
+            {
+                "mag_id": "ab23d75d-547d-455a-8b51-16b46ddf7496",
+                "sample_id": null,
+                "input_file": "ab23d75d-547d-455a-8b51-16b46ddf7496.fasta",
+                "dataset": "bacteria_odb10",
+                "complete": 80.6,
+                "single": 80.6,
+                "duplicated": 0.0,
+                "fragmented": 2.4,
+                "missing": 17.0,
+                "n_markers": 124,
+                "scaffold_n50": 1309033,
+                "contigs_n50": 1309033,
+                "percent_gaps": "0.000%",
+                "scaffolds": 5,
+                "completeness": 83,
+                "contamination": 0.0,
+                "length": 3177889
+            },
+            {
+                "mag_id": "0e514d88-16c4-4273-a1df-1a360eb2c823",
+                "sample_id": null,
+                "input_file": "0e514d88-16c4-4273-a1df-1a360eb2c823.fasta",
+                "dataset": "bacteria_odb10",
+                "complete": 100.0,
+                "single": 1.6,
+                "duplicated": 98.4,
+                "fragmented": 0.0,
+                "missing": 0.0,
+                "n_markers": 124,
+                "scaffold_n50": 44962,
+                "contigs_n50": 44962,
+                "percent_gaps": "0.000%",
+                "scaffolds": 701,
+                "completeness": 100,
+                "contamination": 98.4,
+                "length": 19625518
+            }
+        ]
+    }
+}
