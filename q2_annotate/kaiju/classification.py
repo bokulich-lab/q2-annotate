@@ -28,9 +28,6 @@ from q2_annotate._utils import run_command
 from q2_types.kaiju import KaijuDBDirectoryFormat
 from q2_types.sample_data import SampleData
 
-from q2_annotate.kraken2.select import _find_lcas, RANKS
-from q2_annotate.kraken2.utils import _taxon_to_list, _find_lca
-
 DEFAULT_PREFIXES = ["d__", "p__", "c__", "o__", "f__", "g__", "s__", "ssp__"]
 
 
@@ -128,7 +125,6 @@ def _construct_feature_table(
 
     """
     table = pd.read_csv(table_fp, sep="\t")
-    table.to_csv("/cluster/scratch/rischv/table.tsv", sep="\t")
 
     # clean up taxon IDs
     table = _fix_id_types(table)
@@ -138,27 +134,7 @@ def _construct_feature_table(
         table["sample"] = table["file"].map(lambda x: Path(x).parent.name)
     else:
         table["sample"] = table["file"].map(lambda x: Path(x).stem)
-    
-    table['taxon_name'] = table['taxon_name'].apply(
-        lambda x: _taxon_to_list(x, rank_handle=f'^[{RANKS[:-1]}]__|s1?__')
-    )
-    table = table[~table['taxon_name'].str.contains('Viruses|unclassified|cannot', case=False,
-                                           na=False)]
-    # Find LCA for every MAG
-    results = {}
-    for sample in table['sample'].unique():
-        data = table[table['sample'] == sample]['taxon_name']
-        result = _find_lca(data)
-        results[sample] = result
-    
-    # taxonomy = table[["sample", "taxon_name"]].copy()
-    # taxonomy = taxonomy.rename(columns={'taxon_name': 'Taxon', 'sample': 'mag_id'})
-    # taxonomy = taxonomy[~taxonomy['Taxon'].str.contains('Viruses|unclassified|cannot', case=False,
-    #                                        na=False)]
-    # table = table.rename(columns={'taxon_name': 'Taxon', 'sample': 'mag_id'})
-    # 
-    # _find_lcas(taxa_list=[table], mode="lca")
-    
+
     # clean up all the NAs
     table["taxon_name"] = table["taxon_name"].str.replace("NA", "Unspecified")
 
