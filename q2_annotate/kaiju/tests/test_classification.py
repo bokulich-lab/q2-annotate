@@ -142,13 +142,11 @@ class TestKaijuClassification(TestPluginBase):
     @patch("subprocess.run")
     @patch("q2_annotate.kaiju.classification._construct_feature_table")
     def test_process_kaiju_reports_c_float(self, p1, p2):
-        os.mkdir(os.path.join(self.temp_dir.name, "sample1"))
         open(
-            os.path.join(str(self.temp_dir.name), "sample1", "bin1.out"), "w"
+            os.path.join(str(self.temp_dir.name), "sample1.out"), "w"
         ).close()
-        os.mkdir(os.path.join(self.temp_dir.name, "sample2"))
         open(
-            os.path.join(str(self.temp_dir.name), "sample2", "bin2.out"), "w"
+            os.path.join(str(self.temp_dir.name), "sample2.out"), "w"
         ).close()
         args = {
             "r": "species",
@@ -168,8 +166,8 @@ class TestKaijuClassification(TestPluginBase):
             "-n", f"{self.temp_dir.name}/names.dmp",
             "-l", "superkingdom,phylum,class,order,family,genus,species",
             "-e", "-u", "-m", "0.6",
-            f"{self.temp_dir.name}/sample1/bin1.out",
-            f"{self.temp_dir.name}/sample2/bin2.out"
+            f"{self.temp_dir.name}/sample1.out",
+            f"{self.temp_dir.name}/sample2.out"
         ]
 
         p1.assert_called_once_with(f"{self.temp_dir.name}/results.tsv")
