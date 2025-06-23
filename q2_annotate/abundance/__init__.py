@@ -8,4 +8,6 @@
 
 from .abundance import estimate_abundance
 
-__all__ = ["estimate_abundance", ]
+__all__ = [
+    "estimate_abundance",
+]

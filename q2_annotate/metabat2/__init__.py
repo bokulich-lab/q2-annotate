@@ -8,4 +8,4 @@
 
 from .metabat2 import bin_contigs_metabat
 
-__all__ = ['bin_contigs_metabat']
+__all__ = ["bin_contigs_metabat"]

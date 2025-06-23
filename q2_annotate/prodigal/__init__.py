@@ -8,4 +8,4 @@
 
 from .prodigal import predict_genes_prodigal
 
-__all__ = ['predict_genes_prodigal']
+__all__ = ["predict_genes_prodigal"]

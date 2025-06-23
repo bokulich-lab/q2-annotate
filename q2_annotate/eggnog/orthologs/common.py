@@ -17,17 +17,20 @@ from qiime2.sdk import Context
 from q2_types.feature_data import FeatureData
 from q2_types.feature_data_mag import MAG, MAGSequencesDirFmt
 from q2_types.genome_data import (
-    SeedOrthologDirFmt, OrthologFileFmt, LociDirectoryFormat
+    SeedOrthologDirFmt,
+    OrthologFileFmt,
+    LociDirectoryFormat,
 )
 from q2_types.per_sample_sequences import (
-    Contigs, MAGs, ContigSequencesDirFmt, MultiMAGSequencesDirFmt
+    Contigs,
+    MAGs,
+    ContigSequencesDirFmt,
+    MultiMAGSequencesDirFmt,
 )
 from q2_types.sample_data import SampleData
 
 
-def _create_symlinks(
-    source_dirs: list, target_dir: str
-):
+def _create_symlinks(source_dirs: list, target_dir: str):
     """
     Create symbolic links for files from source_dirs in the target directory.
 
@@ -38,19 +41,18 @@ def _create_symlinks(
     for src in source_dirs:
         for filename in os.listdir(str(src)):
             os.symlink(
-                os.path.join(str(src), filename),
-                os.path.join(target_dir, filename)
+                os.path.join(str(src), filename), os.path.join(target_dir, filename)
             )
 
 
 def _run_eggnog_search_pipeline(
-        ctx: Context,
-        sequences: qiime2.Artifact,
-        db: list,
-        num_cpus: int,
-        db_in_memory: bool,
-        num_partitions: int,
-        search_action: str
+    ctx: Context,
+    sequences: qiime2.Artifact,
+    db: list,
+    num_cpus: int,
+    db_in_memory: bool,
+    num_partitions: int,
+    search_action: str,
 ):
     """
     Run the eggNOG search pipeline on the given sequences.
@@ -104,12 +106,12 @@ def _run_eggnog_search_pipeline(
 
 
 def _search_runner(
-        input_path,
-        sample_label: str,
-        output_loc: str,
-        num_cpus: int,
-        db_in_memory: bool,
-        runner_args: List[str]
+    input_path,
+    sample_label: str,
+    output_loc: str,
+    num_cpus: int,
+    db_in_memory: bool,
+    runner_args: List[str],
 ):
     """
     Execute the eggNOG-mapper command with specified arguments for
@@ -125,21 +127,30 @@ def _search_runner(
     - runner_args: Additional arguments to pass to the eggNOG-mapper command.
     """
     cmd = [
-        'emapper.py', '-i', str(input_path), '-o', sample_label,
-        '-m', *runner_args, '--genepred', 'prodigal',
-        '--itype', 'metagenome', '--output_dir', output_loc,
-        '--cpu', str(num_cpus), '--no_annot'
+        "emapper.py",
+        "-i",
+        str(input_path),
+        "-o",
+        sample_label,
+        "-m",
+        *runner_args,
+        "--genepred",
+        "prodigal",
+        "--itype",
+        "metagenome",
+        "--output_dir",
+        output_loc,
+        "--cpu",
+        str(num_cpus),
+        "--no_annot",
     ]
     if db_in_memory:
-        cmd.append('--dbmem')
+        cmd.append("--dbmem")
 
     try:
         subprocess.run(cmd, check=True, cwd=output_loc)
     except subprocess.CalledProcessError as e:
-        raise Exception(
-            "Error running eggNOG-mapper. "
-            f"The exception was: {e}"
-        )
+        raise Exception("Error running eggNOG-mapper. " f"The exception was: {e}")
 
 
 def _eggnog_search(
@@ -160,25 +171,21 @@ def _eggnog_search(
     # iterate over the gff files and move them to the correct location
     loci = LociDirectoryFormat()
     gff_fp = [
-        os.path.basename(x) for x
-        in glob.glob(f'{output_loc}/*.emapper.genepred.gff')
+        os.path.basename(x) for x in glob.glob(f"{output_loc}/*.emapper.genepred.gff")
     ]
     for fn in gff_fp:
-        new_fn = fn.replace('.emapper.genepred.gff', '.gff')
+        new_fn = fn.replace(".emapper.genepred.gff", ".gff")
         qiime2.util.duplicate(
-            os.path.join(output_loc, fn),
-            os.path.join(loci.path, new_fn)
+            os.path.join(output_loc, fn), os.path.join(loci.path, new_fn)
         )
 
     orthologs = SeedOrthologDirFmt()
     ortholog_fps = [
-        os.path.basename(x) for x
-        in glob.glob(f'{output_loc}/*.seed_orthologs')
+        os.path.basename(x) for x in glob.glob(f"{output_loc}/*.seed_orthologs")
     ]
     for item in ortholog_fps:
         qiime2.util.duplicate(
-            os.path.join(output_loc, item),
-            os.path.join(orthologs.path, item)
+            os.path.join(output_loc, item), os.path.join(orthologs.path, item)
         )
 
     ft = _eggnog_feature_table(orthologs)
@@ -188,16 +195,15 @@ def _eggnog_search(
 def _eggnog_feature_table(seed_orthologs: SeedOrthologDirFmt) -> pd.DataFrame:
     per_sample_counts = []
 
-    for sample_path, obj in seed_orthologs.seed_orthologs.iter_views(
-            OrthologFileFmt):
+    for sample_path, obj in seed_orthologs.seed_orthologs.iter_views(OrthologFileFmt):
         # TODO: put filename to sample name logic on OrthologFileFmt object
-        sample_name = str(sample_path).replace('.emapper.seed_orthologs', '')
+        sample_name = str(sample_path).replace(".emapper.seed_orthologs", "")
         sample_df = obj.view(pd.DataFrame)
-        sample_feature_counts = sample_df.value_counts('sseqid')
+        sample_feature_counts = sample_df.value_counts("sseqid")
         sample_feature_counts.name = str(sample_name)
         per_sample_counts.append(sample_feature_counts)
     df = pd.DataFrame(per_sample_counts)
     df.fillna(0, inplace=True)
-    df.columns = df.columns.astype('str')
+    df.columns = df.columns.astype("str")
 
     return df

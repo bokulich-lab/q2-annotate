@@ -16,49 +16,43 @@ class TestEggnogHmmerIdmap(TestPluginBase):
 
     def test_HmmIdmapFileFmt_valid(self):
         fmt = EggnogHmmerIdmapFileFmt(
-            self.get_data_path("valid_idmaps/bacteria.hmm.idmap"), 'r'
+            self.get_data_path("valid_idmaps/bacteria.hmm.idmap"), "r"
         )
         fmt.validate()
 
     def test_HmmIdmapFileFmt_invalid_idmap_1(self):
         fmt = EggnogHmmerIdmapFileFmt(
-            self.get_data_path("invalid_idmaps/1.hmm.idmap"), 'r'
+            self.get_data_path("invalid_idmaps/1.hmm.idmap"), "r"
         )
         with self.assertRaisesRegex(
             ValidationError,
-            "Expected index and an alphanumeric code separated "
-            "by a single space."
+            "Expected index and an alphanumeric code separated " "by a single space.",
         ):
             fmt.validate(level="min")
 
     def test_HmmIdmapFileFmt_invalid_idmap_2(self):
         fmt = EggnogHmmerIdmapFileFmt(
-            self.get_data_path("invalid_idmaps/2.hmm.idmap"), 'r'
+            self.get_data_path("invalid_idmaps/2.hmm.idmap"), "r"
         )
         with self.assertRaisesRegex(
             ValidationError,
-            "Expected index and an alphanumeric code separated "
-            "by a single space."
+            "Expected index and an alphanumeric code separated " "by a single space.",
         ):
             fmt.validate(level="min")
 
     def test_HmmIdmapFileFmt_invalid_idmap_3(self):
         fmt = EggnogHmmerIdmapFileFmt(
-            self.get_data_path("invalid_idmaps/3.hmm.idmap"), 'r'
+            self.get_data_path("invalid_idmaps/3.hmm.idmap"), "r"
         )
-        with self.assertRaisesRegex(
-            ValidationError,
-            'Expected index'
-        ):
+        with self.assertRaisesRegex(ValidationError, "Expected index"):
             fmt.validate(level="min")
 
     def test_HmmIdmapFileFmt_invalid_idmap_4(self):
         fmt = EggnogHmmerIdmapFileFmt(
-            self.get_data_path("invalid_idmaps/4.hmm.idmap"), 'r'
+            self.get_data_path("invalid_idmaps/4.hmm.idmap"), "r"
         )
         with self.assertRaisesRegex(
             ValidationError,
-            "Expected index and an alphanumeric code separated "
-            "by a single space."
+            "Expected index and an alphanumeric code separated " "by a single space.",
         ):
             fmt.validate(level="min")

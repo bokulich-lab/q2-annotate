@@ -8,11 +8,10 @@
 from qiime2.plugin.testing import TestPluginBase
 from q2_types.reference_db import ReferenceDB
 from q2_annotate.busco.types._format import (
-    BuscoDatabaseDirFmt, BUSCOResultsDirectoryFormat
+    BuscoDatabaseDirFmt,
+    BUSCOResultsDirectoryFormat,
 )
-from q2_annotate.busco.types._type import (
-    BUSCOResults, BUSCO
-)
+from q2_annotate.busco.types._type import BUSCOResults, BUSCO
 
 
 class TestBuscoTypes(TestPluginBase):
@@ -31,5 +30,5 @@ class TestBuscoTypes(TestPluginBase):
 
     def test_BuscoDatabaseDirFmt_semantic_type_registered_to_DirFmt(self):
         self.assertSemanticTypeRegisteredToFormat(
-                ReferenceDB[BUSCO], BuscoDatabaseDirFmt
+            ReferenceDB[BUSCO], BuscoDatabaseDirFmt
         )

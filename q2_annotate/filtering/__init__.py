@@ -13,5 +13,5 @@ __all__ = [
     "filter_derep_mags",
     "filter_mags",
     "filter_reads_pangenome",
-    "construct_pangenome_index"
+    "construct_pangenome_index",
 ]

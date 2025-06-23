@@ -57,7 +57,7 @@ from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 
 
 def _find_similar_bins_fcluster(
-        distance_matrix: pd.DataFrame, threshold: float
+    distance_matrix: pd.DataFrame, threshold: float
 ) -> List[List[str]]:
     """
     Group bins into clusters based on a distance threshold.
@@ -83,7 +83,7 @@ def _find_similar_bins_fcluster(
 
     # Form flat clusters from the hierarchical clustering defined
     # by the given linkage matrix
-    cluster_ids = fcluster(tree, t=threshold, criterion='distance')
+    cluster_ids = fcluster(tree, t=threshold, criterion="distance")
 
     # Map each MAG to its corresponding cluster
     clusters = {i: [] for i in cluster_ids}
@@ -112,16 +112,14 @@ def _get_bin_lengths(mags: MultiMAGSequencesDirFmt) -> pd.Series:
             tot += len(_seq)
         bin_lengths[str(path)] = tot
     ser = pd.Series(bin_lengths, name="length")
-    ser.index = ser.index.map(
-        lambda x: x.replace(".fasta", "").split("/")[-1]
-    )
+    ser.index = ser.index.map(lambda x: x.replace(".fasta", "").split("/")[-1])
     return ser
 
 
 def _remap_bins(
     bin_clusters: List[List[str]],
     representative_bins: List[str],
-    distances: pd.DataFrame
+    distances: pd.DataFrame,
 ) -> Dict[str, str]:
     """
     Maps duplicate bins to a single dereplicated bin and assigns
@@ -190,13 +188,11 @@ def _reassign_bins_to_samples(
              'sample3': {'mag1': 0, 'mag2': 0, 'mag3': 1, 'mag4': 1,
                          'mag5': 1, 'mag6': 0, 'mag7': 0, 'mag8': 0},)}.
     """
-    all_samples = manifest.copy(deep=True) \
-        .reset_index().replace({"mag-id": final_bins})
+    all_samples = manifest.copy(deep=True).reset_index().replace({"mag-id": final_bins})
     all_derep_mags = set([mag_id for _, mag_id in final_bins.items()])
 
     samples_to_bins = {
-        key: {mag: 0 for mag in all_derep_mags}
-        for key in set(all_samples["sample-id"])
+        key: {mag: 0 for mag in all_derep_mags} for key in set(all_samples["sample-id"])
     }
 
     for i, row in all_samples.iterrows():
@@ -235,7 +231,7 @@ def _write_unique_bins(
 
 
 def _generate_pa_table(
-    unique_bins_per_sample: Dict[str, Dict[str, int]]
+    unique_bins_per_sample: Dict[str, Dict[str, int]],
 ) -> pd.DataFrame:
     """
     Generates a presence-absence table from a dictionary of unique
@@ -286,11 +282,9 @@ def _get_representatives(mags, metadata, column, bin_clusters, find_max):
         try:
             metadata_col = metadata.to_dataframe()[column].astype(float)
         except KeyError:
-            raise KeyError(f'The column "{column}" does not exist '
-                           f'in the metadata.')
+            raise KeyError(f'The column "{column}" does not exist ' f"in the metadata.")
         except ValueError:
-            raise ValueError('The specified metadata column has to be '
-                             'numerical.')
+            raise ValueError("The specified metadata column has to be " "numerical.")
 
         representative_bins = []
         for bins in bin_clusters:
@@ -306,8 +300,7 @@ def _get_representatives(mags, metadata, column, bin_clusters, find_max):
 
     # Choose by length
     else:
-        representative_bins = \
-            [bin_lengths[ids].idxmax() for ids in bin_clusters]
+        representative_bins = [bin_lengths[ids].idxmax() for ids in bin_clusters]
 
     return representative_bins
 

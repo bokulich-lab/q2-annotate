@@ -76,13 +76,9 @@ def _encode_unclassified_ids(table: pd.DataFrame, text: str) -> pd.DataFrame:
         pd.DataFrame: The updated DataFrame with encoded unclassified ids.
 
     """
-    taxon = table.loc[
-        table["taxon_name"].str.startswith(text), "taxon_name"
-    ].iloc[0]
+    taxon = table.loc[table["taxon_name"].str.startswith(text), "taxon_name"].iloc[0]
     encoded = base64.b64encode(taxon.encode()).decode()
-    table.loc[
-        table["taxon_name"].str.startswith(text), "taxon_id"
-    ] = encoded[:8]
+    table.loc[table["taxon_name"].str.startswith(text), "taxon_id"] = encoded[:8]
     return table
 
 
@@ -102,15 +98,13 @@ def _fix_id_types(table: pd.DataFrame) -> pd.DataFrame:
 
     """
     table["taxon_id"].fillna(0, inplace=True)
-    table['taxon_id'] = table['taxon_id'].astype(int)
+    table["taxon_id"] = table["taxon_id"].astype(int)
     table = _encode_unclassified_ids(table, "cannot be assigned")
     table = _encode_unclassified_ids(table, "unclassified")
     return table
 
 
-def _construct_feature_table(
-        table_fp: str
-) -> (pd.DataFrame, pd.DataFrame):
+def _construct_feature_table(table_fp: str) -> (pd.DataFrame, pd.DataFrame):
     """
     Args:
         table_fp (str): The file path of the table.
@@ -135,10 +129,8 @@ def _construct_feature_table(
     table["taxon_name"] = table["taxon_name"].str.replace("NA", "Unspecified")
 
     # rename taxon IDs to taxon names and clean up
-    taxa = table.set_index('taxon_id')['taxon_name'].to_dict()
-    table["taxon_name"] = table["taxon_id"].map(
-        lambda x: _rename_taxon(x, taxa)
-    )
+    taxa = table.set_index("taxon_id")["taxon_name"].to_dict()
+    table["taxon_name"] = table["taxon_id"].map(lambda x: _rename_taxon(x, taxa))
 
     # create taxonomy table
     taxonomy = table[["taxon_id", "taxon_name"]].drop_duplicates()
@@ -148,9 +140,7 @@ def _construct_feature_table(
     taxonomy.columns = ["Taxon"]
 
     # convert to sample x feature format
-    table = table.groupby(
-        ["taxon_id", "sample"], as_index=False
-    )["reads"].sum()
+    table = table.groupby(["taxon_id", "sample"], as_index=False)["reads"].sum()
     table = table.pivot(index="sample", columns="taxon_id", values="reads")
 
     # convert column names to strings
@@ -172,10 +162,14 @@ def _process_kaiju_reports(tmpdir, all_args):
 
     """
     table_args = [
-        "-r", all_args["r"],
-        "-t", os.path.join(str(all_args["db"].path), "nodes.dmp"),
-        "-n", os.path.join(str(all_args["db"].path), "names.dmp"),
-        "-l", "superkingdom,phylum,class,order,family,genus,species",
+        "-r",
+        all_args["r"],
+        "-t",
+        os.path.join(str(all_args["db"].path), "nodes.dmp"),
+        "-n",
+        os.path.join(str(all_args["db"].path), "names.dmp"),
+        "-l",
+        "superkingdom,phylum,class,order,family,genus,species",
     ]
     if all_args["exp"]:
         table_args.append("-e")
@@ -190,9 +184,7 @@ def _process_kaiju_reports(tmpdir, all_args):
 
     table_fp = os.path.join(tmpdir, "results.tsv")
 
-    cmd = [
-        "kaiju2table", "-v", "-o", table_fp, *table_args, *report_fps
-    ]
+    cmd = ["kaiju2table", "-v", "-o", table_fp, *table_args, *report_fps]
     try:
         run_command(cmd=cmd, verbose=True)
     except subprocess.CalledProcessError as e:
@@ -205,9 +197,7 @@ def _process_kaiju_reports(tmpdir, all_args):
     return _construct_feature_table(table_fp)
 
 
-def _classify_kaiju_helper(
-        seqs, all_args: dict
-) -> (pd.DataFrame, pd.DataFrame):
+def _classify_kaiju_helper(seqs, all_args: dict) -> (pd.DataFrame, pd.DataFrame):
     """
     Args:
         seqs: Sequences object, can be of class SingleLanePerSampleSingleEndFastqDirFmt,
@@ -224,23 +214,29 @@ def _classify_kaiju_helper(
 
     """
     kaiju_args = [
-        "-z", str(all_args["z"]),
-        "-a", str(all_args["a"]),
-        "-e", str(all_args["e"]),
-        "-m", str(all_args["m"]),
-        "-s", str(all_args["s"]),
-        "-E", str(all_args["evalue"]),
+        "-z",
+        str(all_args["z"]),
+        "-a",
+        str(all_args["a"]),
+        "-e",
+        str(all_args["e"]),
+        "-m",
+        str(all_args["m"]),
+        "-s",
+        str(all_args["s"]),
+        "-E",
+        str(all_args["evalue"]),
         "-x" if all_args["x"] else "-X",
-        "-t", os.path.join(str(all_args["db"].path), "nodes.dmp"),
-        "-f", glob.glob(
-            os.path.join(str(all_args["db"].path), "kaiju_*.fmi")
-        )[0],
+        "-t",
+        os.path.join(str(all_args["db"].path), "nodes.dmp"),
+        "-f",
+        glob.glob(os.path.join(str(all_args["db"].path), "kaiju_*.fmi"))[0],
     ]
 
     base_cmd = ["kaiju-multi", "-v", *kaiju_args]
     read_types = (
         SingleLanePerSampleSingleEndFastqDirFmt,
-        SingleLanePerSamplePairedEndFastqDirFmt
+        SingleLanePerSamplePairedEndFastqDirFmt,
     )
     files_fwd, files_rev, output_fps = [], [], []
     paired = False
@@ -281,54 +277,56 @@ def _classify_kaiju_helper(
 
 
 def _classify_kaiju(
-        seqs: Union[
-            SingleLanePerSamplePairedEndFastqDirFmt,
-            SingleLanePerSampleSingleEndFastqDirFmt,
-            ContigSequencesDirFmt
-        ],
-        db: KaijuDBDirectoryFormat,
-        z: int = 1,
-        a: str = "greedy",
-        e: int = 3,
-        m: int = 11,
-        s: int = 65,
-        evalue: float = 0.01,
-        x: bool = True,
-        r: str = "species",
-        c: float = 0.0,
-        exp: bool = False,
-        u: bool = False,
+    seqs: Union[
+        SingleLanePerSamplePairedEndFastqDirFmt,
+        SingleLanePerSampleSingleEndFastqDirFmt,
+        ContigSequencesDirFmt,
+    ],
+    db: KaijuDBDirectoryFormat,
+    z: int = 1,
+    a: str = "greedy",
+    e: int = 3,
+    m: int = 11,
+    s: int = 65,
+    evalue: float = 0.01,
+    x: bool = True,
+    r: str = "species",
+    c: float = 0.0,
+    exp: bool = False,
+    u: bool = False,
 ) -> (pd.DataFrame, pd.DataFrame):
 
     return _classify_kaiju_helper(seqs, dict(locals().items()))
 
 
 def classify_kaiju(
-        ctx,
-        seqs,
-        db,
-        z=1,
-        a="greedy",
-        e=3,
-        m=11,
-        s=65,
-        evalue=0.01,
-        x=True,
-        r="species",
-        c=0.0,
-        exp=False,
-        u=False,
-        num_partitions=None
+    ctx,
+    seqs,
+    db,
+    z=1,
+    a="greedy",
+    e=3,
+    m=11,
+    s=65,
+    evalue=0.01,
+    x=True,
+    r="species",
+    c=0.0,
+    exp=False,
+    u=False,
+    num_partitions=None,
 ):
-    kwargs = {k: v for k, v in locals().items()
-              if k not in ["seqs", "db", "ctx", "num_partitions"]}
+    kwargs = {
+        k: v
+        for k, v in locals().items()
+        if k not in ["seqs", "db", "ctx", "num_partitions"]
+    }
 
     _classify_kaiju = ctx.get_action("annotate", "_classify_kaiju")
     collate_feature_tables = ctx.get_action("feature_table", "merge")
     collate_taxonomies = ctx.get_action("feature_table", "merge_taxa")
 
-    if seqs.type <= SampleData[SequencesWithQuality |
-                               JoinedSequencesWithQuality]:
+    if seqs.type <= SampleData[SequencesWithQuality | JoinedSequencesWithQuality]:
         partition_method = ctx.get_action("demux", "partition_samples_single")
     elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
         partition_method = ctx.get_action("demux", "partition_samples_paired")

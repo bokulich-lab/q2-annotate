@@ -20,8 +20,15 @@ arguments_with_hyphens = {
     "update_data": "update-data",
 }
 
-MARKER_COLS = ["single", "duplicated", "fragmented", "missing",
-               "complete", "completeness", "contamination"]
+MARKER_COLS = [
+    "single",
+    "duplicated",
+    "fragmented",
+    "missing",
+    "complete",
+    "completeness",
+    "contamination",
+]
 
 
 def _validate_lineage_dataset_input(
@@ -30,7 +37,7 @@ def _validate_lineage_dataset_input(
     auto_lineage_euk: bool,
     auto_lineage_prok: bool,
     busco_db: BuscoDatabaseDirFmt,
-    kwargs
+    kwargs,
 ) -> None:
     # When lineage_dataset is specified, all other lineage flags are ignored
     if any([auto_lineage, auto_lineage_euk, auto_lineage_prok]):
@@ -44,12 +51,8 @@ def _validate_lineage_dataset_input(
 
     # Check that lineage indeed exists inside Busco DB (if provided)
     if busco_db is not None:
-        if not os.path.exists(
-            f"{str(busco_db)}/lineages/{lineage_dataset}"
-        ):
-            present_lineages = os.listdir(
-                os.path.join(str(busco_db), "lineages/")
-            )
+        if not os.path.exists(f"{str(busco_db)}/lineages/{lineage_dataset}"):
+            present_lineages = os.listdir(os.path.join(str(busco_db), "lineages/"))
             raise ValueError(
                 f"The specified lineage_dataset ({lineage_dataset}) "
                 "is not present in input database. "
@@ -82,9 +85,7 @@ def _parse_busco_params(arg_key, arg_val) -> List[str]:
         return [f"--{arg_key}", str(arg_val)]
 
 
-def _partition_dataframe(
-    df: pd.DataFrame, max_rows: int, is_sample_data: bool
-) -> list:
+def _partition_dataframe(df: pd.DataFrame, max_rows: int, is_sample_data: bool) -> list:
     """
     Partitions a DataFrame into smaller DataFrames based on
     a maximum row limit.
@@ -113,7 +114,7 @@ def _partition_dataframe(
             list is a partition of the original DataFrame.
     """
     if is_sample_data:
-        groups = [group for _, group in df.groupby('sample_id')]
+        groups = [group for _, group in df.groupby("sample_id")]
         partitions = []
         temp = []
         total_rows = 0
@@ -133,20 +134,28 @@ def _partition_dataframe(
 
         return partitions
     else:
-        return [df[i:i+max_rows] for i in range(0, len(df), max_rows)]
+        return [df[i : i + max_rows] for i in range(0, len(df), max_rows)]
 
 
 def _get_feature_table(busco_results: pd.DataFrame) -> str:
     df = busco_results.reset_index(inplace=False, drop=False)
 
     new_cols = {
-        "mag_id": "MAG", "sample_id": "Sample", "dataset": "Dataset",
-        "single": "% single", "duplicated": "% duplicated",
-        "fragmented": "% fragmented", "missing": "% missing",
-        "complete": "% complete", "completeness": "% completeness",
-        "contamination": "% contamination", "n_markers": "Total markers",
-        "contigs_n50": "N50 contigs", "percent_gaps": "Percent gaps",
-        "scaffolds": "Contigs", "length": "Length (bp)"
+        "mag_id": "MAG",
+        "sample_id": "Sample",
+        "dataset": "Dataset",
+        "single": "% single",
+        "duplicated": "% duplicated",
+        "fragmented": "% fragmented",
+        "missing": "% missing",
+        "complete": "% complete",
+        "completeness": "% completeness",
+        "contamination": "% contamination",
+        "n_markers": "Total markers",
+        "contigs_n50": "N50 contigs",
+        "percent_gaps": "Percent gaps",
+        "scaffolds": "Contigs",
+        "length": "Length (bp)",
     }
     if not ("completeness" in df.columns and "contamination" in df.columns):
         new_cols.pop("completeness")
@@ -156,7 +165,7 @@ def _get_feature_table(busco_results: pd.DataFrame) -> str:
         del new_cols["sample_id"]
 
     df = df[list(new_cols.keys())].rename(columns=new_cols, inplace=False)
-    return df.to_json(orient='split')
+    return df.to_json(orient="split")
 
 
 def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -179,9 +188,7 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(columns={"id": "mag_id"}, inplace=False)
 
     # fix data types
-    df["percent_gaps"] = df["percent_gaps"].str.split(
-        '%', expand=True
-    )[0].map(float)
+    df["percent_gaps"] = df["percent_gaps"].str.split("%", expand=True)[0].map(float)
     for col in cols:
         df[col] = df[col].map(float)
     df["n_markers"] = df["n_markers"].map(int)
@@ -193,16 +200,8 @@ def _cleanup_bootstrap(output_dir):
     # Remove unwanted files
     # until Bootstrap 3 is replaced with v5, remove the v3 scripts as
     # the HTML files are adjusted to work with v5
-    os.remove(
-        os.path.join(
-            output_dir, "q2templateassets", "css", "bootstrap.min.css"
-        )
-    )
-    os.remove(
-        os.path.join(
-            output_dir, "q2templateassets", "js", "bootstrap.min.js"
-        )
-    )
+    os.remove(os.path.join(output_dir, "q2templateassets", "css", "bootstrap.min.css"))
+    os.remove(os.path.join(output_dir, "q2templateassets", "js", "bootstrap.min.js"))
 
 
 def _calculate_summary_stats(df: pd.DataFrame) -> json:
@@ -211,14 +210,16 @@ def _calculate_summary_stats(df: pd.DataFrame) -> json:
         cols.remove("completeness")
         cols.remove("contamination")
 
-    stats = pd.DataFrame({
-        "min": df[cols].min(),
-        "median": df[cols].median(),
-        "mean": df[cols].mean(),
-        "max": df[cols].max(),
-        "count": df[cols].count()
-    })
-    return stats.T.to_json(orient='table')
+    stats = pd.DataFrame(
+        {
+            "min": df[cols].min(),
+            "median": df[cols].median(),
+            "mean": df[cols].mean(),
+            "max": df[cols].max(),
+            "count": df[cols].count(),
+        }
+    )
+    return stats.T.to_json(orient="table")
 
 
 def _extract_json_data(path):
@@ -266,8 +267,9 @@ def _calculate_contamination_completeness(missing, total, duplicated, complete):
     return completeness, contamination
 
 
-def _validate_parameters(lineage_dataset, auto_lineage,
-                         auto_lineage_euk, auto_lineage_prok):
+def _validate_parameters(
+    lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok
+):
     if not any([lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok]):
         raise ValueError(
             "At least one of these parameters must be provided/set to True: "
@@ -299,11 +301,14 @@ def _process_busco_results(results, sample_id, mag_id, file_name, additional_met
     """
     # Add completeness and contamination values if specified
     if additional_metrics:
-        results["completeness"], results["contamination"] = \
+        results["completeness"], results["contamination"] = (
             _calculate_contamination_completeness(
-                results["missing_value"], results["n_markers"],
-                results["duplicated_value"], results["complete_value"]
+                results["missing_value"],
+                results["n_markers"],
+                results["duplicated_value"],
+                results["complete_value"],
             )
+        )
 
     # Remove whole value keys
     for key in ["missing_value", "complete_value", "duplicated_value"]:

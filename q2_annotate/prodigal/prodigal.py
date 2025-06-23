@@ -12,15 +12,15 @@ from .._utils import run_command
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequencesDirFmt
 from q2_types.genome_data import (
-    LociDirectoryFormat, GenesDirectoryFormat, ProteinsDirectoryFormat,
+    LociDirectoryFormat,
+    GenesDirectoryFormat,
+    ProteinsDirectoryFormat,
 )
 
 
 def predict_genes_prodigal(
-        seqs: Union[
-            MAGSequencesDirFmt, MultiMAGSequencesDirFmt, ContigSequencesDirFmt
-        ],
-        translation_table_number: str = "11",
+    seqs: Union[MAGSequencesDirFmt, MultiMAGSequencesDirFmt, ContigSequencesDirFmt],
+    translation_table_number: str = "11",
 ) -> (LociDirectoryFormat, GenesDirectoryFormat, ProteinsDirectoryFormat):
 
     # Instantiate output directories
@@ -29,11 +29,7 @@ def predict_genes_prodigal(
     proteins = ProteinsDirectoryFormat()
 
     # Define base command
-    base_cmd = [
-        "prodigal",
-        "-g", translation_table_number,
-        "-f", "gff"
-    ]
+    base_cmd = ["prodigal", "-g", translation_table_number, "-f", "gff"]
 
     def _run_prodigal(path_to_input: str, _id: str, subdir: str = None):
         # If subdirectory is not None, append a "/" s.t. the command
@@ -42,12 +38,18 @@ def predict_genes_prodigal(
 
         # Complete command and run
         cmd = cp.deepcopy(base_cmd)
-        cmd.extend([
-            "-i", path_to_input,
-            "-o", os.path.join(loci.path, f"{subdir}{_id}.gff"),
-            "-a", os.path.join(proteins.path, f"{subdir}{_id}.fasta"),
-            "-d", os.path.join(genes.path, f"{subdir}{_id}.fasta")
-        ])
+        cmd.extend(
+            [
+                "-i",
+                path_to_input,
+                "-o",
+                os.path.join(loci.path, f"{subdir}{_id}.gff"),
+                "-a",
+                os.path.join(proteins.path, f"{subdir}{_id}.fasta"),
+                "-d",
+                os.path.join(genes.path, f"{subdir}{_id}.fasta"),
+            ]
+        )
         run_command(cmd)
 
     if isinstance(seqs, MAGSequencesDirFmt):

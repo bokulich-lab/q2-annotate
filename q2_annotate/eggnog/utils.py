@@ -22,7 +22,8 @@ from tqdm import tqdm
 from q2_annotate.eggnog.types import EggnogHmmerIdmapDirectoryFmt
 from q2_types.genome_data import ProteinsDirectoryFormat
 from q2_types.profile_hmms import (
-    ProteinMultipleProfileHmmDirectoryFmt, PressedProfileHmmsDirectoryFmt
+    ProteinMultipleProfileHmmDirectoryFmt,
+    PressedProfileHmmsDirectoryFmt,
 )
 from .._utils import run_command, colorify
 
@@ -56,10 +57,14 @@ def _download_and_build_hmm_db(taxon_id):
 
     with tempfile.TemporaryDirectory() as tmp:
         try:
-            run_command(cmd=[
-                "wget", "-O", f"{tmp}/{taxon_id}_hmms.tar.gz",
-                f"{COMMON_URL}/{taxon_id}/{taxon_id}_hmms.tar.gz"
-            ])
+            run_command(
+                cmd=[
+                    "wget",
+                    "-O",
+                    f"{tmp}/{taxon_id}_hmms.tar.gz",
+                    f"{COMMON_URL}/{taxon_id}/{taxon_id}_hmms.tar.gz",
+                ]
+            )
         except subprocess.CalledProcessError as e:
             raise Exception(
                 "Error during HMMER database download. "
@@ -68,10 +73,7 @@ def _download_and_build_hmm_db(taxon_id):
 
         # Extracting
         print(colorify("Decompressing..."))
-        run_command(
-            cmd=["tar", "zxf", f"{taxon_id}_hmms.tar.gz"],
-            cwd=tmp
-        )
+        run_command(cmd=["tar", "zxf", f"{taxon_id}_hmms.tar.gz"], cwd=tmp)
 
         # Merge hmm files + write .hmm.idmap
         print(colorify("Merging hmm files..."))
@@ -91,22 +93,22 @@ def _download_fastas_into_hmmer_db(taxon_id: int):
     fastas_obj = ProteinsDirectoryFormat()
     with tempfile.TemporaryDirectory() as tmp:
         try:
-            run_command(cmd=[
-                "wget", "-O", f"{tmp}/{taxon_id}_raw_algs.tar",
-                f"{COMMON_URL}/{taxon_id}/{taxon_id}_raw_algs.tar",
-            ])
+            run_command(
+                cmd=[
+                    "wget",
+                    "-O",
+                    f"{tmp}/{taxon_id}_raw_algs.tar",
+                    f"{COMMON_URL}/{taxon_id}/{taxon_id}_raw_algs.tar",
+                ]
+            )
         except subprocess.CalledProcessError as e:
             raise Exception(
-                "Error downloading seed-alignments. "
-                f"wget error code: {e.returncode}"
+                "Error downloading seed-alignments. " f"wget error code: {e.returncode}"
             )
 
         # Extracting
         print(colorify("Decompressing..."))
-        run_command(
-            cmd=["tar", "xf", f"{taxon_id}_raw_algs.tar"],
-            cwd=tmp
-        )
+        run_command(cmd=["tar", "xf", f"{taxon_id}_raw_algs.tar"], cwd=tmp)
 
         files = glob.glob(f"{tmp}/{taxon_id}/*.gz")
 
@@ -134,9 +136,7 @@ def _merge_hmms_and_write_idmap(hmms_merged_p, idmap_p, taxon_id, tmp):
                     with open(f"{root}/{file}", "r") as hmm_file:
                         for line in hmm_file:
                             if line.startswith("NAME "):
-                                line = re.sub(
-                                    r"\.faa\.final_tree(\.fa)?", "", line
-                                )
+                                line = re.sub(r"\.faa\.final_tree(\.fa)?", "", line)
                                 id = line.replace("NAME  ", "", 1)
                                 idmap.write(f"{i} {id}")
                             hmms.write(line)
@@ -148,10 +148,10 @@ class _EggnogHTMLParser(HTMLParser):
         self.links = []
 
     def handle_starttag(self, tag, attrs):
-        if tag == 'a':
+        if tag == "a":
             for attr in attrs:
-                if attr[0] == 'href':
-                    match = re.search(r'(\d+)/', attr[1])
+                if attr[0] == "href":
+                    match = re.search(r"(\d+)/", attr[1])
                     if match:
                         self.links.append(match.group(1))
 
@@ -164,7 +164,7 @@ class _EggnogHTMLParser(HTMLParser):
 def _validate_eggnog_hmmer_taxon_id(taxon_id):
     try:
         with urllib.request.urlopen(COMMON_URL) as response:
-            html_content = response.read().decode('utf-8')
+            html_content = response.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         print(f"HTTP Error: {e.code} {e.reason}")
     except urllib.error.URLError as e:

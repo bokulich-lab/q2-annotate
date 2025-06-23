@@ -45,10 +45,12 @@ def _process_lineages(lineages):
     domain_lineages = ["prokaryota", "eukaryota", "virus"]
     domain_matches = [lin for lin in lineages if lin in domain_lineages]
     if domain_matches:
-        print(colorify(
-            f"Domain lineages were provided ({', '.join(domain_matches)}) - "
-            "other lineages, if any, will be ignored."
-        ))
+        print(
+            colorify(
+                f"Domain lineages were provided ({', '.join(domain_matches)}) - "
+                "other lineages, if any, will be ignored."
+            )
+        )
         lineages = domain_matches
 
     return lineages
@@ -72,30 +74,26 @@ def delete_symlinks(root_dir):
                 os.unlink(os.path.join(dirpath, _file))
 
 
-def fetch_busco_db(
-    lineages: List[str] = None
-) -> BuscoDatabaseDirFmt:
-    busco_db = BuscoDatabaseDirFmt(path=None, mode='w')
+def fetch_busco_db(lineages: List[str] = None) -> BuscoDatabaseDirFmt:
+    busco_db = BuscoDatabaseDirFmt(path=None, mode="w")
 
     lineages = _process_lineages(lineages)
 
     print(colorify(f"Fetching lineages: {', '.join(lineages)}."))
-    cmd = [
-        "busco", "--download_path", str(busco_db), "--download", *lineages
-    ]
+    cmd = ["busco", "--download_path", str(busco_db), "--download", *lineages]
     try:
         run_command(cmd)
     except subprocess.CalledProcessError as e:
-        raise Exception(
-            f"Error during BUSCO database download: {e.returncode}"
-        )
+        raise Exception(f"Error during BUSCO database download: {e.returncode}")
 
     # There is a symlink in the BUSCO database that needs to be removed
     delete_symlinks(str(busco_db))
 
-    print(colorify(
-        "Download completed. \n"
-        "Copying files from temporary directory to the final location..."
-    ))
+    print(
+        colorify(
+            "Download completed. \n"
+            "Copying files from temporary directory to the final location..."
+        )
+    )
 
     return busco_db

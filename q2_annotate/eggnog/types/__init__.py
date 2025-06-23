@@ -10,6 +10,7 @@ from ._format import EggnogHmmerIdmapFileFmt, EggnogHmmerIdmapDirectoryFmt
 
 
 __all__ = [
-    'EggnogHmmerIdmapFileFmt', 'EggnogHmmerIdmapDirectoryFmt',
-    'EggnogHmmerIdmap'
+    "EggnogHmmerIdmapFileFmt",
+    "EggnogHmmerIdmapDirectoryFmt",
+    "EggnogHmmerIdmap",
 ]

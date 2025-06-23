@@ -23,14 +23,14 @@ class TestBUSCOPlots(TestPluginBase):
 
         busco_results = [
             BUSCOResultsDirectoryFormat(p1, mode="r"),
-            BUSCOResultsDirectoryFormat(p2, mode="r")
+            BUSCOResultsDirectoryFormat(p2, mode="r"),
         ]
 
         collated_busco_result = collate_busco_results(busco_results)
 
-        obs = pd.read_csv(
-            os.path.join(str(collated_busco_result), "busco_results.tsv"))
+        obs = pd.read_csv(os.path.join(str(collated_busco_result), "busco_results.tsv"))
         exp = pd.read_csv(
-            self.get_data_path("busco_results/results_all/busco_results.tsv"))
+            self.get_data_path("busco_results/results_all/busco_results.tsv")
+        )
 
         pd.testing.assert_frame_equal(obs, exp)

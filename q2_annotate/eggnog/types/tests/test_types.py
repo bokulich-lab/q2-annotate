@@ -6,13 +6,11 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 from qiime2.plugin.testing import TestPluginBase
-from q2_annotate.eggnog.types import (
-    EggnogHmmerIdmap, EggnogHmmerIdmapDirectoryFmt
-)
+from q2_annotate.eggnog.types import EggnogHmmerIdmap, EggnogHmmerIdmapDirectoryFmt
 
 
 class TestEggnogHmmerIdmap(TestPluginBase):
-    package = 'q2_annotate.eggnog.tests'
+    package = "q2_annotate.eggnog.tests"
 
     def test_hmmer_registration(self):
         self.assertRegisteredSemanticType(EggnogHmmerIdmap)

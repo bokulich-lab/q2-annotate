@@ -15,8 +15,7 @@ from tqdm import tqdm
 from q2_types.kaiju import KaijuDBDirectoryFormat
 
 CHUNK_SIZE = 8192
-KAIJU_SERVER_URL = ("https://bioinformatics-centre.github.io/"
-                    "kaiju/downloads.html")
+KAIJU_SERVER_URL = "https://bioinformatics-centre.github.io/" "kaiju/downloads.html"
 ERR_MSG = (
     "Unable to connect to the Kaiju server. Please try again later. "
     "The error was: {}"
@@ -75,26 +74,26 @@ def _find_latest_db_url(response: bytes, database_type: str) -> str:
     Returns:
         str: The latest database URL.
     """
-    soup = BeautifulSoup(response, 'html.parser')
-    tables = soup.find_all('table')
+    soup = BeautifulSoup(response, "html.parser")
+    tables = soup.find_all("table")
 
     for table in tables:
         # Locate the table header
-        headers = table.find_all('th')
+        headers = table.find_all("th")
         if headers and headers[0].get_text().strip() == "Database":
-            rows = table.find_all('tr')
+            rows = table.find_all("tr")
             for row in rows:
-                cells = row.find_all('td')
+                cells = row.find_all("td")
 
                 # Check if the first cell contains the required database_type
                 if cells and cells[0].get_text().strip() == database_type:
                     # The next row contains the desired URLs
-                    next_row = row.find_next_sibling('tr')
+                    next_row = row.find_next_sibling("tr")
                     if next_row:
-                        url_cell = next_row.find_all('td')[-1]
-                        url = url_cell.find('a')
+                        url_cell = next_row.find_all("td")[-1]
+                        url = url_cell.find("a")
                         if url:
-                            return url['href']
+                            return url["href"]
 
     raise ValueError(f"URL for database type '{database_type}' not found.")
 

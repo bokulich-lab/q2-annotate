@@ -16,10 +16,7 @@ from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 
 
 def _filter_ids(
-        ids: set,
-        metadata: Metadata = None,
-        where: str = None,
-        exclude_ids: bool = False
+    ids: set, metadata: Metadata = None, where: str = None, exclude_ids: bool = False
 ) -> set:
     """
     Filters IDs based on the provided metadata.
@@ -49,7 +46,7 @@ def _filter_ids(
 
 
 def _filter_manifest(
-        manifest: pd.DataFrame, ids_to_keep: set, on: str = 'mag'
+    manifest: pd.DataFrame, ids_to_keep: set, on: str = "mag"
 ) -> pd.DataFrame:
     """
     Filters a manifest DataFrame based on a set of IDs.
@@ -63,16 +60,19 @@ def _filter_manifest(
     Returns:
         pd.DataFrame: The filtered manifest DataFrame.
     """
-    if on == 'mag':
-        lvl = 'mag-id'
-    elif on == 'sample':
-        lvl = 'sample-id'
+    if on == "mag":
+        lvl = "mag-id"
+    elif on == "sample":
+        lvl = "sample-id"
     else:
         raise ValueError(f"Invalid value for 'on' parameter: {on}")
 
-    manifest["filename"] = \
-        manifest.index.get_level_values('sample-id') + "/" + \
-        manifest.index.get_level_values('mag-id') + ".fasta"
+    manifest["filename"] = (
+        manifest.index.get_level_values("sample-id")
+        + "/"
+        + manifest.index.get_level_values("mag-id")
+        + ".fasta"
+    )
 
     return manifest[manifest.index.get_level_values(lvl).isin(ids_to_keep)]
 
@@ -93,29 +93,25 @@ def _mags_to_df(mags: MultiMAGSequencesDirFmt, on: str):
     mags_df = pd.DataFrame.from_dict(mags.sample_dict(), orient="index")
     mags_df = mags_df.stack().reset_index()
     mags_df.columns = ["sample_id", "mag_id", "mag_fp"]
-    if on == 'sample':
+    if on == "sample":
         mags_df.set_index("sample_id", inplace=True)
-    elif on == 'mag':
+    elif on == "mag":
         mags_df.set_index("mag_id", inplace=True)
     return mags_df
 
 
 def filter_derep_mags(
-        mags: MAGSequencesDirFmt,
-        metadata: Metadata,
-        where: str = None,
-        exclude_ids: bool = False,
+    mags: MAGSequencesDirFmt,
+    metadata: Metadata,
+    where: str = None,
+    exclude_ids: bool = False,
 ) -> MAGSequencesDirFmt:
     results = MAGSequencesDirFmt()
     features = mags.feature_dict()
-    ids_to_keep = _filter_ids(
-        set(features.keys()), metadata, where, exclude_ids
-    )
+    ids_to_keep = _filter_ids(set(features.keys()), metadata, where, exclude_ids)
     try:
         for _id in ids_to_keep:
-            duplicate(
-                features[_id], os.path.join(str(results), f"{_id}.fasta")
-            )
+            duplicate(features[_id], os.path.join(str(results), f"{_id}.fasta"))
     except KeyError:
         raise ValueError(f"{_id!r} is not a MAG present in the input data.")
 
@@ -123,36 +119,32 @@ def filter_derep_mags(
 
 
 def filter_mags(
-        mags: MultiMAGSequencesDirFmt,
-        metadata: Metadata,
-        where: str = None,
-        exclude_ids: bool = False,
-        on: str = 'mag'
+    mags: MultiMAGSequencesDirFmt,
+    metadata: Metadata,
+    where: str = None,
+    exclude_ids: bool = False,
+    on: str = "mag",
 ) -> MultiMAGSequencesDirFmt:
     results = MultiMAGSequencesDirFmt()
     mags_df = _mags_to_df(mags, on)
 
-    ids_to_keep = _filter_ids(
-        set(mags_df.index), metadata, where, exclude_ids
-    )
+    ids_to_keep = _filter_ids(set(mags_df.index), metadata, where, exclude_ids)
 
     filtered_mags = mags_df[mags_df.index.isin(ids_to_keep)]
     filtered_manifest = _filter_manifest(
         mags.manifest.view(pd.DataFrame), ids_to_keep, on=on
     )
-    filtered_manifest.to_csv(
-        os.path.join(str(results), "MANIFEST"), sep=","
-    )
+    filtered_manifest.to_csv(os.path.join(str(results), "MANIFEST"), sep=",")
     try:
         for _id, row in filtered_mags.iterrows():
-            if on == 'mag':
+            if on == "mag":
                 sample_dir = os.path.join(str(results), row["sample_id"])
                 mag_dest = os.path.join(sample_dir, f"{_id}.fasta")
             else:
                 sample_dir = os.path.join(str(results), _id)
                 mag_dest = os.path.join(sample_dir, f"{row['mag_id']}.fasta")
             os.makedirs(sample_dir, exist_ok=True)
-            duplicate(row['mag_fp'], mag_dest)
+            duplicate(row["mag_fp"], mag_dest)
     except KeyError:
         raise ValueError(f"{_id!r} is not a MAG present in the input data.")
 

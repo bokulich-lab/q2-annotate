@@ -69,11 +69,15 @@ kraken2_params = {
 kraken2_param_descriptions = {
     'threads': 'Number of threads.',
     'confidence': 'Confidence score threshold.',
-    'minimum_base_quality': 'Minimum base quality used in classification.'
-                            ' Only applies when reads are used as input.',
+    'minimum_base_quality': (
+        'Minimum base quality used in classification. '
+        'Only applies when reads are used as input.'
+    ),
     'memory_mapping': 'Avoids loading the database into RAM.',
-    'minimum_hit_groups': 'Minimum number of hit groups (overlapping '
-                          'k-mers sharing the same minimizer).',
+    'minimum_hit_groups': (
+        'Minimum number of hit groups (overlapping '
+        'k-mers sharing the same minimizer).'
+    ),
     'quick': 'Quick operation (use first hit or hits).',
     'report_minimizer_data': (
         'Include number of read-minimizers per-taxon and unique '
@@ -85,9 +89,11 @@ kraken2_param_descriptions = {
 
 partition_params = {"num_partitions": Int % Range(1, None)}
 partition_param_descriptions = {
-        "num_partitions": "The number of partitions to split the contigs"
-        " into. Defaults to partitioning into individual"
-        " samples."
+        "num_partitions": (
+            "The number of partitions to split the contigs "
+            "into. Defaults to partitioning into individual "
+            "samples."
+        )
 }
 
 plugin = Plugin(
@@ -98,7 +104,8 @@ plugin = Plugin(
     description=(
         'MOdular SHotgun metagenome Pipelines with Integrated '
         'provenance Tracking: QIIME 2 plugin gor metagenome analysis with'
-        'tools for genome binning and functional annotation.'),
+        'tools for genome binning and functional annotation.'
+    ),
     short_description='QIIME 2 plugin for metagenome analysis.',
 )
 
@@ -135,6 +142,7 @@ plugin.methods.register_function(
         'contigs': 'Contigs to be binned.',
         'alignment_maps': 'Reads-to-contig alignment maps.'
     },
+    # fmt: off
     parameter_descriptions={
         'min_contig': 'Minimum size of a contig for binning.',
         'max_p': 'Percentage of "good" contigs considered for binning '
@@ -163,9 +171,12 @@ plugin.methods.register_function(
                       'contained in each MAG.',
         'unbinned_contigs': 'Contigs that were not binned into any MAG.'
     },
+    # fmt: on
     name='Bin contigs into MAGs using MetaBAT 2.',
-    description='This method uses MetaBAT 2 to bin provided contigs '
-                'into MAGs.',
+    description=(
+        'This method uses MetaBAT 2 to bin provided contigs '
+        'into MAGs.'
+    ),
     citations=[citations["kang2019"], citations["heng2009samtools"],
                citations["scikit_bio_release"]]
 )
@@ -207,8 +218,10 @@ plugin.pipelines.register_function(
         ('outputs', T_kraken_out_hits),
     ],
     input_descriptions={
-        "seqs": "Sequences to be classified. Single-/paired-end reads,"
-                "contigs, or assembled MAGs, can be provided.",
+        "seqs": (
+            "Sequences to be classified. Single-/paired-end reads,"
+            "contigs, or assembled MAGs, can be provided."
+        ),
         "db": "Kraken 2 database.",
     },
     parameter_descriptions={
@@ -220,8 +233,10 @@ plugin.pipelines.register_function(
         'outputs': 'Output files produced by Kraken2.',
     },
     name='Perform taxonomic classification of reads or MAGs using Kraken 2.',
-    description='Use Kraken 2 to classify provided DNA sequence reads, '
-                'contigs, or MAGs into taxonomic groups.',
+    description=(
+        'Use Kraken 2 to classify provided DNA sequence reads, '
+        'contigs, or MAGs into taxonomic groups.'
+    ),
     citations=[citations["wood2019"]]
 )
 
@@ -259,8 +274,10 @@ plugin.methods.register_function(
         ('outputs', T_kraken_out_hits),
     ],
     input_descriptions={
-        "seqs": "Sequences to be classified. Single-/paired-end reads, "
-                "contigs, or assembled MAGs can be provided.",
+        "seqs": (
+            "Sequences to be classified. Single-/paired-end reads, "
+            "contigs, or assembled MAGs can be provided."
+        ),
         "db": "Kraken 2 database.",
     },
     parameter_descriptions=kraken2_param_descriptions,
@@ -269,8 +286,10 @@ plugin.methods.register_function(
         'outputs': 'Output files produced by Kraken2.',
     },
     name='Perform taxonomic classification of reads or MAGs using Kraken 2.',
-    description='Use Kraken 2 to classify provided DNA sequence reads, '
-                'contigs, or MAGs into taxonomic groups.',
+    description=(
+        'Use Kraken 2 to classify provided DNA sequence reads, '
+        'contigs, or MAGs into taxonomic groups.'
+    ),
     citations=[citations["wood2019"]]
 )
 
@@ -339,25 +358,35 @@ if platform.system() != "Darwin":
             "db": "Bracken database."
         },
         parameter_descriptions={
-            'threshold': 'Bracken: number of reads required PRIOR to abundance '
-                         'estimation to perform re-estimation.',
-            'read_len': ('Bracken: the ideal length of reads in your sample. '
-                         'For paired end data (e.g., 2x150) this should be set '
-                         'to the length of the single-end reads (e.g., 150).'),
-            'level': ('Bracken: specifies the taxonomic rank to  analyze. Each '
-                      'classification at this specified rank will receive an '
-                      'estimated number of reads belonging to that rank after '
-                      'abundance estimation.'),
-            'include_unclassified': 'Bracken does not include the unclassified '
-                                    'read counts in the feature table. Set this '
-                                    'to True to include those regardless.'
+            'threshold': (
+                'Bracken: number of reads required PRIOR to abundance '
+                'estimation to perform re-estimation.'
+            ),
+            'read_len': (
+                'Bracken: the ideal length of reads in your sample. '
+                'For paired end data (e.g., 2x150) this should be set '
+                'to the length of the single-end reads (e.g., 150).'
+            ),
+            'level': (
+                'Bracken: specifies the taxonomic rank to  analyze. Each '
+                'classification at this specified rank will receive an '
+                'estimated number of reads belonging to that rank after '
+                'abundance estimation.'
+            ),
+            'include_unclassified': (
+                'Bracken does not include the unclassified '
+                'read counts in the feature table. Set this '
+                'to True to include those regardless.'
+            )
         },
         output_descriptions={
             'reports': 'Reports modified by Bracken.',
         },
         name='Perform read abundance re-estimation using Bracken.',
-        description='This method uses Bracken to re-estimate read abundances. '
-                    'Only available on Linux platforms.',
+        description=(
+            'This method uses Bracken to re-estimate read abundances. '
+            'Only available on Linux platforms.'
+        ),
         citations=[citations["wood2019"]]
     )
 
@@ -392,40 +421,53 @@ plugin.methods.register_function(
         "seqs": "Sequences to be added to the Kraken 2 database."
     },
     parameter_descriptions={
-        'collection': 'Name of the database collection to be fetched. '
-                      'Please check https://benlangmead.github.io/aws-'
-                      'indexes/k2 for the description of the available '
-                      'options.',
-        'threads': 'Number of threads. Only applicable when building a '
-                   'custom database.',
+        'collection': (
+            'Name of the database collection to be fetched. '
+            'Please check https://benlangmead.github.io/aws-'
+            'indexes/k2 for the description of the available options.'
+        ),
+        'threads':(
+            'Number of threads. Only applicable when building a '
+            'custom database.'
+        ),
         'kmer_len': 'K-mer length in bp/aa.',
         'minimizer_len': 'Minimizer length in bp/aa.',
-        'minimizer_spaces': 'Number of characters in minimizer that are '
-                            'ignored in comparisons.',
-        'no_masking': 'Avoid masking low-complexity sequences prior to '
-                      'building; masking requires dustmasker or segmasker '
-                      'to be installed in PATH.',
-        'max_db_size': 'Maximum number of bytes for Kraken 2 hash table; '
-                       'if the estimator determines more would normally be '
-                       'needed, the reference library will be downsampled '
-                       'to fit.',
+        'minimizer_spaces': (
+            'Number of characters in minimizer that are '
+            'ignored in comparisons.'
+        ),
+        'no_masking': (
+            'Avoid masking low-complexity sequences prior to '
+            'building; masking requires dustmasker or segmasker '
+            'to be installed in PATH.'
+        ),
+        'max_db_size': (
+            'Maximum number of bytes for Kraken 2 hash table; '
+            'if the estimator determines more would normally be '
+            'needed, the reference library will be downsampled to fit.'
+        ),
         'use_ftp': 'Use FTP for downloading instead of RSYNC.',
         'load_factor': 'Proportion of the hash table to be populated.',
-        'fast_build': 'Do not require database to be deterministically '
-                      'built when using multiple threads. This is faster, '
-                      'but does introduce variability in minimizer/LCA pairs.',
-        'read_len': 'Ideal read lengths to be used while building the Bracken '
-                    'database.'
+        'fast_build': (
+            'Do not require database to be deterministically '
+            'built when using multiple threads. This is faster, '
+            'but does introduce variability in minimizer/LCA pairs.'
+        ),
+        'read_len': (
+            'Ideal read lengths to be used while building the Bracken database.'
+        )
     },
     output_descriptions={
         'kraken2_db': 'Kraken2 database.',
         'bracken_db': 'Bracken database.'
     },
     name='Build Kraken 2 database.',
-    description=('This method builds Kraken 2 and Bracken databases either (1) '
-                 'from provided DNA sequences to build a custom database, or '
-                 '(2) simply fetches pre-built versions from an online '
-                 'resource.'),
+    description=(
+        'This method builds Kraken 2 and Bracken databases either (1) '
+        'from provided DNA sequences to build a custom database, or '
+        '(2) simply fetches pre-built versions from an online '
+        'resource.'
+    ),
     citations=[citations["wood2019"], citations["lu2017"]]
 )
 
@@ -444,11 +486,13 @@ plugin.methods.register_function(
         "report": "The report of the supplied database."
     },
     name="Inspect a Kraken 2 database.",
-    description=("This method generates a report of identical format to those "
-                 "generated by classify_kraken2, with a slightly different "
-                 "interpretation. Instead of reporting the number of inputs "
-                 "classified to a taxon/clade, the report displays the number "
-                 "of minimizers mapped to each taxon/clade."),
+    description=(
+        "This method generates a report of identical format to those "
+        "generated by classify_kraken2, with a slightly different "
+        "interpretation. Instead of reporting the number of inputs "
+        "classified to a taxon/clade, the report displays the number "
+        "of minimizers mapped to each taxon/clade."
+    ),
     citations=[citations["wood2019"]],
 )
 
@@ -473,14 +517,20 @@ plugin.methods.register_function(
         "distance_matrix": "Matrix of distances between MAGs.",
     },
     parameter_descriptions={
-        "threshold": "Similarity threshold required to consider "
-                     "two bins identical.",
+        "threshold": (
+            "Similarity threshold required to consider "
+            "two bins identical."
+        ),
         "metadata": "Metadata table.",
-        "metadata_column": "Name of the metadata column used to choose the "
-                           "most representative bins.",
-        "find_max": "Set to True to choose the bin with the highest value in "
-                    "the metadata column. Set to False to choose the bin "
-                    "with the lowest value.",
+        "metadata_column": (
+            "Name of the metadata column used to choose the "
+            "most representative bins."
+        ),
+        "find_max": (
+            "Set to True to choose the bin with the highest value in "
+            "the metadata column. Set to False to choose the bin "
+            "with the lowest value."
+        ),
 
     },
     output_descriptions={
@@ -488,17 +538,19 @@ plugin.methods.register_function(
         "table": "Mapping between MAGs and samples."
     },
     name='Dereplicate MAGs from multiple samples.',
-    description='This method dereplicates MAGs from multiple samples '
-                'using distances between them found in the provided '
-                'distance matrix. For each cluster of similar MAGs, '
-                'the longest one will be selected as the representative. If '
-                'metadata is given as input, the MAG with the '
-                'highest or lowest value in the specified metadata column '
-                'is chosen, depending on the parameter "find-max". '
-                'If there are MAGs with identical values, the longer one is '
-                'chosen. For example an artifact of type BUSCOResults can be '
-                'passed as metadata, and the dereplication can be done by '
-                'highest "completeness".',
+    description=(
+        'This method dereplicates MAGs from multiple samples '
+        'using distances between them found in the provided '
+        'distance matrix. For each cluster of similar MAGs, '
+        'the longest one will be selected as the representative. If '
+        'metadata is given as input, the MAG with the '
+        'highest or lowest value in the specified metadata column '
+        'is chosen, depending on the parameter "find-max". '
+        'If there are MAGs with identical values, the longer one is '
+        'chosen. For example an artifact of type BUSCOResults can be '
+        'passed as metadata, and the dereplication can be done by '
+        'highest "completeness".'
+    ),
     citations=[]
 )
 
@@ -506,11 +558,13 @@ select_features_taxonomy_description = (
     'Output taxonomy. Infra-clade ranks are ignored unless if they are '
     'strain-level. Missing internal ranks are annotated by their next '
     'most specific rank, with the exception of k__Bacteria and k__Archaea, '
-    'which match their domain name.')
+    'which match their domain name.'
+)
 
 select_features_description = (
     'Convert a Kraken 2 report, which is an annotated NCBI taxonomy tree, '
-    'into generic artifacts for downstream analyses.')
+    'into generic artifacts for downstream analyses.'
+)
 
 plugin.methods.register_function(
     function=q2_annotate.kraken2.kraken2_to_features,
@@ -528,13 +582,17 @@ plugin.methods.register_function(
         'reports': 'Per-sample Kraken 2 reports.'
     },
     parameter_descriptions={
-        'coverage_threshold': 'The minimum percent coverage required to '
-                              'produce a feature.'
+        'coverage_threshold': (
+            'The minimum percent coverage required to '
+            'produce a feature.'
+        )
     },
     output_descriptions={
-        'table': 'A presence/absence table of selected features. The features '
-                 'are not of even ranks, but will be the most specific rank '
-                 'available.',
+        'table': (
+            'A presence/absence table of selected features. The features '
+            'are not of even ranks, but will be the most specific rank '
+            'available.'
+        ),
         'taxonomy': select_features_taxonomy_description,
     },
     name='Select downstream features from Kraken 2.',
@@ -557,8 +615,10 @@ plugin.methods.register_function(
         'outputs': 'Per-sample Kraken 2 output files.',
     },
     parameter_descriptions={
-        'coverage_threshold': 'The minimum percent coverage required to '
-                              'produce a feature.',
+        'coverage_threshold': (
+            'The minimum percent coverage required to '
+            'produce a feature.'
+        ),
         # 'lca_mode': 'The method used to determine the LCA of a MAG using '
         #             'taxonomic assignments of its contigs. '
     },
@@ -577,8 +637,9 @@ plugin.methods.register_function(
     },
     input_descriptions={
         'seqs': "Protein reference database.",
-        'taxonomy': "Reference taxonomy, "
-                    "needed to provide taxonomy features."
+        'taxonomy': (
+            "Reference taxonomy, needed to provide taxonomy features."
+        )
     },
     outputs=[('db', ReferenceDB[Diamond])],
     output_descriptions={
@@ -596,11 +657,15 @@ plugin.methods.register_function(
         "ignore_warnings": "Ignore warnings.",
         "no_parse_seqids": "Print raw seqids without parsing."
     },
-    name="Create a DIAMOND formatted reference database from a FASTA input "
-         "file.",
-    description="Creates an artifact containing a binary DIAMOND database "
-                "file (ref_db.dmnd) from a protein reference database "
-                "file in FASTA format.",
+    name=(
+        "Create a DIAMOND formatted reference database from a FASTA input "
+        "file."
+    ),
+    description=(
+        "Creates an artifact containing a binary DIAMOND database "
+        "file (ref_db.dmnd) from a protein reference database "
+        "file in FASTA format."
+    ),
     citations=[citations["buchfink_sensitive_2021"]],
     examples={
         "Minimum working example": ex.diamond_makedb
@@ -615,13 +680,17 @@ plugin.methods.register_function(
     output_descriptions={
         "db": "eggNOG annotation database."
     },
-    name="Fetch the databases necessary to run the "
-         "eggnog-annotate action.",
-    description="Downloads EggNOG reference database using the "
-                "`download_eggnog_data.py` script from eggNOG. Here, this "
-                "script downloads 3 files and stores them in the output "
-                "artifact. At least 80 GB of storage space is required to "
-                "run this action.",
+    name=(
+        "Fetch the databases necessary to run the "
+        "eggnog-annotate action."
+    ),
+    description=(
+        "Downloads EggNOG reference database using the "
+        "`download_eggnog_data.py` script from eggNOG. Here, this "
+        "script downloads 3 files and stores them in the output "
+        "artifact. At least 80 GB of storage space is required to "
+        "run this action."
+    ),
     citations=[citations["huerta_cepas_eggnog_2019"]]
 )
 
@@ -633,11 +702,15 @@ plugin.methods.register_function(
     output_descriptions={
         "db": "Complete Diamond reference database."
     },
-    name="Fetch the complete Diamond database necessary to run the "
-         "eggnog-diamond-search action.",
-    description="Downloads Diamond reference database. "
-                "This action downloads 1 file (ref_db.dmnd). At least 18 GB "
-                "of storage space is required to run this action.",
+    name=(
+        "Fetch the complete Diamond database necessary to run the "
+        "eggnog-diamond-search action."
+    ),
+    description=(
+        "Downloads Diamond reference database. "
+        "This action downloads 1 file (ref_db.dmnd). At least 18 GB "
+        "of storage space is required to run this action."
+    ),
     citations=[
         citations["buchfink_sensitive_2021"],
         citations["huerta_cepas_eggnog_2019"]
@@ -650,16 +723,22 @@ plugin.methods.register_function(
     parameters={},
     outputs=[("eggnog_proteins", ReferenceDB[EggnogProteinSequences])],
     output_descriptions={
-        "eggnog_proteins": "eggNOG database of protein sequences and "
-                           "their corresponding taxonomy information."
+        "eggnog_proteins": (
+            "eggNOG database of protein sequences and "
+            "their corresponding taxonomy information."
+        )
     },
-    name="Fetch the databases necessary to run the "
-         "build-eggnog-diamond-db action.",
-    description="Downloads eggNOG proteome database. "
-                "This script downloads 2 files "
-                "(e5.proteomes.faa and e5.taxid_info.tsv) "
-                "and creates and artifact with them. At least 18 GB of "
-                "storage space is required to run this action. ",
+    name=(
+        "Fetch the databases necessary to run the "
+        "build-eggnog-diamond-db action."
+    ),
+    description=(
+        "Downloads eggNOG proteome database. "
+        "This script downloads 2 files "
+        "(e5.proteomes.faa and e5.taxid_info.tsv) "
+        "and creates and artifact with them. At least 18 GB of "
+        "storage space is required to run this action."
+    ),
     citations=[citations["huerta_cepas_eggnog_2019"]]
 )
 
@@ -673,12 +752,14 @@ plugin.methods.register_function(
         "taxonomy": "NCBI reference taxonomy."
     },
     name="Fetch NCBI reference taxonomy.",
-    description="Downloads NCBI reference taxonomy from the NCBI FTP server. "
-                "The resulting artifact is required by the "
-                "build-custom-diamond-db action if one wishes to "
-                "create a Diamond data base with taxonomy features. "
-                "At least 30 GB of "
-                "storage space is required to run this action.",
+    description=(
+        "Downloads NCBI reference taxonomy from the NCBI FTP server. "
+        "The resulting artifact is required by the "
+        "build-custom-diamond-db action if one wishes to "
+        "create a Diamond data base with taxonomy features. "
+        "At least 30 GB of "
+        "storage space is required to run this action."
+    ),
     citations=[citations["NCBI"]]
 )
 
@@ -688,10 +769,12 @@ plugin.methods.register_function(
         'eggnog_proteins': ReferenceDB[EggnogProteinSequences],
     },
     input_descriptions={
-        'eggnog_proteins': "eggNOG database of protein sequences and "
-                           "their corresponding taxonomy information "
-                           "(generated through the `fetch-eggnog-proteins` "
-                           "action)."
+        'eggnog_proteins': (
+            "eggNOG database of protein sequences and "
+            "their corresponding taxonomy information "
+            "(generated through the `fetch-eggnog-proteins` "
+            "action)."
+        )
     },
     parameters={
         'taxon': Int % Range(2, 1579337)
@@ -703,10 +786,14 @@ plugin.methods.register_function(
     output_descriptions={
         "db": "Complete Diamond reference database for the specified taxon."
     },
-    name="Create a DIAMOND formatted reference database for the "
-         "specified taxon.",
-    description="Creates a DIAMOND database which contains the protein "
-                "sequences that belong to the specified taxon.",
+    name=(
+        "Create a DIAMOND formatted reference database for the "
+        "specified taxon."
+    ),
+    description=(
+        "Creates a DIAMOND database which contains the protein "
+        "sequences that belong to the specified taxon."
+    ),
     citations=[
         citations["buchfink_sensitive_2021"],
         citations["huerta_cepas_eggnog_2019"]
@@ -730,12 +817,14 @@ plugin.pipelines.register_function(
         'db': 'The filepath to an artifact containing the Diamond database',
     },
     parameter_descriptions={
-        'num_cpus': 'Number of CPUs to utilize. \'0\' will '
-                    'use all available.',
-        'db_in_memory': 'Read database into memory. The '
-                        'database can be very large, so this '
-                        'option should only be used on clusters or other '
-                        'machines with enough memory.',
+        'num_cpus': (
+            'Number of CPUs to utilize. \'0\' will use all available.'
+        ),
+        'db_in_memory': (
+            'Read database into memory. The database can be very large, '
+            'so this option should only be used on clusters or other '
+            'machines with enough memory.'
+        ),
         **partition_param_descriptions
     },
     outputs=[
@@ -744,8 +833,10 @@ plugin.pipelines.register_function(
         ('loci', GenomeData[Loci])
     ],
     name='Run eggNOG search using diamond aligner.',
-    description="Use Diamond and eggNOG to align contig or MAG sequences "
-                "against the Diamond database.",
+    description=(
+        "Use Diamond and eggNOG to align contig or MAG sequences "
+        "against the Diamond database."
+    ),
     citations=[
         citations["buchfink_sensitive_2021"],
         citations["huerta_cepas_eggnog_2019"]
@@ -769,16 +860,21 @@ plugin.pipelines.register_function(
         'seqs': 'Sequences to be searched for hits.',
         "pressed_hmm_db": "Collection of profile HMMs in binary format and indexed.",
         "idmap": "List of protein families in `pressed_hmm_db`.",
-        "seed_alignments": "Seed alignments for the protein families in "
-                           "`pressed_hmm_db`."
+        "seed_alignments": (
+            "Seed alignments for the protein families in "
+            "`pressed_hmm_db`."
+        )
     },
     parameter_descriptions={
-        'num_cpus': 'Number of CPUs to utilize per partition. \'0\' will '
-                    'use all available.',
-        'db_in_memory': 'Read database into memory. The '
-                        'database can be very large, so this '
-                        'option should only be used on clusters or other '
-                        'machines with enough memory.',
+        'num_cpus': (
+            'Number of CPUs to utilize per partition. \'0\' will '
+            'use all available.'
+        ),
+        'db_in_memory': (
+            'Read database into memory. The database can be very large, '
+            'so this option should only be used on clusters or other '
+            'machines with enough memory.'
+        ),
         **partition_param_descriptions
     },
     outputs=[
@@ -787,8 +883,10 @@ plugin.pipelines.register_function(
         ('loci', GenomeData[Loci]),
     ],
     name='Run eggNOG search using HMMER aligner.',
-    description="This method uses HMMER to find possible target sequences "
-                "to annotate with eggNOG-mapper.",
+    description=(
+        "This method uses HMMER to find possible target sequences "
+        "to annotate with eggNOG-mapper."
+    ),
     citations=[
         citations["noauthor_hmmer_nodate"],
         citations["huerta_cepas_eggnog_2019"]
@@ -811,12 +909,14 @@ plugin.methods.register_function(
         'db': 'Diamond database.'
     },
     parameter_descriptions={
-        'num_cpus': 'Number of CPUs to utilize. \'0\' will '
-                    'use all available.',
-        'db_in_memory': 'Read database into memory. The '
-                        'database can be very large, so this '
-                        'option should only be used on clusters or other '
-                        'machines with enough memory.',
+        'num_cpus': (
+            'Number of CPUs to utilize. \'0\' will use all available.'
+        ),
+        'db_in_memory': (
+            'Read database into memory. The database can be very large, '
+            'so this option should only be used on clusters or other '
+            'machines with enough memory.'
+        ),
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
@@ -824,16 +924,19 @@ plugin.methods.register_function(
         ('loci', GenomeData[Loci])
     ],
     output_descriptions={
-        'eggnog_hits': 'BLAST6-like table(s) describing the identified '
-                       'orthologs. One table per sample or MAG in the input.',
+        'eggnog_hits': (
+            'BLAST6-like table(s) describing the identified '
+            'orthologs. One table per sample or MAG in the input.'
+        ),
         'table': 'Feature table with counts of orthologs per sample/MAG.',
         'loci': 'Loci of the identified orthologs.'
     },
     name='Run eggNOG search using Diamond aligner.',
-    description="This method performs the steps by which we find our "
-                "possible target sequences to annotate using the Diamond "
-                "search functionality from the eggnog `emapper.py` "
-                "script.",
+    description=(
+        "This method performs the steps by which we find our "
+        "possible target sequences to annotate using the Diamond "
+        "search functionality from the eggnog `emapper.py` script."
+    ),
     citations=[
         citations["buchfink_sensitive_2021"],
         citations["huerta_cepas_eggnog_2019"]
@@ -857,16 +960,19 @@ plugin.methods.register_function(
         'seqs': 'Sequences to be searched for hits.',
         'idmap': 'List of protein families in `pressed_hmm_db`.',
         'pressed_hmm_db': 'Collection of Profile HMMs in binary format and indexed.',
-        'seed_alignments': 'Seed alignments for the protein families in '
-                           '`pressed_hmm_db`.'
+        'seed_alignments': (
+            'Seed alignments for the protein families in `pressed_hmm_db`.'
+        )
     },
     parameter_descriptions={
-        'num_cpus': 'Number of CPUs to utilize per partition. \'0\' will '
-                    'use all available.',
-        'db_in_memory': 'Read database into memory. The '
-                        'database can be very large, so this '
-                        'option should only be used on clusters or other '
-                        'machines with enough memory.',
+        'num_cpus': (
+            'Number of CPUs to utilize per partition. \'0\' will use all available.'
+        ),
+        'db_in_memory': (
+            'Read database into memory. The database can be very large, '
+            'so this option should only be used on clusters or other '
+            'machines with enough memory.'
+        ),
     },
     outputs=[
         ('eggnog_hits', SampleData[Orthologs]),
@@ -874,16 +980,19 @@ plugin.methods.register_function(
         ('loci', GenomeData[Loci])
     ],
     output_descriptions={
-        'eggnog_hits': 'BLAST6-like table(s) describing the identified '
-                       'orthologs. One table per sample or MAG in the input.',
+        'eggnog_hits': (
+            'BLAST6-like table(s) describing the identified '
+            'orthologs. One table per sample or MAG in the input.'
+        ),
         'table': 'Feature table with counts of orthologs per sample/MAG.',
         'loci': 'Loci of the identified orthologs.'
     },
     name='Run eggNOG search using HMMER aligner.',
-    description='This method performs the steps by which we find our '
-                'possible target sequences to annotate using the '
-                'HMMER search functionality from the eggnog `emapper.py` '
-                'script.',
+    description=(
+        'This method performs the steps by which we find our '
+        'possible target sequences to annotate using the '
+        'HMMER search functionality from the eggnog `emapper.py` script.'
+    ),
     citations=[
         citations['buchfink_sensitive_2021'],
         citations['huerta_cepas_eggnog_2019']
@@ -897,8 +1006,9 @@ plugin.methods.register_function(
     },
     parameters={},
     input_descriptions={
-        'seed_orthologs': 'Sequence data to be turned into an eggnog feature '
-                          'table.'
+        'seed_orthologs': (
+            'Sequence data to be turned into an eggnog feature table.'
+        )
     },
     parameter_descriptions={},
     outputs=[
@@ -915,8 +1025,9 @@ plugin.pipelines.register_function(
         'db': ReferenceDB[Eggnog],
     },
     input_descriptions={
-        'eggnog_hits': 'BLAST6-like table(s) describing the '
-                       'identified orthologs. ',
+        'eggnog_hits': (
+            'BLAST6-like table(s) describing the identified orthologs.'
+        ),
         'db': 'eggNOG annotation database.'
     },
     parameters={
@@ -925,12 +1036,14 @@ plugin.pipelines.register_function(
         **partition_params
     },
     parameter_descriptions={
-        'db_in_memory': 'Read eggnog database into memory. The '
-                        'eggnog database is very large(>44GB), so this '
-                        'option should only be used on clusters or other '
-                        'machines with enough memory.',
-        'num_cpus': 'Number of CPUs to utilize. \'0\' will '
-                    'use all available.',
+        'db_in_memory': (
+            'Read eggnog database into memory. The eggnog database is very large '
+            '(>44GB), so this option should only be used on clusters or other '
+            'machines with enough memory.'
+        ),
+        'num_cpus': (
+            'Number of CPUs to utilize. \'0\' will use all available.'
+        ),
         **partition_param_descriptions
     },
     outputs=[('ortholog_annotations', GenomeData[NOG])],
@@ -953,12 +1066,14 @@ plugin.methods.register_function(
         'num_cpus': Int % Range(0, None)
     },
     parameter_descriptions={
-        'db_in_memory': 'Read eggnog database into memory. The '
-                        'eggnog database is very large(>44GB), so this '
-                        'option should only be used on clusters or other '
-                        'machines with enough memory.',
-        'num_cpus': 'Number of CPUs to utilize. \'0\' will '
-                    'use all available.',
+        'db_in_memory': (
+            'Read eggnog database into memory. The eggNOG database is very large '
+            '(>44GB), so this option should only be used on clusters or other '
+            'machines with enough memory.'
+        ),
+        'num_cpus': (
+            'Number of CPUs to utilize. \'0\' will use all available.'
+        ),
     },
     outputs=[('ortholog_annotations', GenomeData[NOG])],
     name='Annotate orthologs against eggNOG database.',
@@ -986,53 +1101,67 @@ busco_params = {
     "additional_metrics": Bool,
 }
 busco_param_descriptions = {
-    "mode": "Specify which BUSCO analysis mode to run."
-            "Currently only the 'genome' option is supported, "
-            "for genome assemblies. In the future modes for transcriptome "
-            "assemblies and for annotated gene sets (proteins) will be made "
-            "available.",
-    "lineage_dataset": "Specify the name of the BUSCO lineage to be used. "
-                       "To see all possible options run `busco "
-                       "--list-datasets`.",
+    "mode": (
+        "Specify which BUSCO analysis mode to run."
+        "Currently only the 'genome' option is supported, "
+        "for genome assemblies. In the future modes for transcriptome "
+        "assemblies and for annotated gene sets (proteins) will be made "
+        "available."
+    ),
+    "lineage_dataset": (
+        "Specify the name of the BUSCO lineage to be used. "
+        "To see all possible options run `busco --list-datasets`."
+    ),
     "augustus": "Use augustus gene predictor for eukaryote runs.",
-    "augustus_parameters": "Pass additional arguments to Augustus. "
-                           "All arguments should be contained within a single "
-                           "string with no white space, with each argument "
-                           "separated by a comma. "
-                           "Example: '--PARAM1=VALUE1,--PARAM2=VALUE2'.",
+    "augustus_parameters": (
+        "Pass additional arguments to Augustus. All arguments should be contained "
+        "within a single string with no white space, with each argument "
+        "separated by a comma. Example: '--PARAM1=VALUE1,--PARAM2=VALUE2'."
+    ),
     "augustus_species": "Specify a species for Augustus training.",
     "auto_lineage": "Run auto-lineage to find optimum lineage path.",
-    "auto_lineage_euk": "Run auto-placement just on eukaryote tree to find "
-                        "optimum lineage path.",
-    "auto_lineage_prok": "Run auto-lineage just on non-eukaryote trees to "
-                         "find optimum lineage path.",
+    "auto_lineage_euk": (
+        "Run auto-placement just on eukaryote tree to find "
+        "optimum lineage path."
+    ),
+    "auto_lineage_prok": (
+        "Run auto-lineage just on non-eukaryote trees to find optimum lineage path."
+    ),
     "cpu": "Specify the number (N=integer) of threads/cores to use.",
-    "contig_break": "Number of contiguous Ns to signify a break between "
-                    "contigs. Default is n=10. "
-                    "See https://gitlab.com/ezlab/busco/-/issues/691 for a "
-                    "more detailed explanation.",
-    "evalue": "E-value cutoff for BLAST searches. "
-              "Allowed formats, 0.001 or 1e-03, Default: 1e-03.",
-    "limit": "How many candidate regions (contig or transcript) to consider "
-             "per BUSCO. Default: 3.",
-    "long": "Optimization Augustus self-training mode (Default: Off); "
-            "adds considerably to the run time, "
-            "but can improve results for some non-model organisms.",
-    "metaeuk_parameters": "Pass additional arguments to Metaeuk for the first "
-                          "run. All arguments should be contained within a "
-                          "single string with no white space, with each "
-                          "argument separated by a comma. "
-                          "Example: `--PARAM1=VALUE1,--PARAM2=VALUE2`.",
-    "metaeuk_rerun_parameters": "Pass additional arguments to Metaeuk for the "
-                                "second run. All arguments should be "
-                                "contained within a single string with no "
-                                "white space, with each argument separated by "
-                                "a comma. "
-                                "Example: `--PARAM1=VALUE1,--PARAM2=VALUE2`.",
+    "contig_break": (
+        "Number of contiguous Ns to signify a break between contigs. "
+        "See https://gitlab.com/ezlab/busco/-/issues/691 for a "
+        "more detailed explanation."
+    ),
+    "evalue": (
+        "E-value cutoff for BLAST searches. Allowed formats, 0.001 or 1e-03."
+    ),
+    "limit": (
+        "How many candidate regions (contig or transcript) to consider "
+        "per BUSCO."
+    ),
+    "long": (
+        "Optimization Augustus self-training mode (Default: Off); "
+        "adds considerably to the run time, "
+        "but can improve results for some non-model organisms."
+    ),
+    "metaeuk_parameters": (
+        "Pass additional arguments to Metaeuk for the first run. All arguments "
+        "should be contained within a single string with no white space, with each "
+        "argument separated by a comma. Example: `--PARAM1=VALUE1,--PARAM2=VALUE2`."
+    ),
+    "metaeuk_rerun_parameters": (
+        "Pass additional arguments to Metaeuk for the second run. All arguments "
+        "should be contained within a single string with no white space, with "
+        "each argument separated by a comma. Example: "
+        "`--PARAM1=VALUE1,--PARAM2=VALUE2`."
+    ),
     "miniprot": "Use miniprot gene predictor for eukaryote runs.",
-    "additional_metrics": "Adds completeness and contamination values to the BUSCO "
-                          "report. Check here for documentation: https://github.com/"
-                          "metashot/busco?tab=readme-ov-file#documetation",
+    "additional_metrics": (
+        "Adds completeness and contamination values to the BUSCO "
+        "report. Check here for documentation: https://github.com/"
+        "metashot/busco?tab=readme-ov-file#documetation"
+    ),
 }
 
 
@@ -1056,8 +1185,9 @@ plugin.visualizers.register_function(
     },
     parameter_descriptions={},
     name="Visualize BUSCO results.",
-    description="This method generates a visualization "
-                "from the BUSCO results table.",
+    description=(
+        "This method generates a visualization from the BUSCO results table."
+    ),
     citations=[citations["manni_busco_2021"]],
 )
 
@@ -1080,10 +1210,10 @@ plugin.methods.register_function(
         "results": "BUSCO result table."
     },
     name="Evaluate quality of the generated MAGs using BUSCO.",
-    description="This method uses BUSCO "
-                "(Benchmarking Universal Single-Copy Orthologs assessment "
-                "tool) to assess the quality of assembled MAGs and generates "
-                "a table summarizing the results.",
+    description=(
+        "This method uses BUSCO to assess the quality of assembled MAGs "
+        "and generates a table summarizing the results."
+    ),
     citations=[citations["manni_busco_2021"]],
 )
 
@@ -1110,10 +1240,10 @@ plugin.pipelines.register_function(
         "visualization": "Visualization of the BUSCO results."
     },
     name="Evaluate quality of the generated MAGs using BUSCO.",
-    description="This method uses BUSCO "
-                "(Benchmarking Universal Single-Copy Orthologs assessment "
-                "tool) to assess the quality of assembled MAGs and generates "
-                "a table summarizing the results.",
+    description=(
+        "This method uses BUSCO to assess the quality of assembled "
+        "MAGs and generates a table summarizing the results."
+    ),
     citations=[citations["manni_busco_2021"]],
 )
 
@@ -1133,12 +1263,11 @@ plugin.methods.register_function(
         ])
     },
     parameter_descriptions={
-        'translation_table_number':
-            'Translation table to be used to '
-            'translate genes into a sequences of amino '
-            'acids. See '
-            'https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi '
-            'for reference.'
+        'translation_table_number': (
+            'Translation table to be used to translate genes into sequences of '
+            'amino acids. See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/'
+            'wprintgc.cgi for reference.'
+        )
     },
     outputs=[
         ('loci', GenomeData[Loci]),
@@ -1146,20 +1275,27 @@ plugin.methods.register_function(
         ('proteins', GenomeData[Proteins])
     ],
     output_descriptions={
-        'loci': "Gene coordinates files (one per MAG or sample) listing the "
-                "location of each predicted gene as well as some additional "
-                "scoring information.",
-        'genes': "Fasta files (one per MAG or sample) with the nucleotide "
-                 "sequences of the predicted genes.",
-        'proteins': "Fasta files (one per MAG or sample) with the protein "
-                    "translation of the predicted genes."
+        'loci': (
+            "Gene coordinates files (one per MAG or sample) listing the "
+            "location of each predicted gene as well as some additional "
+            "scoring information."
+        ),
+        'genes': (
+            "Fasta files (one per MAG or sample) with the nucleotide "
+            "sequences of the predicted genes."
+        ),
+        'proteins': (
+            "Fasta files (one per MAG or sample) with the protein "
+            "translation of the predicted genes."
+        )
     },
     name='Predict gene sequences from MAGs or contigs using Prodigal.',
-    description="Prodigal (PROkaryotic DYnamic programming "
-                "Gene-finding ALgorithm), a gene prediction algorithm "
-                "designed for improved gene structure prediction, translation "
-                "initiation site recognition, and reduced false positives in "
-                "bacterial and archaeal genomes.",
+    description=(
+        "Prodigal (PROkaryotic DYnamic programming Gene-finding ALgorithm), "
+        "a gene prediction algorithm designed for improved gene structure "
+        "prediction, translation initiation site recognition, and reduced "
+        "false positives in bacterial and archaeal genomes."
+    ),
     citations=[citations["hyatt_prodigal_2010"]]
 )
 
@@ -1188,14 +1324,17 @@ plugin.methods.register_function(
     ],
     input_descriptions={},
     parameter_descriptions={
-        "database_type": "Type of database to be downloaded. For more "
-        "information on available types please see the list on Kaiju's web "
-        "server: https://bioinformatics-centre.github.io/kaiju/downloads.html",
+        "database_type": (
+            "Type of database to be downloaded. For more information on available "
+            "types please see the list on Kaiju's web server: https://bioinformatics"
+            "-centre.github.io/kaiju/downloads.html"
+        ),
     },
     output_descriptions={"db": "Kaiju database."},
     name="Fetch Kaiju database.",
-    description="This method fetches the latest Kaiju database from "
-                "Kaiju's web server.",
+    description=(
+        "This method fetches the latest Kaiju database from Kaiju's web server."
+    ),
     citations=[citations["menzel2016"]],
 )
 
@@ -1223,13 +1362,19 @@ kaiju_param_descriptions = {
     "evalue": "Minimum E-value in Greedy mode.",
     "x": "Enable SEG low complexity filter.",
     "r": "Taxonomic rank.",
-    "c": "Minimum required number or fraction of reads for "
-         "the taxon (except viruses) to be reported.",
-    "exp": "Expand viruses, which are always shown as full "
-           "taxon path and read counts are not summarized in "
-           "higher taxonomic levels.",
-    "u": "Do not count unclassified reads for the total reads "
-         "when calculating percentages for classified reads."
+    "c": (
+        "Minimum required number or fraction of reads for "
+        "the taxon (except viruses) to be reported."
+    ),
+    "exp": (
+        "Expand viruses, which are always shown as full "
+        "taxon path and read counts are not summarized in "
+        "higher taxonomic levels."
+    ),
+    "u": (
+        "Do not count unclassified reads for the total reads "
+        "when calculating percentages for classified reads."
+    )
 }
 
 plugin.methods.register_function(
@@ -1256,8 +1401,10 @@ plugin.methods.register_function(
         "taxonomy": "Linked taxonomy."
     },
     name="Classify sequences using Kaiju.",
-    description="This method uses Kaiju to perform taxonomic classification "
-                "of DNA sequence reads or contigs.",
+    description=(
+        "This method uses Kaiju to perform taxonomic classification "
+        "of DNA sequence reads or contigs."
+    ),
     citations=[citations["menzel2016"]],
 )
 
@@ -1300,14 +1447,18 @@ plugin.methods.register_function(
     },
     parameters={"lineages": List[Str], },
     parameter_descriptions={
-        "lineages": "Lineages to be included in the database. Can be any "
-                    "valid BUSCO lineage or any of the following: 'all' "
-                    "(for all lineages), 'prokaryota', 'eukaryota', 'virus'.",
+        "lineages": (
+            "Lineages to be included in the database. Can be any "
+            "valid BUSCO lineage or any of the following: 'all' "
+            "(for all lineages), 'prokaryota', 'eukaryota', 'virus'."
+        ),
     },
     name="Download BUSCO database.",
-    description="Downloads BUSCO database for the specified lineage. "
-                "Output can be used to run BUSCO with the 'evaluate-busco' "
-                "action.",
+    description=(
+        "Downloads BUSCO database for the specified lineage. "
+        "Output can be used to run BUSCO with the 'evaluate-busco' "
+        "action."
+    ),
     citations=[citations["manni_busco_2021"]],
 )
 
@@ -1337,18 +1488,24 @@ filter_mags_params = {
     "exclude_ids": Bool,
 }
 filter_contigs_param_descriptions = {
-    "metadata": "Sample metadata indicating which MAG ids to filter. "
-                "The optional `where` parameter may be used to filter ids "
-                "based on specified conditions in the metadata. The "
-                "optional `exclude_ids` parameter may be used to exclude "
-                "the ids specified in the metadata from the filter.",
-    "where": "Optional SQLite WHERE clause specifying MAG metadata "
-             "criteria that must be met to be included in the filtered "
-             "data. If not provided, all MAGs in `metadata` that are "
-             "also in the MAG data will be retained.",
-    "exclude_ids": "Defaults to False. If True, the MAGs selected by "
-                   "the `metadata` and optional `where` parameter will be "
-                   "excluded from the filtered data.",
+    "metadata": (
+        "Sample metadata indicating which MAG ids to filter. "
+        "The optional `where` parameter may be used to filter ids "
+        "based on specified conditions in the metadata. The "
+        "optional `exclude_ids` parameter may be used to exclude "
+        "the ids specified in the metadata from the filter."
+    ),
+    "where": (
+        "Optional SQLite WHERE clause specifying MAG metadata "
+        "criteria that must be met to be included in the filtered "
+        "data. If not provided, all MAGs in `metadata` that are "
+        "also in the MAG data will be retained."
+    ),
+    "exclude_ids": (
+        "Defaults to False. If True, the MAGs selected by "
+        "the `metadata` and optional `where` parameter will be "
+        "excluded from the filtered data."
+    ),
 }
 
 plugin.methods.register_function(
@@ -1397,13 +1554,17 @@ plugin.methods.register_function(
     output_descriptions={
         "idmap": "List of protein families in `hmm_db`.",
         "hmm_db": "Collection of Profile HMMs.",
-        "pressed_hmm_db": "Collection of Profile HMMs in binary format "
-                          "and indexed.",
-        "seed_alignments": "Seed alignments for the protein families in "
-                           "`hmm_db`."
+        "pressed_hmm_db": (
+            "Collection of Profile HMMs in binary format and indexed."
+        ),
+        "seed_alignments": (
+            "Seed alignments for the protein families in `hmm_db`."
+        )
     },
-    name="Fetch the taxon specific database necessary to run the "
-         "eggnog-hmmer-search action.",
+    name=(
+        "Fetch the taxon specific database necessary to run the "
+        "eggnog-hmmer-search action."
+    ),
     description="Downloads Profile HMM database for the specified taxon.",
     citations=[
         citations["huerta_cepas_eggnog_2019"],
@@ -1429,8 +1590,10 @@ plugin.pipelines.register_function(
     },
     output_descriptions={"index": "Generated combined human reference index."},
     name="Construct the human pangenome index.",
-    description="This method generates a Bowtie2 index for the combined human "
-                "GRCh38 reference genome and the draft human pangenome.",
+    description=(
+        "This method generates a Bowtie2 index for the combined human "
+        "GRCh38 reference genome and the draft human pangenome."
+    ),
     citations=[],
 )
 
@@ -1451,9 +1614,11 @@ plugin.pipelines.register_function(
     ],
     input_descriptions={
         "reads": "Reads to be filtered against the human genome.",
-        "index": "Bowtie2 index of the reference human genome. If not "
-                 "provided, an index combined from the reference GRCh38 "
-                 "human genome and the human pangenome will be generated."
+        "index": (
+            "Bowtie2 index of the reference human genome. If not "
+            "provided, an index combined from the reference GRCh38 "
+            "human genome and the human pangenome will be generated."
+        )
     },
     parameter_descriptions={
         "threads": "Number of threads to use for indexing and read filtering.",
@@ -1461,17 +1626,22 @@ plugin.pipelines.register_function(
            if k not in ["exclude_seqs", "n_threads"]}
     },
     output_descriptions={
-        "filtered_reads": "Original reads without the contaminating "
-                          "human reads.",
-        "reference_index": "Generated combined human reference index. If an "
-                           "index was provided as an input, it will be "
-                           "returned here instead."
+        "filtered_reads": (
+            "Original reads without the contaminating human reads."
+        ),
+        "reference_index": (
+            "Generated combined human reference index. If an "
+            "index was provided as an input, it will be "
+             "returned here instead."
+        )
     },
     name="Remove contaminating human reads.",
-    description="This method generates a Bowtie2 index fo the combined human "
-                "GRCh38 reference genome and the draft human pangenome, and"
-                "uses that index to remove the contaminating human reads from "
-                "the reads provided as input.",
+    description=(
+        "Generates a Bowtie2 index fo the combined human "
+        "GRCh38 reference genome and the draft human pangenome, and"
+        "uses that index to remove the contaminating human reads from "
+        "the reads provided as input."
+    ),
     citations=[],
 )
 
@@ -1499,8 +1669,10 @@ plugin.methods.register_function(
         ("abundances", FeatureTable[Frequency % P_abundance_out]),
     ],
     input_descriptions={
-        "alignment_maps": "Bowtie2 alignment maps between reads and features "
-                          "for which the abundance should be estimated.",
+        "alignment_maps": (
+            "Bowtie2 alignment maps between reads and features "
+            "for which the abundance should be estimated."
+        ),
         "feature_lengths": "Table containing length of every feature (MAG/contig).",
     },
     parameter_descriptions={
@@ -1515,9 +1687,11 @@ plugin.methods.register_function(
         "abundances": "Feature abundances.",
     },
     name="Estimate feature (MAG/contig) abundance.",
-    description="This method estimates MAG/contig abundances by mapping the "
-                "reads to them and calculating respective metric values"
-                "which are then used as a proxy for the frequency.",
+    description=(
+        "This method estimates MAG/contig abundances by mapping the "
+        "reads to them and calculating respective metric values"
+        "which are then used as a proxy for the frequency."
+    ),
     citations=[],
 )
 
@@ -1542,13 +1716,16 @@ plugin.methods.register_function(
         "annotation": "Annotation to extract."
     },
     output_descriptions={
-        'annotation_frequency': 'Feature table with frequency of '
-                                'each annotation.',
+        'annotation_frequency': (
+            'Feature table with frequency of each annotation.'
+        ),
     },
     name='Extract annotation frequencies from all annotations.',
-    description='This method extract a specific annotation from the table '
-                'generated by EggNOG and calculates its frequencies across '
-                'all MAGs.',
+    description=(
+        'This method extract a specific annotation from the table '
+        'generated by EggNOG and calculates its frequencies across '
+        'all MAGs.'
+    ),
     citations=[]
 )
 
@@ -1557,10 +1734,11 @@ multiply_input_descriptions = {
     "table2": 'Second feature table with matching dimension.'
 }
 multiply_output_descriptions = {
-    'result_table': 'Feature table with the dot product of the two '
-                    'original tables. The table will have a shape of '
-                    '(M x N) where M is the number of rows from table1 '
-                    'and N is number of columns from table2.',
+    'result_table': (
+        'Feature table with the dot product of the two original tables. '
+        'The table will have a shape of (M x N) where M is the number of '
+        'rows from table1 and N is number of columns from table2.'
+    ),
 }
 
 plugin.methods.register_function(
@@ -1575,11 +1753,12 @@ plugin.methods.register_function(
     parameter_descriptions={},
     output_descriptions=multiply_output_descriptions,
     name='Multiply two feature tables.',
-    description='Calculates the dot product of two feature tables with '
-                'matching dimensions. If table 1 has shape (M x N) and table '
-                '2 has shape (N x P), the resulting table will have shape '
-                '(M x P). Note that the tables must be identical in the N '
-                'dimension.',
+    description=(
+        'Calculates the dot product of two feature tables with matching dimensions. '
+        'If table 1 has shape (M x N) and table 2 has shape (N x P), the resulting '
+        'table will have shape (M x P). Note that the tables must be identical '
+        'in the N dimension.'
+    ),
     citations=[]
 )
 
@@ -1608,11 +1787,12 @@ plugin.methods.register_function(
     parameter_descriptions={},
     output_descriptions=multiply_output_descriptions,
     name='Multiply two feature tables.',
-    description='Calculates the dot product of two feature tables with '
-                'matching dimensions. If table 1 has shape (M x N) and table '
-                '2 has shape (N x P), the resulting table will have shape '
-                '(M x P). Note that the tables must be identical in the N '
-                'dimension.',
+    description=(
+        'Calculates the dot product of two feature tables with matching dimensions. '
+        'If table 1 has shape (M x N) and table 2 has shape (N x P), the resulting '
+        'table will have shape (M x P). Note that the tables must be identical '
+        'in the N dimension.'
+    ),
     citations=[]
 )
 
@@ -1637,11 +1817,12 @@ plugin.methods.register_function(
     parameter_descriptions={},
     output_descriptions=multiply_output_descriptions,
     name='Multiply two feature tables.',
-    description='Calculates the dot product of two feature tables with '
-                'matching dimensions. If table 1 has shape (M x N) and table '
-                '2 has shape (N x P), the resulting table will have shape '
-                '(M x P). Note that the tables must be identical in the N '
-                'dimension.',
+    description=(
+        'Calculates the dot product of two feature tables with matching dimensions. '
+        'If table 1 has shape (M x N) and table 2 has shape (N x P), the resulting '
+        'table will have shape (M x P). Note that the tables must be identical '
+        'in the N dimension.'
+    ),
     citations=[]
 )
 
@@ -1682,17 +1863,19 @@ plugin.pipelines.register_function(
     },
     parameter_descriptions={},
     output_descriptions={
-        'result_table': 'Feature table with the dot product of the two '
-                        'original tables. The table will have the shape of '
-                        '(M x N) where M is the number of rows from table1 '
-                        'and N is number of columns from table2.',
+        'result_table': (
+            'Feature table with the dot product of the two original tables. '
+            'The table will have the shape of (M x N) where M is the number '
+            'of rows from table1 and N is number of columns from table2.'
+        ),
     },
     name='Multiply two feature tables.',
-    description='Calculates the dot product of two feature tables with '
-                'matching dimensions. If table 1 has shape (M x N) and table '
-                '2 has shape (N x P), the resulting table will have shape '
-                '(M x P). Note that the tables must be identical in the N '
-                'dimension.',
+    description=(
+        'Calculates the dot product of two feature tables with '
+        'matching dimensions. If table 1 has shape (M x N) and table '
+        '2 has shape (N x P), the resulting table will have shape '
+        '(M x P). Note that the tables must be identical in the N dimension.'
+    ),
     citations=[]
 )
 
@@ -1728,10 +1911,12 @@ plugin.methods.register_function(
         'abundance_threshold': (
             'A proportion between 0 and 1 representing the minimum relative '
             'abundance (by *classified* read count) that a taxon must have to '
-            ' be retained in the filtered report.'
+            'be retained in the filtered report.'
         ),
-        "remove_empty": "If True, reports with only unclassified reads "
-                        "remaining will be removed from the filtered data.",
+        "remove_empty": (
+            "If True, reports with only unclassified reads "
+            "remaining will be removed from the filtered data."
+        ),
     },
     output_descriptions={
         'filtered_reports': 'The relative abundance-filtered kraken2 reports'
@@ -1746,21 +1931,29 @@ plugin.methods.register_function(
 )
 
 filter_kraken2_results_param_desc = {
-    "metadata": "Metadata indicating which IDs to filter. The optional "
-                "`where` parameter may be used to filter IDs based on "
-                "specified conditions in the metadata. The optional "
-                "`exclude_ids` parameter may be used to exclude the IDs "
-                "specified in the metadata from the filter.",
-    "where": "Optional SQLite WHERE clause specifying metadata criteria that "
-             "must be met to be included in the filtered data. If not "
-             "provided, all IDs in `metadata` that are also in the data will "
-             "be retained.",
-    "exclude_ids": "If True, the samples selected by the `metadata` and "
-                   "optional `where` parameter will be excluded from the "
-                   "filtered data.",
-    "remove_empty": "If True, reports with only unclassified reads will be "
-                    "removed from the filtered data. Reports containing "
-                    "sequences classified only as root will also be removed.",
+    "metadata": (
+        "Metadata indicating which IDs to filter. The optional "
+        "`where` parameter may be used to filter IDs based on "
+        "specified conditions in the metadata. The optional "
+        "`exclude_ids` parameter may be used to exclude the IDs "
+        "specified in the metadata from the filter."
+    ),
+    "where": (
+        "Optional SQLite WHERE clause specifying metadata criteria that "
+        "must be met to be included in the filtered data. If not "
+        "provided, all IDs in `metadata` that are also in the data will "
+        "be retained."
+    ),
+    "exclude_ids": (
+        "If True, the samples selected by the `metadata` and "
+        "optional `where` parameter will be excluded from the "
+        "filtered data."
+    ),
+    "remove_empty": (
+        "If True, reports with only unclassified reads will be "
+        "removed from the filtered data. Reports containing "
+        "sequences classified only as root will also be removed."
+    ),
 }
 
 plugin.methods.register_function(
@@ -1785,8 +1978,10 @@ plugin.methods.register_function(
     },
     parameter_descriptions=filter_kraken2_results_param_desc,
     name="Filter Kraken2 reports and outputs.",
-    description="Filter Kraken2 reports and outputs based on metadata or remove "
-                "reports with 100% unclassified reads.",
+    description=(
+        "Filter Kraken2 reports and outputs based on metadata or remove "
+        "reports with 100% unclassified reads."
+    ),
 )
 
 KRAKEN2_REPORTS_T = TypeMatch([

@@ -12,9 +12,9 @@ from qiime2.core.exceptions import ValidationError
 
 class EggnogHmmerIdmapFileFmt(model.TextFileFormat):
     def _validate_(self, level):
-        with open(str(self), 'r') as file:
+        with open(str(self), "r") as file:
             # Set the number of rows to be parsed
-            max_lines = {"min": 100, "max": float('inf')}[level]
+            max_lines = {"min": 100, "max": float("inf")}[level]
             lines = file.readlines()
             for i, line in enumerate(lines, 1):
                 # Check number of lines parsed so far
@@ -22,7 +22,7 @@ class EggnogHmmerIdmapFileFmt(model.TextFileFormat):
                     break
 
                 # Validate line
-                if not re.match(r'^(\d+) ([A-Z0-9]+)$', line):
+                if not re.match(r"^(\d+) ([A-Z0-9]+)$", line):
                     raise ValidationError(
                         f"Invalid line {i}.\n"
                         f"{line} \n"
@@ -41,4 +41,4 @@ class EggnogHmmerIdmapFileFmt(model.TextFileFormat):
 
 
 class EggnogHmmerIdmapDirectoryFmt(model.DirectoryFormat):
-    idmap = model.File(r'.*\.hmm\.idmap', format=EggnogHmmerIdmapFileFmt)
+    idmap = model.File(r".*\.hmm\.idmap", format=EggnogHmmerIdmapFileFmt)

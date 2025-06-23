@@ -13,16 +13,29 @@ from q2_types.feature_data import AlignedProteinFASTAFormat
 
 class BUSCOResultsFormat(model.TextFileFormat):
     HEADER = [
-        "mag_id", "sample_id", "input_file", "dataset", "complete",
-        "single", "duplicated", "fragmented", "missing", "n_markers",
-        "scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds",
-        "length", "completeness", "contamination"
+        "mag_id",
+        "sample_id",
+        "input_file",
+        "dataset",
+        "complete",
+        "single",
+        "duplicated",
+        "fragmented",
+        "missing",
+        "n_markers",
+        "scaffold_n50",
+        "contigs_n50",
+        "percent_gaps",
+        "scaffolds",
+        "length",
+        "completeness",
+        "contamination",
     ]
     HEADER_2 = HEADER[:-2]
 
     def _validate(self, n_records=None):
         with self.open() as fh:
-            reader = csv.reader(fh, delimiter='\t')
+            reader = csv.reader(fh, delimiter="\t")
             headers = next(reader)
 
             if set(headers) == set(self.HEADER):
@@ -31,28 +44,26 @@ class BUSCOResultsFormat(model.TextFileFormat):
                 expected = self.HEADER_2
             else:
                 raise ValidationError(
-                    f'Invalid header: {headers}, expected: {self.HEADER}, '
+                    f"Invalid header: {headers}, expected: {self.HEADER}, "
                     '"completness" and "contamination" columns are optional.'
                 )
 
             for i, row in enumerate(reader, start=2):
                 if len(row) != len(expected):
                     raise ValidationError(
-                        f'Line {i} has {len(row)} columns, '
-                        f'expected {len(expected)}'
+                        f"Line {i} has {len(row)} columns, " f"expected {len(expected)}"
                     )
 
                 if n_records is not None and i - 1 >= n_records:
                     break
 
     def _validate_(self, level):
-        record_count_map = {'min': 100, 'max': None}
+        record_count_map = {"min": 100, "max": None}
         self._validate(record_count_map[level])
 
 
 BUSCOResultsDirectoryFormat = model.SingleFileDirectoryFormat(
-    'BUSCOResultsDirectoryFormat', 'busco_results.tsv',
-    BUSCOResultsFormat
+    "BUSCOResultsDirectoryFormat", "busco_results.tsv", BUSCOResultsFormat
 )
 
 
@@ -82,21 +93,19 @@ class BuscoDatabaseDirFmt(model.DirectoryFormat):
         species,
     ) = [
         model.FileCollection(
-            rf"lineages\/.+\/{pattern}",
-            format=BuscoGenericTextFileFmt,
-            optional=True
+            rf"lineages\/.+\/{pattern}", format=BuscoGenericTextFileFmt, optional=True
         )
         for pattern in [
-            r'ancestral$',
-            r'ancestral_variants$',
-            r'dataset\.cfg$',
-            r'hmms\/.+\.hmm$',
-            r'lengths_cutoff$',
-            r'links_to_ODB.+\.txt$',
-            r'info\/ogs\.id\.info$',
-            r'refseq_db\.faa\.gz\.md5',
-            r'scores_cutoff$',
-            r'info\/species\.info$',
+            r"ancestral$",
+            r"ancestral_variants$",
+            r"dataset\.cfg$",
+            r"hmms\/.+\.hmm$",
+            r"lengths_cutoff$",
+            r"links_to_ODB.+\.txt$",
+            r"info\/ogs\.id\.info$",
+            r"refseq_db\.faa\.gz\.md5",
+            r"scores_cutoff$",
+            r"info\/species\.info$",
         ]
     ]
 
@@ -108,53 +117,45 @@ class BuscoDatabaseDirFmt(model.DirectoryFormat):
         tree,
         tree_metadata,
     ) = [
-            model.FileCollection(
-                rf"placement_files\/{pattern}",
-                format=BuscoGenericTextFileFmt,
-                optional=True
-            )
-            for pattern in [
-                r'list_of_reference_markers\..+\.txt$',
-                r'mapping_taxid-lineage\..+\.txt$',
-                r'mapping_taxids-busco_dataset_name\..+\.txt$',
-                r'tree\..+\.nwk$',
-                r'tree_metadata\..+\.txt$',
-            ]
+        model.FileCollection(
+            rf"placement_files\/{pattern}",
+            format=BuscoGenericTextFileFmt,
+            optional=True,
+        )
+        for pattern in [
+            r"list_of_reference_markers\..+\.txt$",
+            r"mapping_taxid-lineage\..+\.txt$",
+            r"mapping_taxids-busco_dataset_name\..+\.txt$",
+            r"tree\..+\.nwk$",
+            r"tree_metadata\..+\.txt$",
         ]
+    ]
 
     # Others
     supermatrix_aln = model.FileCollection(
-        r'placement_files\/supermatrix\.aln\..+\.faa$',
+        r"placement_files\/supermatrix\.aln\..+\.faa$",
         format=AlignedProteinFASTAFormat,
-        optional=True
+        optional=True,
     )
     prfls = model.FileCollection(
-        r'lineages\/.+\/prfl\/.+\.prfl$',
-        format=BuscoGenericTextFileFmt,
-        optional=True
+        r"lineages\/.+\/prfl\/.+\.prfl$", format=BuscoGenericTextFileFmt, optional=True
     )
-    version_file = model.File(
-        'file_versions.tsv', format=BuscoGenericTextFileFmt
-    )
+    version_file = model.File("file_versions.tsv", format=BuscoGenericTextFileFmt)
     refseq_db = model.FileCollection(
-        r'lineages\/.+refseq_db\.faa(\.gz)?',
+        r"lineages\/.+refseq_db\.faa(\.gz)?",
         format=BuscoGenericBinaryFileFmt,
-        optional=True
+        optional=True,
     )
     information = model.FileCollection(
-        r'information\/.+\.txt$',
-        format=BuscoGenericTextFileFmt,
-        optional=True
+        r"information\/.+\.txt$", format=BuscoGenericTextFileFmt, optional=True
     )
     missing_parasitic = model.File(
-        r'lineages\/.+\/missing_in_parasitic\.txt$',
+        r"lineages\/.+\/missing_in_parasitic\.txt$",
         format=BuscoGenericTextFileFmt,
-        optional=True
+        optional=True,
     )
     no_hits = model.File(
-        r'lineages\/.+\/no_hits$',
-        format=BuscoGenericTextFileFmt,
-        optional=True
+        r"lineages\/.+\/no_hits$", format=BuscoGenericTextFileFmt, optional=True
     )
 
     def _path_maker(self, name):

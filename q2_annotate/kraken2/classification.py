@@ -17,8 +17,10 @@ from q2_types.per_sample_sequences import (
     JoinedSequencesWithQuality,
     SingleLanePerSamplePairedEndFastqDirFmt,
     SingleLanePerSampleSingleEndFastqDirFmt,
-    ContigSequencesDirFmt, Contigs,
-    MultiFASTADirectoryFormat, MAGs
+    ContigSequencesDirFmt,
+    Contigs,
+    MultiFASTADirectoryFormat,
+    MAGs,
 )
 from q2_types.sample_data import SampleData
 from q2_types.feature_data import FeatureData
@@ -40,15 +42,9 @@ def _get_seq_paths(df_index, df_row, df_columns):
     return _sample, fn
 
 
-def _construct_output_paths(
-        _sample, kraken2_outputs_dir, kraken2_reports_dir
-):
-    report_fp = os.path.join(
-        kraken2_reports_dir.path, f"{_sample}.report.txt"
-    )
-    output_fp = os.path.join(
-        kraken2_outputs_dir.path, f"{_sample}.output.txt"
-    )
+def _construct_output_paths(_sample, kraken2_outputs_dir, kraken2_reports_dir):
+    report_fp = os.path.join(kraken2_reports_dir.path, f"{_sample}.report.txt")
+    output_fp = os.path.join(kraken2_outputs_dir.path, f"{_sample}.output.txt")
     return output_fp, report_fp
 
 
@@ -63,9 +59,9 @@ def classify_kraken2(
     minimum_hit_groups=2,
     quick=False,
     report_minimizer_data=False,
-    num_partitions=None
+    num_partitions=None,
 ):
-    '''
+    """
     Parameters
     ----------
     ctx : qiime2.sdk.Context
@@ -90,15 +86,14 @@ def classify_kraken2(
     ------
     ValueError
         If more than one type of input occurs in the input list.
-    '''
+    """
     kwargs = {
-        k: v for k, v in locals().items()
+        k: v
+        for k, v in locals().items()
         if k not in ["seqs", "db", "ctx", "num_partitions"]
     }
 
-    _merge_kraken2_results = ctx.get_action(
-        "annotate", "_merge_kraken2_results"
-    )
+    _merge_kraken2_results = ctx.get_action("annotate", "_merge_kraken2_results")
 
     reports = []
     outputs = []
@@ -115,7 +110,7 @@ def classify_kraken2(
 
 
 def _classify_single_artifact(ctx, seqs, db, num_partitions, kwargs):
-    '''
+    """
     Runs the kraken2 software on the contents of a single artifact.
 
     Parameters
@@ -138,14 +133,10 @@ def _classify_single_artifact(ctx, seqs, db, num_partitions, kwargs):
     -------
     tuple[Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat]
         The kraken2 reports and outputs directory formats.
-    '''
+    """
     _classify_kraken2 = ctx.get_action("annotate", "_classify_kraken2")
-    collate_kraken2_reports = ctx.get_action(
-        "annotate", "collate_kraken2_reports"
-    )
-    collate_kraken2_outputs = ctx.get_action(
-        "annotate", "collate_kraken2_outputs"
-    )
+    collate_kraken2_reports = ctx.get_action("annotate", "collate_kraken2_reports")
+    collate_kraken2_outputs = ctx.get_action("annotate", "collate_kraken2_outputs")
 
     if seqs.type <= FeatureData[MAG]:
         # FeatureData[MAG] is not parallelized
@@ -161,14 +152,14 @@ def _classify_single_artifact(ctx, seqs, db, num_partitions, kwargs):
             all_reports.append(reports)
             all_outputs.append(outputs)
 
-        collated_reports, = collate_kraken2_reports(all_reports)
-        collated_outputs, = collate_kraken2_outputs(all_outputs)
+        (collated_reports,) = collate_kraken2_reports(all_reports)
+        (collated_outputs,) = collate_kraken2_outputs(all_outputs)
 
         return collated_reports, collated_outputs
 
 
 def _get_partition_action(ctx, seqs):
-    '''
+    """
     Returns the proper partition action for the given type of `seqs`.
 
     Parameters
@@ -185,10 +176,8 @@ def _get_partition_action(ctx, seqs):
     -------
     qiime2.sdk.Action
         The partition action.
-    '''
-    if seqs.type <= SampleData[
-        SequencesWithQuality | JoinedSequencesWithQuality
-    ]:
+    """
+    if seqs.type <= SampleData[SequencesWithQuality | JoinedSequencesWithQuality]:
         return ctx.get_action("demux", "partition_samples_single")
     elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
         return ctx.get_action("demux", "partition_samples_paired")
@@ -201,27 +190,26 @@ def _get_partition_action(ctx, seqs):
 
 
 def _classify_kraken2(
-        seqs: Union[
-            SingleLanePerSamplePairedEndFastqDirFmt,
-            SingleLanePerSampleSingleEndFastqDirFmt,
-            ContigSequencesDirFmt,
-            MAGSequencesDirFmt,
-            MultiFASTADirectoryFormat
-        ],
-        db: Kraken2DBDirectoryFormat,
-        threads: int = 1,
-        confidence: float = 0.0,
-        minimum_base_quality: int = 0,
-        memory_mapping: bool = False,
-        minimum_hit_groups: int = 2,
-        quick: bool = False,
-        report_minimizer_data: bool = False
+    seqs: Union[
+        SingleLanePerSamplePairedEndFastqDirFmt,
+        SingleLanePerSampleSingleEndFastqDirFmt,
+        ContigSequencesDirFmt,
+        MAGSequencesDirFmt,
+        MultiFASTADirectoryFormat,
+    ],
+    db: Kraken2DBDirectoryFormat,
+    threads: int = 1,
+    confidence: float = 0.0,
+    minimum_base_quality: int = 0,
+    memory_mapping: bool = False,
+    minimum_hit_groups: int = 2,
+    quick: bool = False,
+    report_minimizer_data: bool = False,
 ) -> (
-        Kraken2ReportDirectoryFormat,
-        Kraken2OutputDirectoryFormat,
+    Kraken2ReportDirectoryFormat,
+    Kraken2OutputDirectoryFormat,
 ):
-    kwargs = {k: v for k, v in locals().items()
-              if k not in ["seqs", "db", "ctx"]}
+    kwargs = {k: v for k, v in locals().items() if k not in ["seqs", "db", "ctx"]}
 
     common_args = _process_common_input_params(
         processing_func=_process_kraken2_arg, params=kwargs
@@ -231,13 +219,13 @@ def _classify_kraken2(
 
 
 def classify_kraken2_helper(
-        seqs, common_args
+    seqs, common_args
 ) -> (Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat):
     base_cmd = ["kraken2", *common_args]
 
     read_types = (
         SingleLanePerSampleSingleEndFastqDirFmt,
-        SingleLanePerSamplePairedEndFastqDirFmt
+        SingleLanePerSamplePairedEndFastqDirFmt,
     )
 
     if isinstance(seqs, read_types):
@@ -286,9 +274,7 @@ def classify_kraken2_helper(
                 _sample, kraken2_outputs_dir, kraken2_reports_dir
             )
             cmd = deepcopy(base_cmd)
-            cmd.extend(
-                ["--report", report_fp, "--output", output_fp, *fps]
-            )
+            cmd.extend(["--report", report_fp, "--output", output_fp, *fps])
             run_command(cmd=cmd, verbose=True)
 
     except subprocess.CalledProcessError as e:

@@ -7,4 +7,4 @@
 # ----------------------------------------------------------------------------
 from qiime2.plugin import SemanticType
 
-EggnogHmmerIdmap = SemanticType('EggnogHmmerIdmap')
+EggnogHmmerIdmap = SemanticType("EggnogHmmerIdmap")

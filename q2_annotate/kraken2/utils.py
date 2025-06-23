@@ -44,8 +44,7 @@ def _find_lca(taxa):
     """
     # LCA ends where zipped taxonomy strings no longer converge to len == 1
     taxa_comparison = [set(rank) - {None} for rank in zip(*taxa)]
-    return (rank.pop() for rank in takewhile(
-        lambda x: len(x) == 1, taxa_comparison))
+    return (rank.pop() for rank in takewhile(lambda x: len(x) == 1, taxa_comparison))
 
 
 # def _find_lca_majority(taxa):
@@ -70,7 +69,7 @@ def _find_lca(taxa):
 
 def _taxon_to_list(taxon, rank_handle):
     """Split taxonomy string into list of taxonomic labels"""
-    return [sub(rank_handle, '', t.strip()) for t in taxon.split(';')]
+    return [sub(rank_handle, "", t.strip()) for t in taxon.split(";")]
 
 
 def _join_ranks(taxonomy: List[str], ranks: List[str]) -> str:
@@ -79,6 +78,6 @@ def _join_ranks(taxonomy: List[str], ranks: List[str]) -> str:
     All the terminal None values will be removed.
     """
     taxonomy = list(dropwhile(lambda x: x is None, taxonomy[::-1]))
-    taxonomy = ['' if x is None else x for x in taxonomy[::-1]]
-    taxonomy = ';'.join([''.join(t) for t in zip(ranks, taxonomy)])
+    taxonomy = ["" if x is None else x for x in taxonomy[::-1]]
+    taxonomy = ";".join(["".join(t) for t in zip(ranks, taxonomy)])
     return taxonomy

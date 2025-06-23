@@ -17,15 +17,23 @@ import pandas as pd
 import q2templates
 
 from q2_annotate.busco.plots_detailed import _draw_detailed_plots
-from q2_annotate.busco.plots_summary import _draw_marker_summary_histograms, \
-    _draw_selectable_summary_histograms, _draw_completeness_vs_contamination
+from q2_annotate.busco.plots_summary import (
+    _draw_marker_summary_histograms,
+    _draw_selectable_summary_histograms,
+    _draw_completeness_vs_contamination,
+)
 
 from q2_annotate.busco.utils import (
     _parse_busco_params,
-    _parse_df_columns, _partition_dataframe, _calculate_summary_stats,
-    _get_feature_table, _cleanup_bootstrap,
-    _validate_lineage_dataset_input, _extract_json_data,
-    _validate_parameters, _process_busco_results
+    _parse_df_columns,
+    _partition_dataframe,
+    _calculate_summary_stats,
+    _get_feature_table,
+    _cleanup_bootstrap,
+    _validate_lineage_dataset_input,
+    _extract_json_data,
+    _validate_parameters,
+    _process_busco_results,
 )
 from q2_annotate._utils import _process_common_input_params, run_command
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
@@ -45,15 +53,8 @@ def _run_busco(input_dir: str, output_dir: str, sample_id: str, params: List[str
     base_cmd = ["busco", *params]
 
     cmd = deepcopy(base_cmd)
-    cmd.extend([
-        "--in",
-        input_dir,
-        "--out_path",
-        output_dir,
-        "-o",
-        sample_id
-    ])
-    run_command(cmd,  cwd=os.path.dirname(output_dir))
+    cmd.extend(["--in", input_dir, "--out_path", output_dir, "-o", sample_id])
+    run_command(cmd, cwd=os.path.dirname(output_dir))
 
 
 def _busco_helper(mags, common_args, additional_metrics):
@@ -79,12 +80,17 @@ def _busco_helper(mags, common_args, additional_metrics):
             for mag_id, mag_fp in feature_dict.items():
 
                 json_path = glob.glob(
-                    os.path.join(str(tmp), sample_id,
-                                 os.path.basename(mag_fp), "*.json"))[0]
+                    os.path.join(
+                        str(tmp), sample_id, os.path.basename(mag_fp), "*.json"
+                    )
+                )[0]
 
                 results = _process_busco_results(
-                    _extract_json_data(json_path), sample_id, mag_id,
-                    os.path.basename(mag_fp), additional_metrics
+                    _extract_json_data(json_path),
+                    sample_id,
+                    mag_id,
+                    os.path.basename(mag_fp),
+                    additional_metrics,
                 )
                 results_all.append(results)
 
@@ -113,17 +119,21 @@ def _evaluate_busco(
     additional_metrics: bool = False,
 ) -> pd.DataFrame:
     kwargs = {
-        k: v for k, v in locals().items() if k not in [
-            "mags", "db", "additional_metrics"
-        ]
+        k: v
+        for k, v in locals().items()
+        if k not in ["mags", "db", "additional_metrics"]
     }
     kwargs["offline"] = True
     kwargs["download_path"] = str(db)
 
     if lineage_dataset is not None:
         _validate_lineage_dataset_input(
-            lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok,
-            db, kwargs  # kwargs may be modified inside this function
+            lineage_dataset,
+            auto_lineage,
+            auto_lineage_euk,
+            auto_lineage_prok,
+            db,
+            kwargs,  # kwargs may be modified inside this function
         )
 
     # Filter out all kwargs that are None, False or 0.0
@@ -135,10 +145,7 @@ def _evaluate_busco(
 
 
 def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
-    results.to_csv(
-        os.path.join(output_dir, "busco_results.csv"),
-        index=False
-    )
+    results.to_csv(os.path.join(output_dir, "busco_results.csv"), index=False)
 
     # Outputs different df for sample and feature data
     results = _parse_df_columns(results)
@@ -153,8 +160,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
 
         # Draw selectable histograms (only for sample data mags)
         tabbed_context = {
-            "vega_summary_selectable_json":
-            json.dumps(
+            "vega_summary_selectable_json": json.dumps(
                 _draw_selectable_summary_histograms(results)
             ).replace("NaN", "null")
         }
@@ -169,25 +175,21 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
 
     # Copy BUSCO results from tmp dir to output_dir
     TEMPLATES = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        "assets",
-        "busco"
+        os.path.dirname(os.path.dirname(__file__)), "assets", "busco"
     )
     templates = [
         os.path.join(TEMPLATES, assets_subdir, file_name)
         for file_name in ["index.html", "detailed_view.html", "table.html"]
     ]
     copytree(
-        src=os.path.join(TEMPLATES, assets_subdir),
-        dst=output_dir,
-        dirs_exist_ok=True
+        src=os.path.join(TEMPLATES, assets_subdir), dst=output_dir, dirs_exist_ok=True
     )
     for folder in ["css", "js"]:
         os.makedirs(os.path.join(output_dir, folder))
         copytree(
             src=os.path.join(TEMPLATES, folder),
             dst=os.path.join(output_dir, folder),
-            dirs_exist_ok=True
+            dirs_exist_ok=True,
         )
 
     # Partition data frames and draw detailed plots
@@ -207,45 +209,49 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
             label_font_size=17,
             spacing=20,
         )
-        context.update({
-            f"partition_{i}":
+        context.update(
             {
-                "subcontext": subcontext,
-                "counters": counters,
-                "ids": df[counter_col].unique().tolist(),
+                f"partition_{i}": {
+                    "subcontext": subcontext,
+                    "counters": counters,
+                    "ids": df[counter_col].unique().tolist(),
+                }
             }
-        })
+        )
 
     # Render
     vega_json = json.dumps(context).replace("NaN", "null")
-    vega_json_summary = json.dumps(
-        _draw_marker_summary_histograms(results)
-    ).replace("NaN", "null")
+    vega_json_summary = json.dumps(_draw_marker_summary_histograms(results)).replace(
+        "NaN", "null"
+    )
     table_json = _get_feature_table(results)
     stats_json = _calculate_summary_stats(results)
 
     if "completeness" in results.columns and "contamination" in results.columns:
         scatter_json = json.dumps(_draw_completeness_vs_contamination(results)).replace(
-            "NaN", "null")
+            "NaN", "null"
+        )
         comp_cont = True
     else:
         scatter_json = None
         comp_cont = False
 
-    tabbed_context.update({
-        "tabs": [
-            {"title": "QC overview", "url": "index.html"},
-            {"title": tab_title[0], "url": "detailed_view.html"},
-            {"title": tab_title[1], "url": "table.html"}
-        ],
-        "vega_json": vega_json,
-        "vega_summary_json": vega_json_summary,
-        "table": table_json,
-        "summary_stats_json": stats_json,
-        "scatter_json": scatter_json,
-        "comp_cont": comp_cont,
-        "page_size": 100
-    })
+    tabbed_context.update(
+        {
+            "tabs": [
+                {"title": "QC overview", "url": "index.html"},
+                {"title": tab_title[0], "url": "detailed_view.html"},
+                {"title": tab_title[1], "url": "table.html"},
+            ],
+            "vega_json": vega_json,
+            "vega_summary_json": vega_json_summary,
+            "table": table_json,
+            "summary_stats_json": stats_json,
+            "scatter_json": scatter_json,
+            "comp_cont": comp_cont,
+            "page_size": 100,
+        }
+    )
     q2templates.render(templates, output_dir, context=tabbed_context)
 
     # Final cleanup, needed until we fully migrate to Bootstrap 5
@@ -273,14 +279,14 @@ def evaluate_busco(
     metaeuk_rerun_parameters=None,
     miniprot=False,
     additional_metrics=True,
-    num_partitions=None
+    num_partitions=None,
 ):
-    _validate_parameters(lineage_dataset, auto_lineage,
-                         auto_lineage_euk, auto_lineage_prok)
+    _validate_parameters(
+        lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok
+    )
 
     kwargs = {
-        k: v for k, v in locals().items()
-        if k not in ["mags", "ctx", "num_partitions"]
+        k: v for k, v in locals().items() if k not in ["mags", "ctx", "num_partitions"]
     }
 
     _evaluate_busco = ctx.get_action("annotate", "_evaluate_busco")
@@ -293,13 +299,13 @@ def evaluate_busco(
         partition_action = "partition_feature_data_mags"
     partition_mags = ctx.get_action("types", partition_action)
 
-    (partitioned_mags, ) = partition_mags(mags, num_partitions)
+    (partitioned_mags,) = partition_mags(mags, num_partitions)
     results = []
     for mag in partitioned_mags.values():
-        (busco_result, ) = _evaluate_busco(mag, **kwargs)
+        (busco_result,) = _evaluate_busco(mag, **kwargs)
         results.append(busco_result)
 
-    collated_results, = collate_busco_results(results)
-    visualization, = _visualize_busco(collated_results)
+    (collated_results,) = collate_busco_results(results)
+    (visualization,) = _visualize_busco(collated_results)
 
     return collated_results, visualization

@@ -13,8 +13,9 @@ import tempfile
 
 from q2_annotate._utils import run_command
 
-EBI_SERVER_URL = ("ftp://ftp.sra.ebi.ac.uk/vol1/analysis/ERZ127/"
-                  "ERZ12792464/hprc-v1.0-pggb.gfa.gz")
+EBI_SERVER_URL = (
+    "ftp://ftp.sra.ebi.ac.uk/vol1/analysis/ERZ127/" "ERZ12792464/hprc-v1.0-pggb.gfa.gz"
+)
 
 
 def _fetch_and_extract_pangenome(uri: str, dest_dir: str):
@@ -55,13 +56,12 @@ def _extract_fasta_from_gfa(gfa_fp: str, fasta_fp: str):
         fasta_fp (str): The file path where the output FASTA will be saved.
     """
     cmd = ["gfatools", "gfa2fa", gfa_fp]
-    with open(fasta_fp, 'w') as f_out:
+    with open(fasta_fp, "w") as f_out:
         try:
             subprocess.run(cmd, stdout=f_out)
         except Exception as e:
             raise Exception(
-                f"Failed to extract the fasta file from the GFA. "
-                f"The error was: {e}"
+                f"Failed to extract the fasta file from the GFA. " f"The error was: {e}"
             )
     os.remove(gfa_fp)
 
@@ -79,16 +79,16 @@ def _fetch_and_extract_grch38(get_ncbi_genomes: callable, dest_dir: str):
         dest_dir (str): The directory where the genome data will be saved.
     """
     results = get_ncbi_genomes(
-        taxa=['Homo sapiens'],
+        taxa=["Homo sapiens"],
         only_reference=True,
-        assembly_levels=['chromosome'],
-        assembly_source='refseq',
-        only_genomic=False
+        assembly_levels=["chromosome"],
+        assembly_source="refseq",
+        only_genomic=False,
     )
     results.genome_assemblies.export_data(dest_dir)
     shutil.move(
         os.path.join(dest_dir, "dna-sequences.fasta"),
-        os.path.join(dest_dir, "grch38.fasta")
+        os.path.join(dest_dir, "grch38.fasta"),
     )
 
 
@@ -106,7 +106,7 @@ def _combine_fasta_files(*fasta_in_fp, fasta_out_fp):
         fasta_out_fp (str): The file path where the combined output FASTA
             file should be saved.
     """
-    with open(fasta_out_fp, 'a') as f_out:
+    with open(fasta_out_fp, "a") as f_out:
         for f_in in fasta_in_fp:
             try:
                 subprocess.run(["seqtk", "seq", "-U", f_in], stdout=f_out)
@@ -142,22 +142,26 @@ def construct_pangenome_index(ctx, threads=1):
         print("Generating an index of the combined reference...")
         combined_fasta_fp = os.path.join(tmp, "combined.fasta")
         _combine_fasta_files(
-            pan_fasta_fp, os.path.join(tmp, "grch38.fasta"),
-            fasta_out_fp=combined_fasta_fp
+            pan_fasta_fp,
+            os.path.join(tmp, "grch38.fasta"),
+            fasta_out_fp=combined_fasta_fp,
         )
         combined_reference = ctx.make_artifact(
             "FeatureData[Sequence]", combined_fasta_fp
         )
-        index, = build_index(
-            sequences=combined_reference, n_threads=threads
-        )
+        (index,) = build_index(sequences=combined_reference, n_threads=threads)
     return index
 
 
 def filter_reads_pangenome(
-        ctx, reads, index=None, threads=1, mode='local',
-        sensitivity='sensitive', ref_gap_open_penalty=5,
-        ref_gap_ext_penalty=3,
+    ctx,
+    reads,
+    index=None,
+    threads=1,
+    mode="local",
+    sensitivity="sensitive",
+    ref_gap_open_penalty=5,
+    ref_gap_ext_penalty=3,
 ):
     """
     Filters reads against a pangenome index, optionally generating the index
@@ -174,19 +178,20 @@ def filter_reads_pangenome(
 
     if index is None:
         print("Reference index was not provided - it will be generated.")
-        index, = construct_index(threads)
+        (index,) = construct_index(threads)
 
     print("Filtering reads against the index...")
     filter_params = {
-        k: v for k, v in locals().items() if k in
-        ['mode', 'ref_gap_open_penalty', 'ref_gap_ext_penalty']
+        k: v
+        for k, v in locals().items()
+        if k in ["mode", "ref_gap_open_penalty", "ref_gap_ext_penalty"]
     }
-    filtered_reads, = filter_reads(
+    (filtered_reads,) = filter_reads(
         demultiplexed_sequences=reads,
         database=index,
         exclude_seqs=True,
         n_threads=threads,
-        **filter_params
+        **filter_params,
     )
 
     return filtered_reads, index

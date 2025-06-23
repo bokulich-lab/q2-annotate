@@ -19,9 +19,15 @@ from .filter import (
 )
 
 __all__ = [
-    'build_kraken_db', 'classify_kraken2', '_classify_kraken2',
-    'estimate_bracken', 'kraken2_to_features',
-    'kraken2_to_mag_features', '_filter_kraken2_reports_by_abundance',
-    '_filter_kraken2_results_by_metadata', '_align_outputs_with_reports',
-    'filter_kraken2_results', '_merge_kraken2_results'
+    "build_kraken_db",
+    "classify_kraken2",
+    "_classify_kraken2",
+    "estimate_bracken",
+    "kraken2_to_features",
+    "kraken2_to_mag_features",
+    "_filter_kraken2_reports_by_abundance",
+    "_filter_kraken2_results_by_metadata",
+    "_align_outputs_with_reports",
+    "filter_kraken2_results",
+    "_merge_kraken2_results",
 ]

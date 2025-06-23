@@ -7,11 +7,16 @@
 # ----------------------------------------------------------------------------
 from ._type import BUSCOResults, BUSCO
 from ._format import (
-    BUSCOResultsFormat, BUSCOResultsDirectoryFormat, BuscoDatabaseDirFmt
+    BUSCOResultsFormat,
+    BUSCOResultsDirectoryFormat,
+    BuscoDatabaseDirFmt,
 )
 
 
 __all__ = [
-    'BUSCOResults', 'BUSCOResultsFormat', 'BUSCOResultsDirectoryFormat',
-    'BUSCO', 'BuscoDatabaseDirFmt'
+    "BUSCOResults",
+    "BUSCOResultsFormat",
+    "BUSCOResultsDirectoryFormat",
+    "BUSCO",
+    "BuscoDatabaseDirFmt",
 ]

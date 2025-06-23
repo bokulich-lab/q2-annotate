@@ -44,14 +44,16 @@ def _draw_detailed_plots(
         var_name="category",
     )
 
-    secondary_plot_data = df[[
-        "sample_id",
-        "mag_id",
-        'scaffold_n50',
-        'contigs_n50',
-        'percent_gaps',
-        'scaffolds',
-    ]]
+    secondary_plot_data = df[
+        [
+            "sample_id",
+            "mag_id",
+            "scaffold_n50",
+            "contigs_n50",
+            "percent_gaps",
+            "scaffolds",
+        ]
+    ]
 
     # Specify order
     mapping = {"single": 1, "duplicated": 2, "fragmented": 3, "missing": 4}
@@ -61,10 +63,12 @@ def _draw_detailed_plots(
     busco_plot_data["frac_markers"] = (
         "~"
         + round(
-            busco_plot_data["BUSCO_percentage"] *
-            busco_plot_data["n_markers"] / 100
-        ).map(int).map(str)
-        + "/" + busco_plot_data["n_markers"].map(str)
+            busco_plot_data["BUSCO_percentage"] * busco_plot_data["n_markers"] / 100
+        )
+        .map(int)
+        .map(str)
+        + "/"
+        + busco_plot_data["n_markers"].map(str)
     )
 
     # Define title
@@ -84,11 +88,7 @@ def _draw_detailed_plots(
         alt.Chart(busco_plot_data)
         .mark_bar()
         .encode(
-            x=alt.X(
-                "sum(BUSCO_percentage)",
-                stack="normalize",
-                title="BUSCO fraction"
-            ),
+            x=alt.X("sum(BUSCO_percentage)", stack="normalize", title="BUSCO fraction"),
             y=alt.Y("mag_id", axis=alt.Axis(titleFontSize=0)),
             color=alt.Color(
                 "category",
@@ -101,24 +101,20 @@ def _draw_detailed_plots(
                 alt.Tooltip("mag_id", title="MAG ID"),
                 alt.Tooltip("dataset", title="Lineage dataset"),
                 alt.Tooltip(
-                    "frac_markers",
-                    title="Approx. number of markers in this category"
+                    "frac_markers", title="Approx. number of markers in this category"
                 ),
                 alt.Tooltip("BUSCO_percentage", title="% BUSCOs"),
             ],
             opacity=alt.value(0.85),
         )
-        .properties(
-            width=width,
-            height={"step": height}
-        )
+        .properties(width=width, height={"step": height})
         .facet(
             row=alt.Row(
                 "sample_id",
                 title=title,
                 header=alt.Header(labelFontSize=subtitle_size),
             ),
-            spacing=spacing
+            spacing=spacing,
         )
         .resolve_scale(y="independent")
     )
@@ -126,51 +122,45 @@ def _draw_detailed_plots(
     # Secondary plot
     dropdown = alt.binding_select(
         options=[
-            'scaffold_n50',
-            'contigs_n50',
-            'percent_gaps',
-            'scaffolds',
+            "scaffold_n50",
+            "contigs_n50",
+            "percent_gaps",
+            "scaffolds",
         ],
-        name="Assembly statistics: "
+        name="Assembly statistics: ",
     )
 
-    xcol_param = alt.param(
-        value='scaffold_n50',
-        bind=dropdown
-    )
+    xcol_param = alt.param(value="scaffold_n50", bind=dropdown)
 
-    secondary_plot = alt.Chart(secondary_plot_data).mark_bar().encode(
-        x=alt.X('x:Q').title('Assembly statistic'),
-        y=alt.Y('mag_id', axis=None),
-        tooltip=[alt.Tooltip('x:Q', title="value")],
-        opacity=alt.value(0.85)
-    ).transform_calculate(
-        x=f'datum[{xcol_param.name}]'
-    ).add_params(
-        xcol_param
-    ).properties(
-        width=width,
-        height={"step": height}
-    ).facet(
-        row=alt.Row(
-            "sample_id",
-            title=None,
-            header=alt.Header(labelFontSize=0),
-        ),
-        spacing=spacing
-    ).resolve_scale(
-        y="independent"
+    secondary_plot = (
+        alt.Chart(secondary_plot_data)
+        .mark_bar()
+        .encode(
+            x=alt.X("x:Q").title("Assembly statistic"),
+            y=alt.Y("mag_id", axis=None),
+            tooltip=[alt.Tooltip("x:Q", title="value")],
+            opacity=alt.value(0.85),
+        )
+        .transform_calculate(x=f"datum[{xcol_param.name}]")
+        .add_params(xcol_param)
+        .properties(width=width, height={"step": height})
+        .facet(
+            row=alt.Row(
+                "sample_id",
+                title=None,
+                header=alt.Header(labelFontSize=0),
+            ),
+            spacing=spacing,
+        )
+        .resolve_scale(y="independent")
     )
 
     # concatenate plots horizontally
-    output_plot = alt.hconcat(
-        busco_plot, secondary_plot, spacing=3
-    ).configure_axis(
-        labelFontSize=label_font_size, titleFontSize=title_font_size
-    ).configure_legend(
-        labelFontSize=label_font_size, titleFontSize=title_font_size
-    ).configure_header(
-        labelFontSize=label_font_size, titleFontSize=title_font_size
+    output_plot = (
+        alt.hconcat(busco_plot, secondary_plot, spacing=3)
+        .configure_axis(labelFontSize=label_font_size, titleFontSize=title_font_size)
+        .configure_legend(labelFontSize=label_font_size, titleFontSize=title_font_size)
+        .configure_header(labelFontSize=label_font_size, titleFontSize=title_font_size)
     )
 
     return output_plot.to_dict()

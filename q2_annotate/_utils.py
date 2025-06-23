@@ -15,9 +15,7 @@ import skbio
 from q2_types.feature_data import DNASequencesDirectoryFormat
 
 from q2_types.feature_data_mag import MAGSequencesDirFmt
-from q2_types.feature_table import (
-    FeatureTable, PresenceAbsence, RelativeFrequency
-)
+from q2_types.feature_table import FeatureTable, PresenceAbsence, RelativeFrequency
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequencesDirFmt
 
 EXTERNAL_CMD_WARNING = (
@@ -32,8 +30,8 @@ EXTERNAL_CMD_WARNING = (
 def run_command(cmd, env=None, verbose=True, pipe=False, **kwargs):
     if verbose:
         print(EXTERNAL_CMD_WARNING)
-        print("\nCommand:", end=' ')
-        print(" ".join(cmd), end='\n\n')
+        print("\nCommand:", end=" ")
+        print(" ".join(cmd), end="\n\n")
 
     if pipe:
         result = subprocess.run(
@@ -76,23 +74,19 @@ def _process_common_input_params(processing_func, params: dict) -> List[str]:
     for arg_key, arg_val in params.items():
         # This if condition excludes arguments which are falsy
         # (False, None, "", []), except for integers and floats.
-        if (  # noqa: E721
-            type(arg_val) == int or
-            type(arg_val) == float or
-            arg_val
-        ):
+        if type(arg_val) == int or type(arg_val) == float or arg_val:  # noqa: E721
             processed_args.extend(processing_func(arg_key, arg_val))
 
     return processed_args
 
 
 def colorify(string: str):
-    return "%s%s%s" % ('\033[1;32m', string, "\033[0m")
+    return "%s%s%s" % ("\033[1;32m", string, "\033[0m")
 
 
 def _calculate_md5_from_file(file_path: str) -> str:
     md5_hash = hashlib.md5()
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         # Read the file in chunks to handle large files
         for chunk in iter(lambda: f.read(4096), b""):
             md5_hash.update(chunk)
@@ -100,12 +94,12 @@ def _calculate_md5_from_file(file_path: str) -> str:
 
 
 def get_feature_lengths(
-        features: Union[
-            MAGSequencesDirFmt,
-            MultiMAGSequencesDirFmt,
-            ContigSequencesDirFmt,
-            DNASequencesDirectoryFormat
-        ]
+    features: Union[
+        MAGSequencesDirFmt,
+        MultiMAGSequencesDirFmt,
+        ContigSequencesDirFmt,
+        DNASequencesDirectoryFormat,
+    ],
 ) -> pd.DataFrame:
     """Calculate lengths of features in a feature data object."""
     ids, lengths = [], []
@@ -113,7 +107,7 @@ def get_feature_lengths(
 
     # for FeatureData[Sequence]
     if isinstance(features, DNASequencesDirectoryFormat):
-        sample_dict = {"": {"": os.path.join(str(features), 'dna-sequences.fasta')}}
+        sample_dict = {"": {"": os.path.join(str(features), "dna-sequences.fasta")}}
         per_sequence = True
 
         # For SampleData[Contigs]
@@ -131,24 +125,22 @@ def get_feature_lengths(
 
     for _, file_dict in sample_dict.items():
         for _id, fp in file_dict.items():
-            sequences = skbio.io.read(fp, format='fasta', verify=False)
+            sequences = skbio.io.read(fp, format="fasta", verify=False)
 
             if per_sequence:
                 for seq in sequences:
-                    ids.append(seq.metadata['id'])
+                    ids.append(seq.metadata["id"])
                     lengths.append(len(seq))
             else:
                 ids.append(_id)
                 lengths.append(sum(len(seq) for seq in sequences))
 
-    df = pd.DataFrame({'id': ids, 'length': lengths})
-    df.set_index('id', inplace=True)
+    df = pd.DataFrame({"id": ids, "length": lengths})
+    df.set_index("id", inplace=True)
     return df
 
 
-def _multiply(
-        table1: pd.DataFrame, table2: pd.DataFrame
-) -> pd.DataFrame:
+def _multiply(table1: pd.DataFrame, table2: pd.DataFrame) -> pd.DataFrame:
     """Calculate dot product of two tables."""
     if not table1.columns.equals(table2.index):
         raise ValueError(
@@ -157,30 +149,26 @@ def _multiply(
     return table1.dot(table2)
 
 
-def _multiply_tables(
-        table1: pd.DataFrame, table2: pd.DataFrame
-) -> pd.DataFrame:
+def _multiply_tables(table1: pd.DataFrame, table2: pd.DataFrame) -> pd.DataFrame:
     """Calculate dot product of two feature tables."""
     result = _multiply(table1, table2)
     return result
 
 
 def _multiply_tables_relative(
-        table1: pd.DataFrame, table2: pd.DataFrame
+    table1: pd.DataFrame, table2: pd.DataFrame
 ) -> pd.DataFrame:
     """Calculate dot product of two feature tables and convert to
-        a relative frequency table."""
+    a relative frequency table."""
     result = _multiply(table1, table2)
     sum_per_sample = result.sum(axis=1)
     result = result.div(sum_per_sample, axis=0)
     return result
 
 
-def _multiply_tables_pa(
-        table1: pd.DataFrame, table2: pd.DataFrame
-) -> pd.DataFrame:
+def _multiply_tables_pa(table1: pd.DataFrame, table2: pd.DataFrame) -> pd.DataFrame:
     """Calculate dot product of two feature tables and convert to
-        a presence-absence table."""
+    a presence-absence table."""
     result = _multiply(table1, table2)
     result = result.applymap(lambda x: 1 if x != 0 else 0)
     return result
@@ -188,13 +176,17 @@ def _multiply_tables_pa(
 
 def multiply_tables(ctx, table1, table2):
     """Calculate dot product of two feature tables."""
-    if (table1.type <= FeatureTable[PresenceAbsence]
-            or table2.type <= FeatureTable[PresenceAbsence]):
+    if (
+        table1.type <= FeatureTable[PresenceAbsence]
+        or table2.type <= FeatureTable[PresenceAbsence]
+    ):
         multiply = ctx.get_action("annotate", "_multiply_tables_pa")
-    elif (table1.type <= FeatureTable[RelativeFrequency]
-            or table2.type <= FeatureTable[RelativeFrequency]):
+    elif (
+        table1.type <= FeatureTable[RelativeFrequency]
+        or table2.type <= FeatureTable[RelativeFrequency]
+    ):
         multiply = ctx.get_action("annotate", "_multiply_tables_relative")
     else:
         multiply = ctx.get_action("annotate", "_multiply_tables")
-    result, = multiply(table1, table2)
+    (result,) = multiply(table1, table2)
     return result
