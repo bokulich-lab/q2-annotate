@@ -54,14 +54,22 @@ class TestDereplication(TestPluginBase):
                 "fb0bc871-04f6-486b-a10e-8e0cb66f8de3",
             ],
         ]
+        # fmt: off
         self.bin_map = {
-            "ca7012fc-ba65-40c3-84f5-05aa478a7585": "ca7012fc-ba65-40c3-84f5-05aa478a7585",
-            "d65a71fa-4279-4588-b937-0747ed5d604d": "d65a71fa-4279-4588-b937-0747ed5d604d",
-            "db03f8b6-28e1-48c5-a47c-9c65f38f7357": "ca7012fc-ba65-40c3-84f5-05aa478a7585",
-            "fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf": "ca7012fc-ba65-40c3-84f5-05aa478a7585",
-            "fb0bc871-04f6-486b-a10e-8e0cb66f8de3": "d65a71fa-4279-4588-b937-0747ed5d604d",
-            "24dee6fe-9b84-45bb-8145-de7b092533a1": "24dee6fe-9b84-45bb-8145-de7b092533a1",
+            "ca7012fc-ba65-40c3-84f5-05aa478a7585":
+                "ca7012fc-ba65-40c3-84f5-05aa478a7585",
+            "d65a71fa-4279-4588-b937-0747ed5d604d":
+                "d65a71fa-4279-4588-b937-0747ed5d604d",
+            "db03f8b6-28e1-48c5-a47c-9c65f38f7357":
+                "ca7012fc-ba65-40c3-84f5-05aa478a7585",
+            "fa4d7420-d0a4-455a-b4d7-4fa66e54c9bf":
+                "ca7012fc-ba65-40c3-84f5-05aa478a7585",
+            "fb0bc871-04f6-486b-a10e-8e0cb66f8de3":
+                "d65a71fa-4279-4588-b937-0747ed5d604d",
+            "24dee6fe-9b84-45bb-8145-de7b092533a1":
+                "24dee6fe-9b84-45bb-8145-de7b092533a1",
         }
+        # fmt: on
         self.dereplicated_bins = {
             "sample1": {
                 "ca7012fc-ba65-40c3-84f5-05aa478a7585": 1,
