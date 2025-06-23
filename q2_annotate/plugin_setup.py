@@ -1237,7 +1237,7 @@ plugin.methods.register_function(
         "seqs": SampleData[
                     SequencesWithQuality | PairedEndSequencesWithQuality |
                     JoinedSequencesWithQuality
-                ] | SampleData[Contigs] | FeatureData[MAG] | SampleData[MAGs],
+                ] | SampleData[Contigs],
         "db": KaijuDB,
     },
     parameters=kaiju_params,
@@ -1264,7 +1264,7 @@ plugin.pipelines.register_function(
         "seqs": SampleData[
                     SequencesWithQuality | PairedEndSequencesWithQuality |
                     JoinedSequencesWithQuality
-                ] | SampleData[Contigs] | FeatureData[MAG] | SampleData[MAGs],
+                ] | SampleData[Contigs],
         "db": KaijuDB,
     },
     parameters={**kaiju_params, **partition_params},

@@ -69,24 +69,7 @@ class TestKaijuClassification(TestPluginBase):
 
     def test_construct_feature_table(self):
         obs_table, obs_taxonomy = _construct_feature_table(
-            table_fp=self.get_data_path('kaiju-table.tsv'), sample_data_mags=False
-        )
-
-        exp_table = pd.read_csv(
-            self.get_data_path('kaiju-ft-ok.csv'), index_col=0
-        )
-        exp_table.columns.name = "taxon_id"
-        exp_taxonomy = pd.read_csv(
-            self.get_data_path('kaiju-taxonomy-ok.csv'), index_col=0
-        )
-
-        assert_frame_equal(exp_table, obs_table)
-        assert_frame_equal(exp_taxonomy, obs_taxonomy)
-
-    def test_construct_feature_table_sample_data_mags(self):
-        obs_table, obs_taxonomy = _construct_feature_table(
-            table_fp=self.get_data_path('kaiju-table-sample-mags.tsv'),
-            sample_data_mags=True
+            table_fp=self.get_data_path('kaiju-table.tsv')
         )
 
         exp_table = pd.read_csv(
@@ -176,7 +159,7 @@ class TestKaijuClassification(TestPluginBase):
             "c": 0.6
         }
 
-        _process_kaiju_reports(self.temp_dir.name, args, False)
+        _process_kaiju_reports(self.temp_dir.name, args)
 
         exp_cmd = [
             "kaiju2table", "-v", "-o",
@@ -190,7 +173,7 @@ class TestKaijuClassification(TestPluginBase):
             f"{self.temp_dir.name}/sample2/bin2.out"
         ]
 
-        p1.assert_called_once_with(f"{self.temp_dir.name}/results.tsv", False)
+        p1.assert_called_once_with(f"{self.temp_dir.name}/results.tsv")
         p2.assert_called_once_with(exp_cmd, check=True)
 
     @patch("subprocess.run")
@@ -210,7 +193,7 @@ class TestKaijuClassification(TestPluginBase):
             "c": 2
         }
 
-        _process_kaiju_reports(self.temp_dir.name, args, False)
+        _process_kaiju_reports(self.temp_dir.name, args)
 
         exp_cmd = [
             "kaiju2table", "-v", "-o",
@@ -224,7 +207,7 @@ class TestKaijuClassification(TestPluginBase):
             f"{self.temp_dir.name}/sample2.out"
         ]
 
-        p1.assert_called_once_with(f"{self.temp_dir.name}/results.tsv", False)
+        p1.assert_called_once_with(f"{self.temp_dir.name}/results.tsv")
         p2.assert_called_once_with(exp_cmd, check=True)
 
     @patch("subprocess.run")
@@ -248,32 +231,6 @@ class TestKaijuClassification(TestPluginBase):
         r_paired = r".*reads1_R1.fastq.gz,.*reads2_R1.fastq.gz"
 
         self.classify_kaiju_test_helper(p1, p2, seqs, r_in, r_out, r_paired)
-
-    @patch("subprocess.run")
-    @patch("q2_annotate.kaiju.classification._process_kaiju_reports")
-    def test_classify_kaiju_mags(self, p1, p2):
-        seqs = MultiFASTADirectoryFormat(
-            self.get_data_path("mags"), "r"
-        )
-        r_out = (r".*3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa.out,.*"
-                 r"8894435a-c836-4c18-b475-8b38a9ab6c6b.out,.*"
-                 r"99e2f6c5-5811-4a31-a4de-65040c8197bd.out")
-        r_in = (r".*3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa.fasta,.*"
-                r"8894435a-c836-4c18-b475-8b38a9ab6c6b.fasta,.*"
-                r"99e2f6c5-5811-4a31-a4de-65040c8197bd.fasta")
-        self.classify_kaiju_test_helper(p1, p2, seqs, r_in, r_out)
-
-    @patch("subprocess.run")
-    @patch("q2_annotate.kaiju.classification._process_kaiju_reports")
-    def test_classify_kaiju_mag(self, p1, p2):
-        seqs = MAGSequencesDirFmt(
-            self.get_data_path("mags/sample1"), "r"
-        )
-        r_out = (r".*3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa.out,.*"
-                 r"8894435a-c836-4c18-b475-8b38a9ab6c6b.out")
-        r_in = (r".*3b72d1a7-ddb0-4dc7-ac36-080ceda04aaa.fasta,.*"
-                r"8894435a-c836-4c18-b475-8b38a9ab6c6b.fasta")
-        self.classify_kaiju_test_helper(p1, p2, seqs, r_in, r_out)
 
     @patch("subprocess.run")
     @patch("q2_annotate.kaiju.classification._process_kaiju_reports")
@@ -473,57 +430,6 @@ class TestKaijuClassification(TestPluginBase):
         )
         self.assertEqual("merged_table", out_table)
         self.assertEqual("merged_taxa", out_taxonomy)
-
-    def test_classify_kaiju_single_partition_mags(self):
-        fake_seqs = qiime2.Artifact.import_data(
-            "SampleData[MAGs]",
-            self.get_data_path("mags"),
-            MultiFASTADirectoryFormat
-        )
-        fake_db = Mock()
-
-        self.mock_partition_mags.side_effect = [({0: "part1"},)]
-
-        out_table, out_taxonomy = classify_kaiju(
-            self.ctx, fake_seqs, fake_db, num_partitions=1
-        )
-
-        self.ctx.get_action.assert_any_call("annotate", "_classify_kaiju")
-        self.ctx.get_action.assert_any_call("feature_table", "merge")
-        self.ctx.get_action.assert_any_call("feature_table", "merge_taxa")
-        self.ctx.get_action.assert_any_call(
-            "types", "partition_sample_data_mags"
-        )
-
-        self.mock_partition_mags.assert_called_once_with(fake_seqs, 1)
-        self.mock_classify_kaiju.assert_called_once_with(
-            "part1", fake_db, z=1, a='greedy', e=3, m=11, s=65, evalue=0.01,
-            x=True, r='species', c=0.0, exp=False, u=False
-        )
-        self.mock_merge.assert_called_once_with(["table1"])
-        self.mock_merge_taxa.assert_called_once_with(["taxonomy1"])
-        self.assertEqual("merged_table", out_table)
-        self.assertEqual("merged_taxa", out_taxonomy)
-
-    def test_classify_kaiju_single_partition_mag(self):
-        fake_seqs = qiime2.Artifact.import_data(
-            "FeatureData[MAG]",
-            self.get_data_path("mags/sample1"),
-            MAGSequencesDirFmt
-        )
-        fake_db = Mock()
-
-        out_table, out_taxonomy = classify_kaiju(
-            self.ctx, fake_seqs, fake_db, num_partitions=1
-        )
-
-        self.ctx.get_action.assert_any_call("annotate", "_classify_kaiju")
-        self.mock_classify_kaiju.assert_called_once_with(
-            fake_seqs, fake_db, z=1, a='greedy', e=3, m=11, s=65, evalue=0.01,
-            x=True, r='species', c=0.0, exp=False, u=False
-        )
-        self.assertEqual("table1", out_table)
-        self.assertEqual("taxonomy1", out_taxonomy)
 
     def test_classify_kaiju_single_partition_contigs(self):
         fake_seqs = qiime2.Artifact.import_data(
