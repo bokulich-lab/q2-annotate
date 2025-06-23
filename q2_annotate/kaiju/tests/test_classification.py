@@ -15,11 +15,10 @@ import numpy as np
 import pandas as pd
 import qiime2
 from pandas._testing import assert_frame_equal
-from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import (
     SingleLanePerSamplePairedEndFastqDirFmt,
     SingleLanePerSampleSingleEndFastqDirFmt,
-    CasavaOneEightSingleLanePerSampleDirFmt, MultiFASTADirectoryFormat,
+    CasavaOneEightSingleLanePerSampleDirFmt,
     ContigSequencesDirFmt
 )
 
