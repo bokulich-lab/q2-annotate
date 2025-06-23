@@ -227,6 +227,16 @@ class TestAnnotationExtraction(TestPluginBase):
             obs, exp, check_index=False, check_dtype=False
         )
 
+    def test_extract_ec(self):
+        col, func = extraction_methods["ec"]
+        obs = _extract_generic(self.annotation_df, col, func)
+        exp = pd.Series(
+            [2, 1],
+            ["3.6.4.12", "6.3.5.5"],
+            name="count"
+        )
+        pd.testing.assert_series_equal(obs, exp)
+
     def test_filter(self):
         obs = _filter(self.df, 0.2, 300.0)
         exp = pd.DataFrame({

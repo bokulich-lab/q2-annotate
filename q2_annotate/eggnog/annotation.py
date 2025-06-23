@@ -134,7 +134,8 @@ extraction_methods = {
     "kegg_module": ("KEGG_Module", lambda x: pd.Series(x.split(","))),
     "kegg_reaction": ("KEGG_Reaction", lambda x: pd.Series(x.split(","))),
     "brite": ("BRITE", lambda x: pd.Series(x.split(","))),
-    "caz": ("CAZy", lambda x: pd.Series(x.split(",")))
+    "caz": ("CAZy", lambda x: pd.Series(x.split(","))),
+    "ec": ("EC", lambda x: pd.Series(x.split(","))),
 }
 
 

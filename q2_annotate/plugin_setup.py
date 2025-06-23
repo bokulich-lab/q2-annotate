@@ -1524,7 +1524,7 @@ plugin.methods.register_function(
     parameters={
         "annotation": Str % Choices([
             "cog", "caz", "kegg_ko", "kegg_pathway", "kegg_reaction",
-            "kegg_module", "brite"
+            "kegg_module", "brite", "ec"
         ]),
         "max_evalue": Float % Range(0, None),
         "min_score": Float % Range(0, None),
