@@ -13,7 +13,6 @@ jobs:
     steps:
       - name: Make some room
         run: |
-#          rm -rf /opt/hostedtoolcache
           cd /opt
           find . -maxdepth 1 -mindepth 1 '!' -path ./containerd '!' -path ./actionarchivecache '!' -path ./runner '!' -path ./runner-cache -exec rm -rf '{}' ';'
 
