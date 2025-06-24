@@ -12,7 +12,10 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Make some room
-        run: rm -rf /opt/hostedtoolcache
+        run: |
+#          rm -rf /opt/hostedtoolcache
+          cd /opt
+          find . -maxdepth 1 -mindepth 1 '!' -path ./containerd '!' -path ./actionarchivecache '!' -path ./runner '!' -path ./runner-cache -exec rm -rf '{}' ';'
 
       - name: Download build metadata
         uses: actions/github-script@v7
