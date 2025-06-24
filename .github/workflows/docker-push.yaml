@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+      - name: Make some room
+        run: rm -rf /opt/hostedtoolcache
+
       - name: Download build metadata
         uses: actions/github-script@v7
         with:
