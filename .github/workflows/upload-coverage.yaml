@@ -39,13 +39,26 @@ jobs:
             console.info("Pull request number is", pullRequestNumber)
             return pullRequestNumber
 
+      - name: Get merge commit SHA for PR
+        id: pr_merge
+        uses: actions/github-script@v7.0.1
+        with:
+          script: |
+            const { data: prData } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: parseInt("${{ steps.pr.outputs.result }}", 10)
+            });
+            console.info("Merge commit SHA is", prData.merge_commit_sha);
+            return prData.merge_commit_sha;
+
       - uses: codecov/codecov-action@v4
         name: Upload coverage report
         with:
           files: ./coverage.xml
           fail_ci_if_error: true
           override_pr: ${{ steps.pr.outputs.result }}
-          override_commit: ${{ github.event.workflow_run.head_sha }}
+          override_commit: ${{ steps.pr_merge.outputs.result }}
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
