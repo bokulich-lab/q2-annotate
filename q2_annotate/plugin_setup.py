@@ -125,7 +125,7 @@ plugin.methods.register_function(
     outputs=[
         ('mags', SampleData[MAGs]),
         ('contig_map', FeatureMap[MAGtoContigs]),
-        ('unbinned_contigs', SampleData[Contigs % Properties('unbinned')])
+        ('unbinned_contigs', SampleData[Contigs % Properties('unbinned')])#??
     ],
     input_descriptions={
         'contigs': 'Contigs to be binned.',

@@ -22,6 +22,7 @@ from q2_types._util import _validate_num_partitions
 ### new for filter_contigs
 from q2_assembly.filter import filter_contigs
 from qiime2 import Metadata
+from q2_annotate.busco.busco import calculate_unbinned_percentage, count_contigs
 #filter_contigs, input dataframe->metadata that fits as the input of filter contigs (id:index-ids)
 def partition_sample_data_mags(
     mags_qza, num_partitions: int = None
@@ -113,36 +114,54 @@ def partition_filtered_unbinned(
     Returns:
         Dict[str, ContigSequencesDirFmt]: Mapping of partitions to unbinned contigs.
     """
+    mags = Artifact.load(mags_partitioned).view(MultiMAGSequencesDirFmt)
     unbinned = Artifact.load(unbinned_qza).view(ContigSequencesDirFmt)
     partitioned_unbinned = {}
+    for unbinned_id, unbinned_path in unbinned.sample_dict().items():
+        binned_sample_dir = MultiMAGSequencesDirFmt(path=mags.path / unbinned_id, mode='r')
+        binned_contigs = count_contigs(binned_sample_dir)
+        print("\nBinned contigs for sample:", unbinned_id)
+        print(binned_contigs)
+        binned_sample_dir = MultiMAGSequencesDirFmt(path=mags.path, mode='r')
+        binned_contigs = count_contigs(binned_sample_dir)
+        print("\nALL Binned contigs :", unbinned_id)
+        print(binned_contigs)
+        print("\nunbinned_id:", unbinned_id)
+        print("\nunbinned_path:", unbinned_path)
+        print("\nunbinned.sample_dict().keys():", unbinned.sample_dict().keys())
 
-    for partition_id, mag_partition in mags_partitioned.items():
-        print("\npartition_id:", partition_id)
-        print("\mag_partition:", mag_partition)
-        print("\mag_partition.keys():", mags_partitioned.keys())
-        print("\mag_partition.sample_dict().keys():", mag_partition.sample_dict().keys())
-        sample_ids = list(mag_partition.sample_dict().keys())
-        index = pd.Index(sample_ids, name="ID")
-        metadata = Metadata(pd.DataFrame(index=index))
-        # Build the WHERE string manually
-        id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
-        where = f"ID IN ({id_list})"
+    # for partition_id, mag_partition in mags_partitioned.items():
+    #     print("\npartition_id:", partition_id)
+    #     print("\mag_partition:", mag_partition)
+    #     print("\mag_partition.keys():", mags_partitioned.keys())
+    #     print("\mag_partition.sample_dict().keys():", mag_partition.sample_dict().keys())
+
+    #     sample_ids = list(mag_partition.sample_dict().keys())
+    #     metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
+    #     print("\Metadata:", metadata.to_dataframe())
+    #     id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
+    #     where = f"ID IN ({id_list})"
+    #     filtered_unbinned = filter_contigs(
+    #         contigs=unbinned,
+    #         metadata=metadata,
+    #         where=where
+    #     )
         # Filter unbinned using metadata
-        filtered_unbinned = filter_contigs(
-            contigs=unbinned,
-            metadata=metadata,
-            where=where
-        )
-        partitioned_unbinned[partition_id] = filtered_unbinned
-    # for unbinned_id, unbinned_value in filtered_unbinned.items():
-    #     # print("\unbinned_id:", unbinned_id)
-    #     print("\unbinned_value:", unbinned_value)
-    #     print("\unbinned_value.sample_dict().keys():", unbinned_value.sample_dict().keys())
-        # Save this filtered subset
-    # partitioned_unbinned[partition_id] = filtered_unbinned
-    print("filtered_unbinned:", filtered_unbinned)
-    print("\nFinal Partitioned unbinned Structure:")
-    print(partitioned_unbinned)
+        # filtered_unbinned = filter_contigs(
+        #     contigs=unbinned,
+        #     metadata=metadata,
+        #     where=where
+        # )
+    #     partitioned_unbinned[partition_id] = filtered_unbinned
+    # # for unbinned_id, unbinned_value in filtered_unbinned.items():
+    # #     # print("\unbinned_id:", unbinned_id)
+    # #     print("\unbinned_value:", unbinned_value)
+    # #     print("\unbinned_value.sample_dict().keys():", unbinned_value.sample_dict().keys())
+    #     # Save this filtered subset
+    # # partitioned_unbinned[partition_id] = filtered_unbinned
+    # print("filtered_unbinned:", filtered_unbinned)
+    # print("\nFinal Partitioned unbinned Structure:")
+    # print(partitioned_unbinned)
     return partitioned_unbinned
 # def count_binned_contigs(bins: MultiFASTADirectoryFormat) -> int:
 #     """Counts sequences in all FASTA files inside a MultiFASTADirectoryFormat using DNAIterator."""
@@ -194,14 +213,25 @@ def partition_filtered_unbinned(
 
 # # Run test
 # calculate_unbinned_percentage("./data/mags.qza", "./data/unbinned_contigs.qza")
-mags_partitioned = partition_sample_data_mags("./data/mags.qza", 2)
-sample_ids = list(mags_partitioned.keys())
-print("Sample IDs in partitioned MAGs:", sample_ids)
+mags_partitioned = partition_sample_data_mags("./data/mags.qza", 1)
+
 
 # for partition_id, mag_partition in mags_partitioned.items():
 #     output_path = f"./partitioned_output2num/partition_{partition_id}"
 #     mag_partition.save(output_path)
+# for partition_id, mag_partition in mags_partitioned.items():
 
-filtered_unbinned = partition_filtered_unbinned("./data/unbinned_contigs.qza", mags_partitioned)
-sample_ids = list(filtered_unbinned.keys())
-print("Sample IDs in partitioned MAGs:", sample_ids)
+    # print("\nmag_partition:", mag_partition)
+    # print("\nmag_partition.keys():", mags_partitioned.keys())
+    # print("\nmag_partition.sample_dict().keys():", mag_partition.sample_dict().keys())
+
+    # sample_ids = list(mag_partition.sample_dict().keys())
+    # print("\nsample_ids:", sample_ids)
+    # df = pd.DataFrame(index=pd.Index(sample_ids, name="ID"))
+    # print("\nDF directly:\n", df)
+    # metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
+    # print(metadata.to_dataframe().index)
+partition_filtered_unbinned("./data/unbinned_contigs.qza","./data/mags.qza")
+# sample_ids = list(filtered_unbinned.keys())
+# print("Sample IDs in partitioned MAGs:", sample_ids)
+

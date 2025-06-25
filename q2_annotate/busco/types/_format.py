@@ -19,7 +19,9 @@ class BUSCOResultsFormat(model.TextFileFormat):
         "length"
     ]
     ### NEW Optional extra columns allowed at the end
-    OPTIONAL_COLUMNS = ["unbinned_percentage", "absolute_unbinned_count"]
+    # OPTIONAL_COLUMNS = ["unbinned_percentage", "absolute_unbinned_count"]
+    OPTIONAL_COLUMNS = ["unbinned_contigs", "unbinned_contigs_count"]
+
     def _validate(self, n_records=None):
         with self.open() as fh:
             reader = csv.reader(fh, delimiter='\t')

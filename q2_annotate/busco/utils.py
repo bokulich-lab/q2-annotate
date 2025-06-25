@@ -176,7 +176,24 @@ def _get_feature_table(busco_results: pd.DataFrame):
     if len(busco_results["sample_id"].unique()) < 2:
         del new_cols["sample_id"]
 
-    df = df[list(new_cols.keys())].rename(columns=new_cols, inplace=False)
+    # df = df[list(new_cols.keys())].rename(columns=new_cols, inplace=False)
+    # return df.to_json(orient='split')
+    # Only keep columns that actually exist in the DataFrame (prevents KeyError)
+    present_cols = [col for col in new_cols if col in df.columns]
+    df = df[present_cols].rename(columns=new_cols, inplace=False)
+
+    # Optional: format the percentage nicely with a "%" sign
+    if "Unbinned %" in df.columns:
+        df["Unbinned %"] = df["Unbinned %"].apply(
+            lambda x: f"{x:.1f}%" if pd.notna(x) else "NA"
+        )
+
+    # Optional: convert count to a clean string (avoids showing e.g. 5.0)
+    if "Unbinned count" in df.columns:
+        df["Unbinned count"] = df["Unbinned count"].apply(
+            lambda x: str(x) if pd.notna(x) else "NA"
+        )
+    # Convert the final DataFrame to JSON format that the HTML template expects
     return df.to_json(orient='split')
 
 
@@ -244,16 +261,29 @@ def _cleanup_bootstrap(output_dir):
     )
 
 
+# def _calculate_summary_stats(df: pd.DataFrame) -> json:
+#     stats = pd.DataFrame({
+#         "min": df[MARKER_COLS].min(),
+#         "median": df[MARKER_COLS].median(),
+#         "mean": df[MARKER_COLS].mean(),
+#         "max": df[MARKER_COLS].max(),
+#         "count": df[MARKER_COLS].count()
+#     })
+#     return stats.T.to_json(orient='table')
 def _calculate_summary_stats(df: pd.DataFrame) -> json:
+    #if statement
+    SUMMARY_COLS = MARKER_COLS + ["unbinned_contigs"]
+
+    columns = [col for col in SUMMARY_COLS if col in df.columns]
+
     stats = pd.DataFrame({
-        "min": df[MARKER_COLS].min(),
-        "median": df[MARKER_COLS].median(),
-        "mean": df[MARKER_COLS].mean(),
-        "max": df[MARKER_COLS].max(),
-        "count": df[MARKER_COLS].count()
+        "min": df[columns].min(),
+        "median": df[columns].median(),
+        "mean": df[columns].mean(),
+        "max": df[columns].max(),
+        "count": df[columns].count()
     })
     return stats.T.to_json(orient='table')
-
 
 def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
     lengths = {}

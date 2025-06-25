@@ -47,123 +47,140 @@ from qiime2.util import duplicate
 from q2_assembly.filter import filter_contigs
 from qiime2 import Metadata
 import warnings
+from skbio import DNA
+from skbio.io import read
+from typing import List
+from pathlib import Path
 #####
-def partition_filtered_unbinned(
-    unbinned: ContigSequencesDirFmt, mags_partitioned: MultiMAGSequencesDirFmt
-) ->ContigSequencesDirFmt:
+def filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
     """
-    Partition unbinned contigs to match the partitioning of MAGs.
+    Filters the unbinned contigs to match the sample IDs in a MAG partition.
 
     Args:
-        unbinned (ContigSequencesDirFmt): The unbinned contigs directory.
-        mags_partitioned (MultiMAGSequencesDirFmt): The partitioned MAGs structure.
+        unbinned_contigs (ContigSequencesDirFmt): The full unbinned contigs.
+        mag_partition (MultiMAGSequencesDirFmt): One partition of MAGs.
+        _filter_contigs (Action): QIIME 2 action to filter contigs.
 
     Returns:
-        Dict[str, ContigSequencesDirFmt]: Mapping of partitions to unbinned contigs.
+        ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
     """
-    # unbinned = Artifact.load(unbinned_qza).view(ContigSequencesDirFmt)
-    partitioned_unbinned = {}
 
-    for partition_id, mag_partition in mags_partitioned.items():
-        sample_ids = list(mags_partitioned.keys())
-        index = pd.Index(sample_ids, name="ID")
-        metadata = Metadata(pd.DataFrame(index=index))
-        # Build the WHERE string manually
-        id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
-        where = f"ID IN ({id_list})"
-        # Filter unbinned using metadata
-        filtered_unbinned = filter_contigs(
-            contigs=unbinned,
-            metadata=metadata,
-            where=where
-        )
+    sample_ids = list(mag_partition.sample_dict().keys())
+    metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
+    id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
+    where = f"ID IN ({id_list})"
+    filtered_unbinned = _filter_contigs(
+        contigs=unbinned_contigs,
+        metadata=metadata,
+        where=where
+    )
+    return filtered_unbinned
+def get_fasta_files_from_dir(directory: Path) -> list:
+    # Only match common FASTA extensions starting with '.fa' or '.fna'
+    return [f for f in directory.glob('*') if f.suffix in {'.fa', '.fasta'}]
+# def count_contigs(dirfmt) -> int:
+#     """
+#     Count the number of DNA sequences in a QIIME 2 directory format.
 
-        # Save this filtered subset
-        partitioned_unbinned[partition_id] = filtered_unbinned
-    # print("\nFinal Partitioned unbinned Structure:")
-    # print(partitioned_unbinned)
-    return partitioned_unbinned
-
-
-def partition_sample_data_unbinned(
-    unbinned: ContigSequencesDirFmt, mags_partitioned: MultiMAGSequencesDirFmt
-) ->ContigSequencesDirFmt:
-    """
-    Partition unbinned contigs to match the partitioning of MAGs.
+#     Parameters
+#     ----------
+#     dirfmt : DirectoryFormat
+#         A QIIME 2 directory format containing one or more FASTA files.
     
-    Args:
-        unbinned (ContigSequencesDirFmt): The unbinned contigs directory.
-        mags_partitioned (MultiMAGSequencesDirFmt): The partitioned MAGs structure.
-        
-    Returns:
-        Dict[str, ContigSequencesDirFmt]: Mapping of partitions to unbinned contigs.
-    """
-    # unbinned = Artifact.load(unbinned_qza).view(ContigSequencesDirFmt)
-    partitioned_unbinned = {}
-
-    for partition_id, mag_partition in mags_partitioned.items():  # Loop over MAG partitions
-        result = ContigSequencesDirFmt()  # Temporary storage for partitioned unbinned contigs
-        for sample_id in mag_partition.sample_dict().keys():  # Extract sample names from MAGs
-            expected_unbinned_filename = f"{sample_id}_contigs.fa"
-            unbinned_sample_dict = unbinned.sample_dict()  # Get unbinned sample mapping
-            
-            if sample_id in unbinned_sample_dict:  # Check if unbinned contigs exist for this sample
-                unbinned_fp = unbinned_sample_dict[sample_id]
-                os.makedirs(result.path, exist_ok=True)
-                duplicate(unbinned_fp, result.path / expected_unbinned_filename)
-        
-        partitioned_unbinned[partition_id] = result  # Store the partitioned unbinned contigs
-    print("\nFinal Partitioned unbinned Structure:")
-    print(partitioned_unbinned)
-    return partitioned_unbinned
-
-
-def count_binned_contigs(bins) -> int:
-    """Counts sequences in all FASTA files inside a MultiFASTADirectoryFormat using DNAIterator."""
+#     Returns
+#     -------
+#     int
+#         The total number of sequences.
+#     """
     
+#     total_sequences = 0
+#     #accepts a list of file paths 
+#     # instead of  DNAIterator for seq in read(str(fp), format="fasta", constructor=DNA):
+#     #Iterate over sequences directly using QIIME 2's DNAIterator
+#     for fasta_fp, dna_iterator in dirfmt.sequences.iter_views(DNAIterator): #one element
+#         # print(f"{fasta_fp} contains {sequence_count} sequences")  # Debugging output
+#         total_sequences += sum(1 for _ in dna_iterat
+
+def count_contigs(file_paths: List[Path]) -> int:
+    """
+    Count the number of DNA sequences across a list of FASTA files.
+
+    Parameters
+    ----------
+    file_paths : list of Path
+        List of FASTA file paths (.fa, .fasta, .fna).
+
+    Returns
+    -------
+    int
+        Total number of sequences across all files.
+    """
     total_sequences = 0
 
-    #Iterate over sequences directly using QIIME 2's DNAIterator
-    for fasta_fp, dna_iterator in bins.sequences.iter_views(DNAIterator):
-        # print(f"{fasta_fp} contains {sequence_count} sequences")  # Debugging output
-        total_sequences += sum(1 for _ in dna_iterator)
+    for fp in file_paths:
+        total_sequences += sum(1 for _ in read(str(fp), format="fasta", constructor=DNA))
 
     return total_sequences
+# def calculate_unbinned_percentage(all_binned_mags, sample_unbinned_contigs) -> tuple[float, int]:
+#     """
+#     Calculate the percentage and absolute count of unbinned contigs for a single sample.
 
-
-def count_unbinned_contigs(unbinned_contigs) -> int:
-    """Counts sequences in the unbinned FASTA file using DNAIterator."""
+#     Parameters
+#     ----------
+#     all_binned_mags : MultiMAGSequencesDirFmt
+#         Binned contigs (MAGs) from all samples.
     
-    total_sequences = 0
+#     sample_unbinned_contigs : ContigSequencesDirFmt
+#         Unbinned contigs from one specific sample.
 
-    for fasta_fp, dna_iterator in unbinned_contigs.sequences.iter_views(DNAIterator):
-        sequence_count = sum(1 for _ in dna_iterator)  # Count sequences
-        # print(f"{fasta_fp} contains {sequence_count} sequences")  # Debugging output
-        total_sequences += sequence_count
+#     Returns
+#     -------
+#     percentage_unbinned : float
+#         The percentage of unbinned contigs relative to the total number of contigs 
+#         (binned + unbinned) for this sample.
 
-    return total_sequences
+#     unbinned_contigs_count : int
+#         The number of unbinned contigs in this sample.
+#     """
+#     # Count sequences
+#     # binned_contigs = count_binned_contigs(all_binned_mags)
+#     unbinned_contigs_count = count_contigs(sample_unbinned_contigs)
 
-def calculate_unbinned_percentage(bins, unbinned_contigs):
-    """ Calculates the percentage of unbinned contigs """
-    #need to remove loading artifacts
+#     # Calculate percentage
+#     total = all_binned_mags + unbinned_contigs_count
+#     percentage_unbinned = (unbinned_contigs_count / total) * 100 if total > 0 else 0
+
+#     return percentage_unbinned, unbinned_contigs_count
+
+def calculate_unbinned_percentage(mags_per_sample, unbinned_contigs_per_sample) -> tuple[float, int]:
+    """
+    Calculate the percentage and absolute count of unbinned contigs for a single sample.
+
+    Parameters
+    ----------
+    mags_per_sample : MultiMAGSequencesDirFmt
+        Binned contigs (MAGs) from one specific sample.
     
-    # # Load QIIME2 artifacts and get correct directory formats
-    # mags_dir = Artifact.load(mags_qza).view(MultiMAGSequencesDirFmt)  # Binned MAGs
-    # unbinned_dir = Artifact.load(unbinned_qza).view(ContigSequencesDirFmt)  # Unbinned Contigs
+    sample_unbinned_contigs : ContigSequencesDirFmt
+        Unbinned contigs from one specific sample.
 
+    Returns
+    -------
+    percentage_unbinned : float
+        The percentage of unbinned contigs relative to the total number of contigs 
+        (binned + unbinned) for this sample.
+
+    unbinned_contigs_count : int
+        The number of unbinned contigs in this sample.
+    """
+    #change input
     # Count sequences
-    binned_contigs = count_binned_contigs(bins)
-    unbinned_contigs_count = count_unbinned_contigs(unbinned_contigs)
+    binned_contigs = count_contigs(mags_per_sample)
+    unbinned_contigs_count = count_contigs(unbinned_contigs_per_sample)
 
     # Calculate percentage
     total = binned_contigs + unbinned_contigs_count
     percentage_unbinned = (unbinned_contigs_count / total) * 100 if total > 0 else 0
-
-    # Print results for verification
-    print(f"Total Contigs (Binned + Unbinned): {total}")
-    print(f"Binned Contigs: {binned_contigs}")
-    print(f"Unbinned Contigs: {unbinned_contigs_count}")
-    print(f"Percentage of Unbinned Contigs: {percentage_unbinned:.2f}%")
 
     return percentage_unbinned, unbinned_contigs_count
 ### NEW ENDS
@@ -287,33 +304,25 @@ def _evaluate_busco(
         processing_func=_parse_busco_params, params=kwargs
     )
 
-    busco_results = _busco_helper(bins, common_args)
-    unbinned_percentage = {}
-    unbinned_count = {}   
-    # ### NEW Calculate unbinned percentage AFTER BUSCO RESULTS 
-    #add absolute count of unbinned contigs
     if issubclass(type(bins), MultiMAGSequencesDirFmt):
-        ### NEW Add unbinned percentage per sample
-        if "unbinned_percentage" not in busco_results.columns:
-            busco_results["unbinned_percentage"] = pd.NA
-        if "absolute_unbinned_count" not in busco_results.columns:
-            busco_results["absolute_unbinned_count"] = pd.NA
-        # for unbinned_id, unbinned_values in unbinned_contigs.items():
-        # #bins once
-        for unbinned_id, unbinned_path in unbinned_contigs.sample_dict().items(): # inside function
+        busco_results = _busco_helper(bins, common_args)
+        busco_results["unbinned_contigs"] = pd.NA
+        busco_results["unbinned_contigs_count"] = pd.NA
+        # binned_contigs = count_contigs(bins)
+        for unbinned_id, unbinned_path in unbinned_contigs.sample_dict().items(): 
             # percentage, count =  calculate_unbinned_percentage(bins, unbinned_values)
-            percentage, count = calculate_unbinned_percentage(bins, ContigSequencesDirFmt(unbinned_path, mode='r')) #calc whole dataframe then merge with busco results
-            busco_results.loc[busco_results["unbinned_id"] == unbinned_id, "unbinned_percentage"] = percentage
-            busco_results.loc[busco_results["unbinned_id"] == unbinned_id, "absolute_unbinned_count"] = count
-
-        ## loc -no dictionary
-        busco_results["unbinned_percentage"] = unbinned_percentage
-        busco_results["absolute_unbinned_count"] = unbinned_count
-
-    return busco_results
-    # NEW ends 
-    ###old return
-    # return _busco_helper(bins, common_args)
+            # binned_sample_dir = MultiMAGSequencesDirFmt(path=bins.path / unbinned_id, mode='r')
+            binned_dir = bins.path / unbinned_id
+            binned_fasta_paths = get_fasta_files_from_dir(binned_dir)
+            # unbinned_fasta_paths = get_fasta_files_from_dir(unbinned_path)
+            # percentage, count = calculate_unbinned_percentage(MultiMAGSequencesDirFmt(path=bins.path / unbinned_id, mode='r'), ContigSequencesDirFmt(unbinned_path, mode='r'))
+            percentage, count = calculate_unbinned_percentage(binned_fasta_paths, [unbinned_path])
+            busco_results.loc[busco_results["unbinned_id"] == unbinned_id, "unbinned_contigs"] = percentage
+            busco_results.loc[busco_results["unbinned_id"] == unbinned_id, "unbinned_contigs_count"] = count
+            # ## loc -no dictionary
+        return busco_results 
+    
+    return _busco_helper(bins, common_args)
 
 
 def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
@@ -480,14 +489,21 @@ def evaluate_busco(
     results = []
     if issubclass(type(bins), MultiMAGSequencesDirFmt):
         for partition_id, mag_partition in partitioned_mags.items():
-            # Get the sample IDs in this partition
-            sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
-
-            # Filter the unbinned contigs for this partition
-            metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
-            filtered_unbinned, = _filter_contigs(
-                contigs=unbinned_contigs, metadata=metadata
-            )
+            # # Get the sample IDs in this partition
+            # sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
+            # # Filter the unbinned contigs for this partition
+            # metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
+            # id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
+            # where = f"ID IN ({id_list})"
+            # filtered_unbinned = _filter_contigs(
+            #     contigs=unbinned_contigs,
+            #     metadata=metadata,
+            #     where=where
+            # )
+            filtered_unbinned = filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs)
+            # filtered_unbinned, = _filter_contigs(
+            #     contigs=unbinned_contigs, metadata=metadata
+            # )
             # Run BUSCO for this partition of MAGs (with filtered unbinned if needed)
             # If you're calculating unbinned percentages inside `_evaluate_busco`, pass it in
             (busco_result,) = _evaluate_busco(mag_partition, filtered_unbinned, **kwargs)
