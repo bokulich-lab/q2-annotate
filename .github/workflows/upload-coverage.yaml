@@ -58,7 +58,7 @@ jobs:
           files: ./coverage.xml
           fail_ci_if_error: true
           override_pr: ${{ steps.pr.outputs.result }}
-          override_commit: ${{ steps.pr_merge.outputs.result }}
+          override_commit: ${{ fromJson(steps.pr_merge.outputs.result) }}
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
