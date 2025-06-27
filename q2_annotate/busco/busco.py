@@ -18,7 +18,7 @@ import q2templates
 
 from q2_annotate.busco.plots_detailed import _draw_detailed_plots
 from q2_annotate.busco.plots_summary import _draw_marker_summary_histograms, \
-    _draw_selectable_summary_histograms
+    _draw_selectable_summary_histograms, _draw_selectable_unbinned_histograms
 
 from q2_annotate.busco.utils import (
     _parse_busco_params, _collect_summaries, _rename_columns,
@@ -51,6 +51,8 @@ from skbio import DNA
 from skbio.io import read
 from typing import List
 from pathlib import Path
+from qiime2.core.type import SemanticType
+from qiime2 import Artifact
 #####
 def filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
     """
@@ -65,11 +67,12 @@ def filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_conti
         ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
     """
 
-    sample_ids = list(mag_partition.sample_dict().keys())
+    # sample_ids = list(mag_partition.sample_dict().keys())
+    sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
     metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
     id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
     where = f"ID IN ({id_list})"
-    filtered_unbinned = _filter_contigs(
+    (filtered_unbinned,) = _filter_contigs(
         contigs=unbinned_contigs,
         metadata=metadata,
         where=where
@@ -303,8 +306,11 @@ def _evaluate_busco(
     common_args = _process_common_input_params(
         processing_func=_parse_busco_params, params=kwargs
     )
-
-    if issubclass(type(bins), MultiMAGSequencesDirFmt):
+    print("xixo")
+    # if isinstance(bins.view(MultiMAGSequencesDirFmt), MultiMAGSequencesDirFmt):
+    if isinstance(bins, MultiMAGSequencesDirFmt):
+    # if issubclass(type(bins), MultiMAGSequencesDirFmt):
+        print("xoxo")
         busco_results = _busco_helper(bins, common_args)
         busco_results["unbinned_contigs"] = pd.NA
         busco_results["unbinned_contigs_count"] = pd.NA
@@ -317,8 +323,12 @@ def _evaluate_busco(
             # unbinned_fasta_paths = get_fasta_files_from_dir(unbinned_path)
             # percentage, count = calculate_unbinned_percentage(MultiMAGSequencesDirFmt(path=bins.path / unbinned_id, mode='r'), ContigSequencesDirFmt(unbinned_path, mode='r'))
             percentage, count = calculate_unbinned_percentage(binned_fasta_paths, [unbinned_path])
-            busco_results.loc[busco_results["unbinned_id"] == unbinned_id, "unbinned_contigs"] = percentage
-            busco_results.loc[busco_results["unbinned_id"] == unbinned_id, "unbinned_contigs_count"] = count
+            print(percentage)
+            busco_results.loc[busco_results["sample_id"] == unbinned_id, "unbinned_contigs"] = float(percentage)
+            busco_results.loc[busco_results["sample_id"] == unbinned_id, "unbinned_contigs_count"] = int(count)
+            
+            # busco_results.loc[busco_results["sample_id"] == unbinned_id, "unbinned_contigs"] = percentage
+            # busco_results.loc[busco_results["sample_id"] == unbinned_id, "unbinned_contigs_count"] = count
             # ## loc -no dictionary
         return busco_results 
     
@@ -344,7 +354,10 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
         # Draw selectable histograms (only for sample data mags)
         tabbed_context = {
             "vega_summary_selectable_json":
-            json.dumps(_draw_selectable_summary_histograms(busco_results))
+            json.dumps(_draw_selectable_summary_histograms(busco_results)),
+            "vega_selectable_unbinned_json":
+            json.dumps(_draw_selectable_unbinned_histograms(busco_results)),
+            
         }
     else:
         counter_col = "mag_id"
@@ -410,6 +423,8 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
         _draw_marker_summary_histograms(busco_results)
     )
     table_json = _get_feature_table(busco_results)
+    # print("BUSCO DF TYPES:\n", df.dtypes)
+    # print("BUSCO DF unbinned_contigs values:\n", df["unbinned_contigs"].tolist())
     stats_json = _calculate_summary_stats(busco_results)
     tabbed_context.update({
         "tabs": [
@@ -432,7 +447,7 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
 def evaluate_busco(
     ctx,
     bins,
-    unbinned_contigs, ### NEW unbinned input dont forget to add to setup (ADDED TO plugin_setup)
+    unbinned_contigs,
     busco_db,
     mode="genome",
     lineage_dataset=None,
@@ -458,15 +473,24 @@ def evaluate_busco(
 
     kwargs = {
         k: v for k, v in locals().items()
-        if k not in ["bins", "unbinned_contigs" "ctx", "num_partitions"] # NEW exlude unbinned, why busco_db not excluded ???
+        if k not in ["bins", "unbinned_contigs", "ctx", "busco_db", "num_partitions"] # NEW exlude unbinned, why busco_db not excluded ??? "num_partitions"
     }
-
     _evaluate_busco = ctx.get_action("annotate", "_evaluate_busco")
     collate_busco_results = ctx.get_action("annotate", "collate_busco_results")
     _visualize_busco = ctx.get_action("annotate", "_visualize_busco")
     _filter_contigs = ctx.get_action("assembly", "filter_contigs")
     #add partition cases for unbinned this is possible/ makes sense to have unbinned only when we partition one mag per sample
-    if issubclass(type(bins), MultiMAGSequencesDirFmt):
+    # print(bins.type)
+    # Get samples directories from MAGs
+    # print("TYPE:", type(bins))
+    # print("IS INSTANCE OF Artifact?", isinstance(bins, Artifact))
+    # print("SEMANTIC TYPE:", bins.type)
+    # print("FORMAT:", bins.format)
+    # print(str(bins.type))
+    if str(bins.type) == 'SampleData[MAGs]':
+    # if isinstance(bins.view(MultiMAGSequencesDirFmt), MultiMAGSequencesDirFmt):
+    # if bins.type == SemanticType('SampleData[MAGs]'):
+    # if issubclass(type(bins), MultiMAGSequencesDirFmt):
         partition_action = "partition_sample_data_mags"
     else:
         partition_action = "partition_feature_data_mags" #here unbined does not make sense! CREATE A WARNING
@@ -487,7 +511,13 @@ def evaluate_busco(
    
     #####new go through mags but also partition unbinned contigs
     results = []
-    if issubclass(type(bins), MultiMAGSequencesDirFmt):
+    # print("TYPE:", type(bins))
+    # print("IS INSTANCE OF Artifact?", isinstance(bins, Artifact))
+    if str(bins.type) == 'SampleData[MAGs]':
+    # if isinstance(bins.view(MultiMAGSequencesDirFmt), MultiMAGSequencesDirFmt):
+    # if isinstance(bins, MultiMAGSequencesDirFmt):
+    # if bins.type == SemanticType('SampleData[MAGs]'):
+    # if issubclass(type(bins), MultiMAGSequencesDirFmt):
         for partition_id, mag_partition in partitioned_mags.items():
             # # Get the sample IDs in this partition
             # sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
@@ -506,13 +536,33 @@ def evaluate_busco(
             # )
             # Run BUSCO for this partition of MAGs (with filtered unbinned if needed)
             # If you're calculating unbinned percentages inside `_evaluate_busco`, pass it in
-            (busco_result,) = _evaluate_busco(mag_partition, filtered_unbinned, **kwargs)
+            print("FILTERED UNBINNED TYPE:", type(filtered_unbinned))
+
+            (busco_result,) = _evaluate_busco(mag_partition, busco_db, filtered_unbinned, **kwargs)
+            # df = busco_result.view(pd.DataFrame)
+            # columns = df.columns
+
+            # # Extract the first and last two column names
+            # selected_columns = [columns[0], columns[-2], columns[-1]]
+
+            # # Subset the DataFrame using those columns
+            # subset_df = df[selected_columns]
+            # print(subset_df.to_string(index=False))
             results.append(busco_result)
     else:
         for mag in partitioned_mags.values(): # each mag is a subset of bins
-            (busco_result, ) = _evaluate_busco(mag, unbinned_contigs, **kwargs)
+            (busco_result, ) = _evaluate_busco(mag, busco_db, unbinned_contigs, **kwargs)
             results.append(busco_result)
-
+    for i, result in enumerate(results):
+        print(f"\nResult {i}: Type = {type(result)}")
+        if isinstance(result, Artifact):
+            try:
+                df = result.view(pd.DataFrame)
+                print(f"Artifact {i} DataFrame:\n", df.head())
+            except Exception as e:
+                print(f"Failed to view Artifact {i} as DataFrame: {e}")
+        else:
+            print("Not a QIIME2 Artifact.")
     collated_results, = collate_busco_results(results)
     visualization, = _visualize_busco(collated_results)
 

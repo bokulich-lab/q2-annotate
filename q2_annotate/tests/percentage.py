@@ -23,6 +23,8 @@ from q2_types._util import _validate_num_partitions
 from q2_assembly.filter import filter_contigs
 from qiime2 import Metadata
 from q2_annotate.busco.busco import calculate_unbinned_percentage, count_contigs
+from qiime2.core.type import SemanticType
+# from qiime2.plugin import SampleData
 #filter_contigs, input dataframe->metadata that fits as the input of filter contigs (id:index-ids)
 def partition_sample_data_mags(
     mags_qza, num_partitions: int = None
@@ -215,7 +217,11 @@ def partition_filtered_unbinned(
 # calculate_unbinned_percentage("./data/mags.qza", "./data/unbinned_contigs.qza")
 mags_partitioned = partition_sample_data_mags("./data/mags.qza", 1)
 
+artifact = Artifact.load("./data/mags.qza")
 
+print("Semantic type:", artifact.type)
+if isinstance(artifact, MultiMAGSequencesDirFmt):
+    print("Artifact is of type SampleData[MAGs]")
 # for partition_id, mag_partition in mags_partitioned.items():
 #     output_path = f"./partitioned_output2num/partition_{partition_id}"
 #     mag_partition.save(output_path)
@@ -231,7 +237,8 @@ mags_partitioned = partition_sample_data_mags("./data/mags.qza", 1)
     # print("\nDF directly:\n", df)
     # metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
     # print(metadata.to_dataframe().index)
-partition_filtered_unbinned("./data/unbinned_contigs.qza","./data/mags.qza")
-# sample_ids = list(filtered_unbinned.keys())
-# print("Sample IDs in partitioned MAGs:", sample_ids)
-
+# partition_filtered_unbinned("./data/unbinned_contigs.qza","./data/mags.qza")
+# # sample_ids = list(filtered_unbinned.keys())
+# # print("Sample IDs in partitioned MAGs:", sample_ids)
+# bins =
+# if "SampleData[MAGs]" in str(bins.type):

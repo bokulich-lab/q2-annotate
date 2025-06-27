@@ -28,7 +28,8 @@
                         The table below shows the summary statistics of the BUSCO marker count
                         fractions for the categories <b>Single</b>, <b>Duplicated</b>, <b>Fragmented</b>,
                         <b>Missing</b>, and <b>Complete</b>. The statistics are calculated for
-                        the categories across <b>all MAGs</b> in <b>all samples</b>.
+                        the categories across <b>all MAGs</b> in <b>all samples</b>, including the
+                        percentage of <b>Unbinned contigs</b> per sample.
                     </p>
                     <table id="summaryTable" class="table table-hover">
                     <thead>
@@ -39,6 +40,7 @@
                             <th scope="col">% fragmented</th>
                             <th scope="col">% missing</th>
                             <th scope="col">% complete</th>
+                            <th scope="col">% unbinned contigs</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -111,6 +113,62 @@
             </div>
         </div>
     </div>
+    <!-- <div class="row" style="margin-bottom: 10px">
+        <div class="col-lg-12">
+            <div class="card">
+                <h5 class="card-header">Histogram Unbinned contigs</h5>
+                <div class="card-body" style="display: flex; align-items: center">
+                    <div class="col-lg-3" style="margin-right: 20px">
+                        <p>
+                        The histogram shows the distribution of unbinned contigs across all samples.
+                        You can use the dropdown to switch between displaying the absolute count or
+                        the percentage of unbinned contigs. This visualization allows you to assess
+                        how many contigs remain unassigned to MAGs in each sample.
+                        </p>
+                    </div>
+                    <div class="col-lg-9" style="display: flex; align-items: center; justify-content: space-evenly">
+                        <div class="col-lg-5" id="selectableHistogramUnbinnedControls"></div>
+                        <div class="col-lg-4" id="selectableHistogramUnbinned">
+                            <div id="plotUnbinned" style="margin-top: 5px"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> -->
+    <div class="row" style="margin-bottom: 10px">
+        <div class="col-lg-12">
+            <div class="card">
+                <h5 class="card-header">Histogram Unbinned contigs</h5>
+                <div class="card-body">
+                    <div class="row align-items-center justify-content-between">
+
+                        <!-- Description on the left -->
+                        <div class="col-lg-4">
+                            <p>
+                            The histogram shows the distribution of unbinned contigs across 
+                            all samples.You can use the radio buttons to switch between 
+                            displaying the absolute count or the percentage of unbinned 
+                            contigs. This visualization allows you to assess how many 
+                            contigs remain unassigned to MAGs in each sample.
+                            </p>
+                        </div>
+
+                        <!-- Radio button in the middle -->
+                        <div class="col-lg-2 d-flex justify-content-center">
+                            <div id="selectableHistogramUnbinnedControls"></div>
+                        </div>
+
+                        <!-- Plot on the right -->
+                        <div class="col-lg-6">
+                            <div id="plotUnbinned" style="margin-top: 5px;"></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script id="vega_summary_json" type="application/json">
@@ -124,6 +182,13 @@
 <script id="vega_summary_selectable_json" type="application/json">
     {{
         vega_summary_selectable_json
+        |
+        safe
+    }}
+</script>
+<script id="vega_selectable_unbinned_json" type="application/json">
+    {{
+        vega_selectable_unbinned_json
         |
         safe
     }}
@@ -147,7 +212,7 @@
 
         const rows = ['rowMinimum', 'rowMedian', 'rowMean', 'rowMaximum', 'rowTotal'];
         const indices = ['min', 'median', 'mean', 'max', 'count'];
-        const cols = ['single', 'duplicated', 'fragmented', 'missing', 'complete'];
+        const cols = ['single', 'duplicated', 'fragmented', 'missing', 'complete', 'unbinned_contigs'];
         rows.forEach((rowId, index) => {
             let rowElement = document.getElementById(rowId)
             let colVals = summarySpec.data[index]
@@ -199,6 +264,31 @@
 
                 let plotSelectableControls = document.getElementById('selectableHistogramControls')
                 plotSelectableControls.appendChild(vegaBindings[0])
+            }
+        );
+        const vegaSpecSelectableUnbinned = JSON.parse(document.getElementById('vega_selectable_unbinned_json').textContent);
+        vegaEmbed("#plotUnbinned", vegaSpecSelectableUnbinned).then(
+            function (result) {
+                result.view.logLevel(vega.Warn);
+                window.v = result.view;
+            }
+        ).catch(
+            function (error) {
+                handleErrors([error], $("#plotUnbinned"));
+            }
+        ).then(
+            function(result) {
+                let plotUnbinned = document.getElementById('plotUnbinned')
+                let chartWrapper = plotUnbinned.getElementsByClassName('chart-wrapper')
+                let vegaBindings = chartWrapper[0].getElementsByClassName('vega-bindings')
+
+                let dropdown = vegaBindings[0].querySelector("select[name=select_metric_category]")
+                dropdown.classList.add("btn-sm", "btn-outline", "dropdown-toggle")
+                let dropdownLabel = vegaBindings[0].getElementsByClassName("vega-bind-name")[0]
+                dropdownLabel.innerHTML = "Select metric:"
+
+                let plotUnbinnedControls  = document.getElementById('selectableHistogramUnbinnedControls')
+                plotUnbinnedControls.appendChild(vegaBindings[0])
             }
         );
     });

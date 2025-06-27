@@ -151,6 +151,10 @@ class TestBUSCOSampleData(TestPluginBase):
         return_value={"fake3": {"plot": "spec"}}
     )
     @patch(
+        "q2_annotate.busco.busco._draw_selectable_unbinned_histograms",
+        return_value={"fake4": {"plot": "spec"}}
+    )
+    @patch(
         "q2_annotate.busco.busco._get_feature_table", return_value="table1"
     )
     @patch(
@@ -161,19 +165,19 @@ class TestBUSCOSampleData(TestPluginBase):
     @patch("q2_annotate.busco.busco._cleanup_bootstrap")
     def test_visualize_busco(
             self, mock_clean, mock_render, mock_stats, mock_table,
-            mock_selectable, mock_marker, mock_detailed
+            mock_selectable, mock_selectable_unbinned, mock_marker, mock_detailed
     ):
         _visualize_busco(
             output_dir=self.temp_dir.name,
             busco_results=pd.read_csv(
-                self.get_data_path('summaries/all_renamed_with_lengths.csv')
+                self.get_data_path('summaries/all_renamed_with_lengths_unbinned.csv')
             )
         )
 
         mock_detailed.assert_called_once()
         mock_marker.assert_called_once()
         mock_selectable.assert_called_once()
-
+        mock_selectable_unbinned.assert_called_once()
         exp_context = {
             "tabs": [
                 {"title": "QC overview", "url": "index.html"},
@@ -190,6 +194,9 @@ class TestBUSCOSampleData(TestPluginBase):
             "vega_summary_selectable_json": json.dumps(
                 {"fake3": {"plot": "spec"}}
             ),
+            "vega_selectable_unbinned_json": json.dumps(
+                {"fake4": {"plot": "spec"}}
+            ),
             "table": "table1",
             "summary_stats_json": "stats1",
             "page_size": 100
@@ -199,14 +206,18 @@ class TestBUSCOSampleData(TestPluginBase):
         )
         mock_clean.assert_called_with(self.temp_dir.name)
 
-    # TODO: maybe this could be turned into an actual test
     def test_evaluate_busco_action(self):
+        fake_partition = MagicMock()
+        fake_partition.view.return_value.sample_dict.return_value = {
+            "sample1": {}, "sample2": {}
+        }
         mock_action = MagicMock(side_effect=[
             lambda x, y, **kwargs: (0,), # evaluate_busco
             lambda x: ("collated_result", ),
             lambda x: ("visualization", ),
             lambda *args, **kwargs: ("filtered_unbinned",),  # filter_contigs
-            lambda x, y: ({"sample1": {}, "sample2": {}}, ) #map id to fasta file in data dir
+            # lambda x, y: ({"sample1": {}, "sample2": {}}, ) #map id to fasta file in data dir
+            lambda x, y: (fake_partition, ) #map id to fasta file in data dir
         ])
        
         mock_ctx = MagicMock()

@@ -122,16 +122,19 @@ class TestBUSCOFeatureData(TestPluginBase):
         )
         mock_clean.assert_called_with(self.temp_dir.name)
 
-    # TODO: maybe this could be turned into an actual test
     def test_evaluate_busco_action(self):
+        fake_partition = MagicMock()
+        fake_partition.view.return_value.sample_dict.return_value = {
+            "sample1": {}, "sample2": {}
+        }
         mock_action = MagicMock(side_effect=[
             lambda x, y, **kwargs: (0,), # evaluate_busco 
             lambda x: ("collated_result",),  # collate
             lambda x: ("visualization",),  # visualize
             lambda *args, **kwargs: ("filtered_unbinned",),  # filter_contigs
-            lambda *args, **kwargs: ({"mag1": {}, "mag2": {}},)  # partition
+            lambda x, y: (fake_partition,)  # partition
         ])
-        mock_ctx = MagicMock(get_action=mock_action) #? 
+        mock_ctx = MagicMock(get_action=mock_action) 
         mags = qiime2.Artifact.import_data(
             'FeatureData[MAG]',
             self.get_data_path('mags/sample2')
@@ -146,7 +149,7 @@ class TestBUSCOFeatureData(TestPluginBase):
             bins=mags,
             unbinned_contigs = None, #none
             busco_db=busco_db,
-            num_partitions=2
+            num_partitions=None
         )
         exp = ("collated_result", "visualization")
         self.assertTupleEqual(obs, exp)

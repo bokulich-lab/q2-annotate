@@ -182,18 +182,15 @@ def _get_feature_table(busco_results: pd.DataFrame):
     present_cols = [col for col in new_cols if col in df.columns]
     df = df[present_cols].rename(columns=new_cols, inplace=False)
 
-    # Optional: format the percentage nicely with a "%" sign
     if "Unbinned %" in df.columns:
         df["Unbinned %"] = df["Unbinned %"].apply(
             lambda x: f"{x:.1f}%" if pd.notna(x) else "NA"
         )
 
-    # Optional: convert count to a clean string (avoids showing e.g. 5.0)
     if "Unbinned count" in df.columns:
         df["Unbinned count"] = df["Unbinned count"].apply(
             lambda x: str(x) if pd.notna(x) else "NA"
         )
-    # Convert the final DataFrame to JSON format that the HTML template expects
     return df.to_json(orient='split')
 
 
@@ -208,6 +205,10 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         df (pd.DataFrame): Formatted DataFrame
     """
+    if "unbinned_contigs" in df.columns:
+        SUMMARY_COLS = MARKER_COLS + ["unbinned_contigs"]
+    else:
+        SUMMARY_COLS = MARKER_COLS
     df = df.reset_index(drop=False, inplace=False)
     df = df.rename(columns={"id": "mag_id"}, inplace=False)
 
@@ -215,10 +216,10 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     df["percent_gaps"] = df["percent_gaps"].str.split(
         '%', expand=True
     )[0].map(float)
-    for col in MARKER_COLS:
+    for col in SUMMARY_COLS:
         df[col] = df[col].map(float)
     df["n_markers"] = df["n_markers"].map(int)
-
+    # df["unbinned_contigs"] = df["unbinned_contigs"].astype(float).round(2)
     return df
 
 
@@ -283,6 +284,10 @@ def _calculate_summary_stats(df: pd.DataFrame) -> json:
         "max": df[columns].max(),
         "count": df[columns].count()
     })
+    # Round numeric values to 2 decimal places
+    for col in stats.columns:
+        if col != "count":
+            stats[col] = stats[col].round(1)
     return stats.T.to_json(orient='table')
 
 def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):

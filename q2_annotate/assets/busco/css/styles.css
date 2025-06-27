@@ -10,7 +10,23 @@
     margin-right: 10px;
     white-space: nowrap
 }
+#selectableHistogramUnbinnedControls {
+  background-color: yellow !important;
+}
+/* Make the radio button block align horizontally and centered */
+#selectableHistogramUnbinnedControls .vega-bind {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
 
+/* Ensure the radio buttons are inline */
+#selectableHistogramUnbinnedControls .vega-bind-radio {
+  display: flex !important;
+  gap: 10px;
+}
 .header-inline {
     display: inline-block;
     float: left;

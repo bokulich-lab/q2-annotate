@@ -27,7 +27,7 @@ from q2_assembly.filter import filter_contigs
 from qiime2 import Metadata
 from pathlib import Path
 import warnings
-
+from qiime2 import Artifact
 class TestBUSCOUtils(TestPluginBase):
     package = "q2_annotate.busco.tests"
 
@@ -474,10 +474,11 @@ class TestBUSCOUtils(TestPluginBase):
 
     
     def test_filtered_unbinned_matches_partition_1_sample(self):
-        partitioned_mags = MultiMAGSequencesDirFmt(
+        mag_fmt = MultiMAGSequencesDirFmt(
             path=self.get_data_path("partition_1_sample"),
             mode="r"
         )
+        partitioned_mags = Artifact.import_data('SampleData[MAGs]', mag_fmt)
 
         unbinned = ContigSequencesDirFmt(
             path=self.get_data_path("unbinned"),
@@ -487,7 +488,7 @@ class TestBUSCOUtils(TestPluginBase):
         expected_metadata = Metadata(pd.DataFrame(index=pd.Index(['sample1'], name="ID")))
         expected_where = "ID IN ('sample1')"
         # Mock _filter_contigs
-        mock_filter_contigs = MagicMock(return_value="filtered_result")
+        mock_filter_contigs = MagicMock(return_value=("filtered_result",))
 
         # Call function under test
         filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
@@ -496,11 +497,11 @@ class TestBUSCOUtils(TestPluginBase):
         mock_filter_contigs.assert_called_once_with(contigs=unbinned, metadata=expected_metadata, where=expected_where)
 
     def test_filtered_unbinned_matches_partition_2_samples(self):
-        partitioned_mags = MultiMAGSequencesDirFmt(
+        mag_fmt = MultiMAGSequencesDirFmt(
             path=self.get_data_path("partition_2_samples"),
             mode="r"
         )
-
+        partitioned_mags = Artifact.import_data('SampleData[MAGs]', mag_fmt)
         # Load unbinned contigs
         unbinned = ContigSequencesDirFmt(
             path=self.get_data_path("unbinned"),
@@ -509,7 +510,8 @@ class TestBUSCOUtils(TestPluginBase):
         expected_metadata = Metadata(pd.DataFrame(index=pd.Index(['sample1', 'sample2'], name="ID")))
         expected_where = "ID IN ('sample1', 'sample2')"
         # Mock _filter_contigs
-        mock_filter_contigs = MagicMock(return_value="filtered_result")
+        # mock_filter_contigs = MagicMock(return_value="filtered_result")
+        mock_filter_contigs = MagicMock(return_value=("filtered_result",))
 
         # Call function under test
         filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
