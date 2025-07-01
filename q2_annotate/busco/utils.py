@@ -219,7 +219,6 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     for col in SUMMARY_COLS:
         df[col] = df[col].map(float)
     df["n_markers"] = df["n_markers"].map(int)
-    # df["unbinned_contigs"] = df["unbinned_contigs"].astype(float).round(2)
     return df
 
 
@@ -261,18 +260,7 @@ def _cleanup_bootstrap(output_dir):
         )
     )
 
-
-# def _calculate_summary_stats(df: pd.DataFrame) -> json:
-#     stats = pd.DataFrame({
-#         "min": df[MARKER_COLS].min(),
-#         "median": df[MARKER_COLS].median(),
-#         "mean": df[MARKER_COLS].mean(),
-#         "max": df[MARKER_COLS].max(),
-#         "count": df[MARKER_COLS].count()
-#     })
-#     return stats.T.to_json(orient='table')
 def _calculate_summary_stats(df: pd.DataFrame) -> json:
-    #if statement
     SUMMARY_COLS = MARKER_COLS + ["unbinned_contigs"]
 
     columns = [col for col in SUMMARY_COLS if col in df.columns]
@@ -284,7 +272,7 @@ def _calculate_summary_stats(df: pd.DataFrame) -> json:
         "max": df[columns].max(),
         "count": df[columns].count()
     })
-    # Round numeric values to 2 decimal places
+    # Round numeric values to 1 decimal place
     for col in stats.columns:
         if col != "count":
             stats[col] = stats[col].round(1)

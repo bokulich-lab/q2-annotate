@@ -146,9 +146,8 @@ def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
     Returns:
         dict: Dictionary containing the Vega spec.
     """
-    metrics = [
-        'unbinned_contigs', 'unbinned_contigs_count'
-    ]
+    metrics = ['unbinned_contigs', 'unbinned_contigs_count']
+    labels = ['Percentage of Unbinned Contigs', 'Absolute Count of Unbinned Contigs']
     # Keep only one row per sample
     data = data.drop_duplicates(subset=["sample_id"])
     data = pd.melt(
@@ -159,28 +158,25 @@ def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
         var_name="category",
     )
 
-    # Create the dropdown selection with all possible metrics
-    # selection_metrics = alt.selection_point(
-    #     fields=['category'],
-    #     bind=alt.binding_select(options=metrics),
-    #     name='select_metric',
-    #     value='unbinned_contigs'
-    # )
     selection_metrics = alt.selection_point(
         fields=['category'],
-        bind=alt.binding_radio(options=metrics, name='Select metric:'),
+        bind=alt.binding_radio(
+            options=metrics,
+            labels=labels,
+            name='Select metric:',
+            element='#selectableHistogramUnbinnedControls'
+        ),
         name='select_metric',
         value='unbinned_contigs'
     )
 
-
     # Create the chart
     chart = alt.Chart(data).mark_bar().encode(
-        x=alt.X("sample_id:N", sort=None, title="Sample ID"),
-        y=alt.Y("metric:Q", title="Unbinned contigs"),
+        x=alt.X('metric:Q', bin=True, title=None),
+        y=alt.Y('count()', title='Sample count'),
         color=alt.value("steelblue")
     ).add_params(
-        selection_metrics,
+        selection_metrics
     ).transform_filter(
         'datum.category == select_metric.category'
     ).configure_axis(
