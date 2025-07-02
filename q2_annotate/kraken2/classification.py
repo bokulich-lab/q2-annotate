@@ -5,7 +5,6 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-import gzip
 import os
 import subprocess
 from copy import deepcopy
@@ -25,8 +24,6 @@ from q2_types.per_sample_sequences import (
 )
 from q2_types.sample_data import SampleData
 from q2_types.feature_data import FeatureData
-from qiime2.core.exceptions import ValidationError
-
 from q2_annotate._utils import run_command, _process_common_input_params
 from q2_annotate.kraken2.utils import _process_kraken2_arg
 from q2_types.feature_data_mag import MAGSequencesDirFmt, MAG
@@ -151,18 +148,10 @@ def _classify_single_artifact(ctx, seqs, db, num_partitions, kwargs):
         all_reports = []
         all_outputs = []
         for seq in partitioned_seqs.values():
-            try:
-                reports, outputs = _classify_kraken2(seq, db, **kwargs)
-                all_reports.append(reports)
-                all_outputs.append(outputs)
-            except ValidationError:
-                pass
+            reports, outputs = _classify_kraken2(seq, db, **kwargs)
+            all_reports.append(reports)
+            all_outputs.append(outputs)
 
-        if not all_reports:
-            raise ValueError(
-                "All sequences were empty, please check your input files."
-            )
-        
         (collated_reports,) = collate_kraken2_reports(all_reports)
         (collated_outputs,) = collate_kraken2_outputs(all_outputs)
 
@@ -266,25 +255,11 @@ def classify_kraken2_helper(
 
     kraken2_reports_dir = Kraken2ReportDirectoryFormat()
     kraken2_outputs_dir = Kraken2OutputDirectoryFormat()
-    
-    removed_samples = []
+
     try:
         for args in iterate_over:
             if isinstance(seqs, read_types):
                 _sample, fps = path_function(*args)
-                
-                # Check for empty files by reading the first line
-                skip_sample = False
-                for fp in fps:
-                    with gzip.open(fp, 'rt') as f:
-                        if not f.readline():
-                            removed_samples.append(_sample)
-                            skip_sample = True
-                            break
-
-                if skip_sample:
-                    continue
-                            
             elif isinstance(seqs, MultiFASTADirectoryFormat):
                 sample_id, mag_id, fps = args
                 for p in (kraken2_reports_dir.path, kraken2_outputs_dir.path):
@@ -308,7 +283,5 @@ def classify_kraken2_helper(
             f"(return code {e.returncode}), please inspect "
             "stdout and stderr to learn more."
         )
-    print(f"Removed {len(removed_samples)} samples with empty files: "
-          f"{', '.join(removed_samples)}")
 
     return kraken2_reports_dir, kraken2_outputs_dir
