@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 from qiime2 import Metadata
 
-
 def _filter_ids(
     ids: set, metadata: Metadata = None, where: str = None, exclude_ids: bool = False
 ) -> set:
@@ -35,5 +34,5 @@ def _filter_ids(
         else:
             ids &= set(selected_ids)
     print(f"Found {len(ids)} IDs to keep.")
-
+    
     return ids
