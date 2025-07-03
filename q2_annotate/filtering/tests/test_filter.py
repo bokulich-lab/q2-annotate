@@ -35,8 +35,10 @@ from q2_annotate.filtering.filter_mags import (
     filter_mags,
 )
 from q2_types.feature_data_mag import MAGSequencesDirFmt
-from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, \
-    CasavaOneEightSingleLanePerSampleDirFmt
+from q2_types.per_sample_sequences import (
+    MultiMAGSequencesDirFmt,
+    CasavaOneEightSingleLanePerSampleDirFmt,
+)
 
 from q2_annotate.filtering.filter_reads import _filter_empty, filter_reads
 
@@ -394,48 +396,45 @@ class TestMAGFiltering(TestPluginBase):
 
     def test_filter_empty(self):
         reads = CasavaOneEightSingleLanePerSampleDirFmt(
-            self.get_data_path("reads"), mode="r")
+            self.get_data_path("reads"), mode="r"
+        )
         obs = _filter_empty(reads.manifest)
         exp = ["sample1"]
         self.assertListEqual(obs, exp)
 
     def test_filter_reads(self):
         reads = CasavaOneEightSingleLanePerSampleDirFmt(
-            self.get_data_path("reads"), mode="r")
+            self.get_data_path("reads"), mode="r"
+        )
         metadata = qiime2.Metadata(
-            pd.read_csv(
-                self.get_data_path("metadata-reads.tsv"), sep="\t", index_col=0)
+            pd.read_csv(self.get_data_path("metadata-reads.tsv"), sep="\t", index_col=0)
         )
         obs = filter_reads(reads, metadata, where="metric<5")
         self.assertTrue(
-            os.path.exists(
-                os.path.join(obs.path, "sample3_00_L001_R1_001.fastq.gz")
-            )
+            os.path.exists(os.path.join(obs.path, "sample3_00_L001_R1_001.fastq.gz"))
         )
         self.assertTrue(
-            os.path.exists(
-                os.path.join(obs.path, "sample3_00_L001_R2_001.fastq.gz")
-            )
+            os.path.exists(os.path.join(obs.path, "sample3_00_L001_R2_001.fastq.gz"))
         )
-        self.assertTrue(len([f for f in obs.path.iterdir() if f.is_file()])==2)
-    
+        self.assertTrue(len([f for f in obs.path.iterdir() if f.is_file()]) == 2)
+
     def test_filter_reads_no_ids_to_keep_error(self):
         reads = CasavaOneEightSingleLanePerSampleDirFmt(
-            self.get_data_path("reads"), mode="r")
+            self.get_data_path("reads"), mode="r"
+        )
         metadata = qiime2.Metadata(
-            pd.read_csv(
-                self.get_data_path("metadata-reads.tsv"), sep="\t", index_col=0)
+            pd.read_csv(self.get_data_path("metadata-reads.tsv"), sep="\t", index_col=0)
         )
         with self.assertRaisesRegex(ValueError, "no samples left after filtering"):
             filter_reads(reads, metadata, where="metric<100", exclude_ids=True)
-            
+
     def test_filter_reads_parameters_error(self):
         reads = CasavaOneEightSingleLanePerSampleDirFmt(
-            self.get_data_path("reads"), mode="r")
+            self.get_data_path("reads"), mode="r"
+        )
         with self.assertRaisesRegex(ValueError, "be provided together"):
             filter_reads(reads, where="metric<100")
-        
-        
+
 
 if __name__ == "__main__":
     unittest.main()
