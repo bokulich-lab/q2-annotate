@@ -81,6 +81,8 @@ from q2_types.reference_db import (
     EggnogProteinSequences,
 )
 
+from q2_annotate.filtering.filter_reads import filter_reads
+
 citations = Citations.load("citations.bib", package="q2_annotate")
 
 kraken2_params = {
@@ -1422,12 +1424,12 @@ plugin.methods.register_function(
     citations=[],
 )
 
-filter_mags_params = {
+filter_params = {
     "metadata": Metadata,
     "where": Str,
     "exclude_ids": Bool,
 }
-filter_contigs_param_descriptions = {
+filter_param_descriptions = {
     "metadata": (
         "Sample metadata indicating which MAG ids to filter. "
         "The optional `where` parameter may be used to filter ids "
@@ -1451,10 +1453,10 @@ filter_contigs_param_descriptions = {
 plugin.methods.register_function(
     function=q2_annotate.filtering.filter_derep_mags,
     inputs={"mags": FeatureData[MAG]},
-    parameters=filter_mags_params,
+    parameters=filter_params,
     outputs={"filtered_mags": FeatureData[MAG]},
     input_descriptions={"mags": "Dereplicated MAGs to filter."},
-    parameter_descriptions=filter_contigs_param_descriptions,
+    parameter_descriptions=filter_param_descriptions,
     name="Filter dereplicated MAGs.",
     description="Filter dereplicated MAGs based on metadata.",
 )
@@ -1463,13 +1465,13 @@ plugin.methods.register_function(
     function=q2_annotate.filtering.filter_mags,
     inputs={"mags": SampleData[MAGs]},
     parameters={
-        **filter_mags_params,
+        **filter_params,
         "on": Str % Choices(["sample", "mag"]),
     },
     outputs={"filtered_mags": SampleData[MAGs]},
     input_descriptions={"mags": "MAGs to filter."},
     parameter_descriptions={
-        **filter_contigs_param_descriptions,
+        **filter_param_descriptions,
         "on": "Whether to filter based on sample or MAG metadata.",
     },
     name="Filter MAGs.",
@@ -2047,6 +2049,25 @@ plugin.pipelines.register_function(
         "Filter kraken2 reports and outputs by sample metadata, and/or filter "
         "classified taxa by relative abundance."
     ),
+)
+
+T = TypeMatch([SequencesWithQuality, PairedEndSequencesWithQuality])
+plugin.methods.register_function(
+    function=filter_reads,
+    inputs={'reads': SampleData[T]},
+    parameters={
+        **filter_params,
+        "remove_empty": Bool,
+    },
+    outputs=[('filtered_reads', SampleData[T])],
+    input_descriptions={"reads": "Paired-end or single-end reads to filter."},
+    parameter_descriptions={
+        **filter_param_descriptions,
+        "remove_empty": "Remove samples with empty files.",
+    },
+    output_descriptions={"filtered_reads": "Filtered paired-end or single-end reads."},
+    name='Filter reads.',
+    description="Filter reads based on metadata.",
 )
 
 plugin.register_semantic_types(BUSCOResults, BUSCO)
