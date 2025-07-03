@@ -9,82 +9,78 @@ import importlib
 import platform
 
 from q2_quality_control.plugin_setup import (
-    filter_parameter_descriptions,
     filter_parameters,
+    filter_parameter_descriptions,
+)
+from qiime2.plugin import Metadata
+from q2_annotate.eggnog.types import (
+    EggnogHmmerIdmapDirectoryFmt,
+    EggnogHmmerIdmapFileFmt,
+    EggnogHmmerIdmap,
+)
+from q2_annotate.busco.types import (
+    BUSCOResultsFormat,
+    BUSCOResultsDirectoryFormat,
+    BuscoDatabaseDirFmt,
+    BUSCOResults,
+    BUSCO,
 )
 from q2_types.bowtie2 import Bowtie2Index
+from q2_types.profile_hmms import ProfileHMM, MultipleProtein, PressedProtein
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.feature_data import (
     FeatureData,
-    ProteinSequence,
     Sequence,
-    SequenceCharacteristics,
     Taxonomy,
+    ProteinSequence,
+    SequenceCharacteristics,
 )
-from q2_types.feature_data_mag import MAG
-from q2_types.feature_map import FeatureMap, MAGtoContigs
 from q2_types.feature_table import (
     FeatureTable,
     Frequency,
     PresenceAbsence,
     RelativeFrequency,
 )
-from q2_types.genome_data import NOG, Genes, GenomeData, Loci, Orthologs, Proteins
-from q2_types.kaiju import KaijuDB
-from q2_types.kraken2 import (
-    BrackenDB,
-    Kraken2DB,
-    Kraken2DBReport,
-    Kraken2Outputs,
-    Kraken2Reports,
-)
 from q2_types.per_sample_sequences import (
-    AlignmentMap,
-    Contigs,
+    SequencesWithQuality,
+    PairedEndSequencesWithQuality,
     JoinedSequencesWithQuality,
     MAGs,
-    PairedEndSequencesWithQuality,
-    SequencesWithQuality,
-)
-from q2_types.profile_hmms import MultipleProtein, PressedProtein, ProfileHMM
-from q2_types.reference_db import (
-    Diamond,
-    Eggnog,
-    EggnogProteinSequences,
-    NCBITaxonomy,
-    ReferenceDB,
+    Contigs,
 )
 from q2_types.sample_data import SampleData
+from q2_types.feature_map import FeatureMap, MAGtoContigs
 from qiime2.core.type import (
     Bool,
-    Choices,
-    Float,
-    Int,
-    List,
-    Properties,
     Range,
+    Int,
     Str,
-    Threads,
+    Float,
+    List,
+    Choices,
+    Visualization,
+    Properties,
     TypeMap,
     TypeMatch,
-    Visualization,
+    Threads,
 )
-from qiime2.plugin import Citations, Metadata, Plugin
-
-import q2_annotate
+from qiime2.plugin import Plugin, Citations
 import q2_annotate._examples as ex
-from q2_annotate.busco.types import (
-    BUSCO,
-    BuscoDatabaseDirFmt,
-    BUSCOResults,
-    BUSCOResultsDirectoryFormat,
-    BUSCOResultsFormat,
+import q2_annotate
+from q2_types.feature_data_mag import MAG
+from q2_types.genome_data import NOG, Orthologs, GenomeData, Loci, Genes, Proteins
+from q2_types.kaiju import KaijuDB
+from q2_types.kraken2 import Kraken2Reports, Kraken2Outputs, Kraken2DB, Kraken2DBReport
+from q2_types.kraken2 import BrackenDB
+from q2_types.per_sample_sequences import AlignmentMap
+from q2_types.reference_db import (
+    ReferenceDB,
+    Diamond,
+    Eggnog,
+    NCBITaxonomy,
+    EggnogProteinSequences,
 )
-from q2_annotate.eggnog.types import (
-    EggnogHmmerIdmap,
-    EggnogHmmerIdmapDirectoryFmt,
-    EggnogHmmerIdmapFileFmt,
-)
+
 from q2_annotate.filtering.filter_reads import filter_reads
 
 citations = Citations.load("citations.bib", package="q2_annotate")
@@ -2071,7 +2067,7 @@ plugin.methods.register_function(
     },
     output_descriptions={"filtered_reads": "Filtered paired-end or single-end reads."},
     name='Filter reads.',
-    description="Filter reads based on metadata and remove empty samples.",
+    description="Filter reads based on metadata.",
 )
 
 plugin.register_semantic_types(BUSCOResults, BUSCO)
