@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 
 from .filter_mags import filter_derep_mags, filter_mags
-from .filter_pangenome import filter_reads_pangenome, construct_pangenome_index
+from .filter_pangenome import construct_pangenome_index, filter_reads_pangenome
 
 __all__ = [
     "filter_derep_mags",

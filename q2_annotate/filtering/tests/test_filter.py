@@ -10,19 +10,14 @@ import os
 import shutil
 import tempfile
 import unittest
-from unittest.mock import Mock, patch, ANY, call, MagicMock
+from unittest.mock import ANY, MagicMock, Mock, call, patch
 
 import pandas as pd
 import qiime2
-
-from q2_annotate.filtering.filter_pangenome import (
-    _fetch_and_extract_grch38,
-    _extract_fasta_from_gfa,
-    _fetch_and_extract_pangenome,
-    filter_reads_pangenome,
-    _combine_fasta_files,
-    EBI_SERVER_URL,
-    construct_pangenome_index,
+from q2_types.feature_data_mag import MAGSequencesDirFmt
+from q2_types.per_sample_sequences import (
+    CasavaOneEightSingleLanePerSampleDirFmt,
+    MultiMAGSequencesDirFmt,
 )
 from qiime2.plugin.testing import TestPluginBase
 
@@ -34,10 +29,15 @@ from q2_annotate.filtering.filter_mags import (
     filter_derep_mags,
     filter_mags,
 )
-from q2_types.feature_data_mag import MAGSequencesDirFmt
-from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, \
-    CasavaOneEightSingleLanePerSampleDirFmt
-
+from q2_annotate.filtering.filter_pangenome import (
+    EBI_SERVER_URL,
+    _combine_fasta_files,
+    _extract_fasta_from_gfa,
+    _fetch_and_extract_grch38,
+    _fetch_and_extract_pangenome,
+    construct_pangenome_index,
+    filter_reads_pangenome,
+)
 from q2_annotate.filtering.filter_reads import _filter_empty, filter_reads
 
 
@@ -417,8 +417,8 @@ class TestMAGFiltering(TestPluginBase):
                 os.path.join(obs.path, "sample3_00_L001_R2_001.fastq.gz")
             )
         )
-        self.assertTrue(len([f for f in obs.path.iterdir() if f.is_file()])==2)
-    
+        self.assertTrue(len([f for f in obs.path.iterdir() if f.is_file()]) == 2)
+
     def test_filter_reads_no_ids_to_keep_error(self):
         reads = CasavaOneEightSingleLanePerSampleDirFmt(
             self.get_data_path("reads"), mode="r")
@@ -428,14 +428,13 @@ class TestMAGFiltering(TestPluginBase):
         )
         with self.assertRaisesRegex(ValueError, "no samples left after filtering"):
             filter_reads(reads, metadata, where="metric<100", exclude_ids=True)
-            
+
     def test_filter_reads_parameters_error(self):
         reads = CasavaOneEightSingleLanePerSampleDirFmt(
             self.get_data_path("reads"), mode="r")
         with self.assertRaisesRegex(ValueError, "be provided together"):
             filter_reads(reads, where="metric<100")
-        
-        
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -8,11 +8,10 @@
 import os
 
 import pandas as pd
-from qiime2 import Metadata
-from qiime2.util import duplicate
-
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
+from qiime2 import Metadata
+from qiime2.util import duplicate
 
 from q2_annotate.filtering.utils import _filter_ids
 
