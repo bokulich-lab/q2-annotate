@@ -13,6 +13,7 @@ from qiime2.util import duplicate
 
 from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
 
+from q2_annotate._utils import colorify
 from q2_annotate.filtering.utils import _filter_ids
 
 
@@ -49,7 +50,8 @@ def filter_reads(
 
     if (metadata is None) != (where is None):
         raise ValueError(
-            'The parameters "metadata" and "where" must be provided together.'
+            'The parameters "metadata" and "where" must be provided '
+            "together or not at all."
         )
 
     results = CasavaOneEightSingleLanePerSampleDirFmt()
@@ -64,6 +66,12 @@ def filter_reads(
     if remove_empty:
         empty_samples = _filter_empty(manifest)
         ids_to_keep = [item for item in ids_to_keep if item not in empty_samples]
+        print(
+            colorify(
+                f"Removed {len(empty_samples)} empty samples: "
+                f"{', '.join(empty_samples)}"
+            )
+        )
 
     if not ids_to_keep:
         raise ValueError(
