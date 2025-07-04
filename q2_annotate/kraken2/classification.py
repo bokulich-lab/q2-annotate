@@ -94,10 +94,18 @@ def classify_kraken2(
     }
 
     _merge_kraken2_results = ctx.get_action("annotate", "_merge_kraken2_results")
+    filter_reads = ctx.get_action("annotate", "filter_reads")
 
     reports = []
     outputs = []
     for seqs_artifact in seqs:
+        # Filter out empty samples if the input is a read type
+        if (
+            seqs_artifact.type <= SampleData[SequencesWithQuality]
+            or seqs_artifact.type <= SampleData[PairedEndSequencesWithQuality]
+        ):
+            (seqs_artifact,) = filter_reads(reads=seqs_artifact)
+
         artifact_reports, artifact_outputs = _classify_single_artifact(
             ctx, seqs_artifact, db, num_partitions, kwargs
         )
