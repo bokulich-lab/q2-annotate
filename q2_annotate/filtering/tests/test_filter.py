@@ -41,6 +41,7 @@ from q2_types.per_sample_sequences import (
 )
 
 from q2_annotate.filtering.filter_reads import _filter_empty, filter_reads
+from q2_annotate.filtering.utils import _validate_parameters
 
 
 class TestMAGFiltering(TestPluginBase):
@@ -441,13 +442,13 @@ class TestMAGFiltering(TestPluginBase):
                 self.reads, self.metadata_reads, where="metric<100", exclude_ids=True
             )
 
-    def test_filter_reads_metadata_where_error(self):
+    def test_validate_parameters_metadata_where_error(self):
         with self.assertRaisesRegex(ValueError, "A filter query must be provided"):
-            filter_reads(self.reads, self.metadata_reads)
+            _validate_parameters("metadata", None, None)
 
-    def test_filter_reads_no_parameter_error(self):
+    def test_validate_parameters_no_parameter_error(self):
         with self.assertRaisesRegex(ValueError, "At least one of the followin"):
-            filter_reads(self.reads)
+            _validate_parameters(None, None, None)
 
 
 if __name__ == "__main__":
