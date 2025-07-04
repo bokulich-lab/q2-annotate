@@ -14,7 +14,7 @@ from qiime2.util import duplicate
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 
-from q2_annotate.filtering.utils import _filter_ids
+from q2_annotate.filtering.utils import _filter_ids, _validate_parameters
 
 
 def _filter_manifest(
@@ -98,6 +98,8 @@ def filter_derep_mags(
     exclude_ids: bool = False,
     remove_empty: bool = False,
 ) -> MAGSequencesDirFmt:
+    _validate_parameters(metadata, where, remove_empty)
+
     results = MAGSequencesDirFmt()
     features = mags.feature_dict()
     ids_to_keep = set(features.keys())
@@ -126,6 +128,8 @@ def filter_mags(
     on: str = "mag",
     remove_empty: bool = False,
 ) -> MultiMAGSequencesDirFmt:
+    _validate_parameters(metadata, where, remove_empty)
+
     results = MultiMAGSequencesDirFmt()
     mags_df = _mags_to_df(mags, on)
     sample_dict = mags.sample_dict()
