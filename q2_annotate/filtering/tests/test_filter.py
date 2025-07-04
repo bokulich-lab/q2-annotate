@@ -56,6 +56,15 @@ class TestMAGFiltering(TestPluginBase):
             },
             index=pd.Index(["mag1", "mag2", "mag3", "mag4", "mag5", "mag6"], name="id"),
         )
+        instance = cls()
+        cls.reads = CasavaOneEightSingleLanePerSampleDirFmt(
+            instance.get_data_path("reads"), mode="r"
+        )
+        cls.metadata_reads = qiime2.Metadata(
+            pd.read_csv(
+                instance.get_data_path("metadata-reads.tsv"), sep="\t", index_col=0
+            )
+        )
 
     def setUp(self):
         super().setUp()
@@ -395,21 +404,14 @@ class TestMAGFiltering(TestPluginBase):
         self.assertIsNotNone(generated_index)
 
     def test_filter_empty(self):
-        reads = CasavaOneEightSingleLanePerSampleDirFmt(
-            self.get_data_path("reads"), mode="r"
-        )
-        obs = _filter_empty(reads.manifest)
+        obs = _filter_empty(self.reads.manifest)
         exp = ["sample1"]
         self.assertListEqual(obs, exp)
 
     def test_filter_reads(self):
-        reads = CasavaOneEightSingleLanePerSampleDirFmt(
-            self.get_data_path("reads"), mode="r"
+        obs = filter_reads(
+            self.reads, self.metadata_reads, where="metric<5", remove_empty=True
         )
-        metadata = qiime2.Metadata(
-            pd.read_csv(self.get_data_path("metadata-reads.tsv"), sep="\t", index_col=0)
-        )
-        obs = filter_reads(reads, metadata, where="metric<5")
         self.assertTrue(
             os.path.exists(os.path.join(obs.path, "sample3_00_L001_R1_001.fastq.gz"))
         )
@@ -419,21 +421,18 @@ class TestMAGFiltering(TestPluginBase):
         self.assertTrue(len([f for f in obs.path.iterdir() if f.is_file()]) == 2)
 
     def test_filter_reads_no_ids_to_keep_error(self):
-        reads = CasavaOneEightSingleLanePerSampleDirFmt(
-            self.get_data_path("reads"), mode="r"
-        )
-        metadata = qiime2.Metadata(
-            pd.read_csv(self.get_data_path("metadata-reads.tsv"), sep="\t", index_col=0)
-        )
         with self.assertRaisesRegex(ValueError, "no samples left after filtering"):
-            filter_reads(reads, metadata, where="metric<100", exclude_ids=True)
+            filter_reads(
+                self.reads, self.metadata_reads, where="metric<100", exclude_ids=True
+            )
 
-    def test_filter_reads_parameters_error(self):
-        reads = CasavaOneEightSingleLanePerSampleDirFmt(
-            self.get_data_path("reads"), mode="r"
-        )
-        with self.assertRaisesRegex(ValueError, "be provided together"):
-            filter_reads(reads, where="metric<100")
+    def test_filter_reads_metadata_where_error(self):
+        with self.assertRaisesRegex(ValueError, "A filter query must be provided"):
+            filter_reads(self.reads, self.metadata_reads)
+
+    def test_filter_reads_no_parameter_error(self):
+        with self.assertRaisesRegex(ValueError, "At least one of the followin"):
+            filter_reads(self.reads)
 
 
 if __name__ == "__main__":

@@ -45,27 +45,33 @@ def filter_reads(
     metadata: Metadata = None,
     where: str = None,
     exclude_ids: bool = False,
-    remove_empty: bool = True,
+    remove_empty: bool = False,
 ) -> CasavaOneEightSingleLanePerSampleDirFmt:
 
-    if (metadata is None) != (where is None):
+    if not any([metadata, remove_empty]):
         raise ValueError(
-            'The parameters "metadata" and "where" must be provided '
-            "together or not at all."
+            "At least one of the following parameters must be provided: "
+            "metadata, remove_empty."
+        )
+
+    if metadata and not where:
+        raise ValueError(
+            "A filter query must be provided through the 'where' parameter "
+            "when filtering by metadata."
         )
 
     results = CasavaOneEightSingleLanePerSampleDirFmt()
     manifest = reads.manifest
-    ids_to_keep = set(manifest.index)
+    samples_to_keep = set(manifest.index)
 
     # If metadata is provided, filter the IDs based on the metadata
     if metadata is not None:
-        ids_to_keep = _filter_ids(set(manifest.index), metadata, where, exclude_ids)
+        samples_to_keep = _filter_ids(set(manifest.index), metadata, where, exclude_ids)
 
     # Remove empty samples if requested
     if remove_empty:
         empty_samples = _filter_empty(manifest)
-        ids_to_keep = [item for item in ids_to_keep if item not in empty_samples]
+        samples_to_keep = [i for i in samples_to_keep if i not in empty_samples]
         print(
             colorify(
                 f"Removed {len(empty_samples)} empty samples: "
@@ -73,7 +79,7 @@ def filter_reads(
             )
         )
 
-    if not ids_to_keep:
+    if not samples_to_keep:
         raise ValueError(
             "There are no samples left after filtering. Please check your metadata and "
             "filtering criteria."
@@ -82,7 +88,10 @@ def filter_reads(
     # Copy the files that are kept to the results directory
     for sample, row in manifest.iterrows():
         for path in row:
-            if sample in ids_to_keep:
-                duplicate(path, os.path.join(results.path, os.path.basename(path)))
+            if sample in samples_to_keep:
+                try:
+                    duplicate(path, os.path.join(results.path, os.path.basename(path)))
+                except KeyError:
+                    raise ValueError(f"{sample!r} is not a sample present in the data.")
 
     return results
