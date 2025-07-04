@@ -60,6 +60,9 @@ class TestMAGFiltering(TestPluginBase):
         cls.reads = CasavaOneEightSingleLanePerSampleDirFmt(
             instance.get_data_path("reads"), mode="r"
         )
+        cls.feature_data_reads = CasavaOneEightSingleLanePerSampleDirFmt(
+            instance.get_data_path("feature_data_reads"), mode="r"
+        )
         cls.metadata_reads = qiime2.Metadata(
             pd.read_csv(
                 instance.get_data_path("metadata-reads.tsv"), sep="\t", index_col=0
@@ -419,6 +422,18 @@ class TestMAGFiltering(TestPluginBase):
             os.path.exists(os.path.join(obs.path, "sample3_00_L001_R2_001.fastq.gz"))
         )
         self.assertTrue(len([f for f in obs.path.iterdir() if f.is_file()]) == 2)
+
+    def test_filter_reads_feature_data(self):
+        obs = filter_reads(
+            self.feature_data_reads,
+            self.metadata_reads,
+            where="metric<5",
+            remove_empty=True,
+        )
+        self.assertTrue(
+            os.path.exists(os.path.join(obs.path, "sample3_00_L001_R1_001.fastq.gz"))
+        )
+        self.assertTrue(len([f for f in obs.path.iterdir() if f.is_file()]) == 1)
 
     def test_filter_reads_no_ids_to_keep_error(self):
         with self.assertRaisesRegex(ValueError, "no samples left after filtering"):

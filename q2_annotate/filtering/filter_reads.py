@@ -33,10 +33,11 @@ def _filter_empty(manifest):
     empty_samples = []
     for sample, row in manifest.iterrows():
         for path in row:
-            with gzip.open(path, "rt") as f:
-                if not f.readline():
-                    empty_samples.append(sample)
-                    break
+            if path is not None:
+                with gzip.open(path, "rt") as f:
+                    if not f.readline():
+                        empty_samples.append(sample)
+                        break
     return empty_samples
 
 
@@ -87,8 +88,9 @@ def filter_reads(
 
     # Copy the files that are kept to the results directory
     for sample, row in manifest.iterrows():
-        for path in row:
-            if sample in samples_to_keep:
-                duplicate(path, os.path.join(results.path, os.path.basename(path)))
+        if sample in samples_to_keep:
+            for path in row:
+                if path is not None:
+                    duplicate(path, os.path.join(results.path, os.path.basename(path)))
 
     return results
