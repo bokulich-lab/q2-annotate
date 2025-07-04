@@ -89,9 +89,6 @@ def filter_reads(
     for sample, row in manifest.iterrows():
         for path in row:
             if sample in samples_to_keep:
-                try:
-                    duplicate(path, os.path.join(results.path, os.path.basename(path)))
-                except KeyError:
-                    raise ValueError(f"{sample!r} is not a sample present in the data.")
+                duplicate(path, os.path.join(results.path, os.path.basename(path)))
 
     return results
