@@ -14,7 +14,7 @@ from qiime2.util import duplicate
 from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
 
 from q2_annotate._utils import colorify
-from q2_annotate.filtering.utils import _filter_ids
+from q2_annotate.filtering.utils import _filter_ids, _validate_parameters
 
 
 def _filter_empty(manifest):
@@ -48,18 +48,7 @@ def filter_reads(
     exclude_ids: bool = False,
     remove_empty: bool = False,
 ) -> CasavaOneEightSingleLanePerSampleDirFmt:
-
-    if not any([metadata, remove_empty]):
-        raise ValueError(
-            "At least one of the following parameters must be provided: "
-            "metadata, remove_empty."
-        )
-
-    if metadata and not where:
-        raise ValueError(
-            "A filter query must be provided through the 'where' parameter "
-            "when filtering by metadata."
-        )
+    _validate_parameters(metadata, where, remove_empty)
 
     results = CasavaOneEightSingleLanePerSampleDirFmt()
     manifest = reads.manifest

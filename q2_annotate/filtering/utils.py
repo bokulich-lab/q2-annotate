@@ -37,3 +37,17 @@ def _filter_ids(
     print(f"Found {len(ids)} IDs to keep.")
 
     return ids
+
+
+def _validate_parameters(metadata, where, remove_empty):
+    if not any([metadata, remove_empty]):
+        raise ValueError(
+            "At least one of the following parameters must be provided: "
+            "metadata, remove_empty."
+        )
+
+    if metadata and not where:
+        raise ValueError(
+            "A filter query must be provided through the 'where' parameter "
+            "when filtering by metadata."
+        )
