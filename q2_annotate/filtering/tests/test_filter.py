@@ -33,6 +33,7 @@ from q2_annotate.filtering.filter_mags import (
     _mags_to_df,
     filter_derep_mags,
     filter_mags,
+    _find_empty_mags,
 )
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import (
@@ -77,15 +78,18 @@ class TestMAGFiltering(TestPluginBase):
         self.mag_derep_data_dir = self.get_data_path("mags/sample2")
         self.mag_df = pd.DataFrame(
             {
-                "sample_id": ["sample1", "sample2", "sample2"],
+                "sample_id": ["sample1", "sample1", "sample2", "sample2"],
                 "mag_id": [
                     "24dee6fe-9b84-45bb-8145-de7b092533a1",
+                    "28f9219f-83c5-42ea-a1d9-1e20df03c707",
                     "d65a71fa-4279-4588-b937-0747ed5d604d",
                     "db03f8b6-28e1-48c5-a47c-9c65f38f7357",
                 ],
                 "mag_fp": [
                     f"{self.mag_data_dir}/sample1/"
                     f"24dee6fe-9b84-45bb-8145-de7b092533a1.fasta",
+                    f"{self.mag_data_dir}/sample1/"
+                    f"28f9219f-83c5-42ea-a1d9-1e20df03c707.fasta",
                     f"{self.mag_data_dir}/sample2/"
                     f"d65a71fa-4279-4588-b937-0747ed5d604d.fasta",
                     f"{self.mag_data_dir}/sample2/"
@@ -162,6 +166,34 @@ class TestMAGFiltering(TestPluginBase):
         obs_features = obs.feature_dict()
         exp_features = ["db03f8b6-28e1-48c5-a47c-9c65f38f7357"]
         self.assertListEqual(list(obs_features.keys()), exp_features)
+
+    def test_filter_mags_remove_empty(self):
+        mags = MultiMAGSequencesDirFmt(self.mag_data_dir, mode="r")
+        obs = filter_mags(mags, remove_empty=True)
+        obs_dict = obs.sample_dict()
+        self.assertEqual(obs_dict.keys(), {"sample1", "sample2"})
+        self.assertEqual(
+            obs_dict["sample1"].keys(), {"24dee6fe-9b84-45bb-8145-de7b092533a1"}
+        )
+        self.assertEqual(
+            obs_dict["sample2"].keys(),
+            {
+                "d65a71fa-4279-4588-b937-0747ed5d604d",
+                "db03f8b6-28e1-48c5-a47c-9c65f38f7357",
+            },
+        )
+
+    def test_find_empty_mags(self):
+        mags = MultiMAGSequencesDirFmt(self.mag_data_dir, mode="r")
+        sample_dict = mags.sample_dict()
+        empty_mags = _find_empty_mags(sample_dict)
+        self.assertEqual(empty_mags, {"28f9219f-83c5-42ea-a1d9-1e20df03c707"})
+
+    def test_filter_derep_mags_remove_empty(self):
+        mags = MAGSequencesDirFmt(self.get_data_path("mags/sample1"), mode="r")
+        obs = filter_derep_mags(mags, remove_empty=True)
+        obs_dict = obs.feature_dict()
+        self.assertEqual(obs_dict.keys(), {"24dee6fe-9b84-45bb-8145-de7b092533a1"})
 
     def test_filter_mags_features(self):
         mags = MultiMAGSequencesDirFmt(self.mag_data_dir, mode="r")

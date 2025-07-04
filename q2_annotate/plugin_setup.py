@@ -1428,6 +1428,7 @@ filter_params = {
     "metadata": Metadata,
     "where": Str,
     "exclude_ids": Bool,
+    "remove_empty": Bool,
 }
 filter_param_descriptions = {
     "metadata": (
@@ -1456,7 +1457,10 @@ plugin.methods.register_function(
     parameters=filter_params,
     outputs={"filtered_mags": FeatureData[MAG]},
     input_descriptions={"mags": "Dereplicated MAGs to filter."},
-    parameter_descriptions=filter_param_descriptions,
+    parameter_descriptions={
+        **filter_param_descriptions,
+        "remove_empty": "Remove empty MAGs.",
+    },
     name="Filter dereplicated MAGs.",
     description="Filter dereplicated MAGs based on metadata.",
 )
@@ -1473,6 +1477,7 @@ plugin.methods.register_function(
     parameter_descriptions={
         **filter_param_descriptions,
         "on": "Whether to filter based on sample or MAG metadata.",
+        "remove_empty": "Remove empty MAGs.",
     },
     name="Filter MAGs.",
     description="Filter MAGs based on metadata.",
@@ -2055,10 +2060,7 @@ T = TypeMatch([SequencesWithQuality, PairedEndSequencesWithQuality])
 plugin.methods.register_function(
     function=filter_reads,
     inputs={"reads": SampleData[T]},
-    parameters={
-        **filter_params,
-        "remove_empty": Bool,
-    },
+    parameters=filter_params,
     outputs=[("filtered_reads", SampleData[T])],
     input_descriptions={"reads": "Paired-end or single-end reads to filter."},
     parameter_descriptions={

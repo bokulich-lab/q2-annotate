@@ -72,15 +72,43 @@ def _mags_to_df(mags: MultiMAGSequencesDirFmt, on: str):
     return mags_df
 
 
+def _find_empty_mags(file_dict: dict) -> set:
+    """
+    Identifies empty MAG files (0-byte) in a file dict.
+
+    Parameters:
+        file_dict (dict): A nested dictionary with keys and full paths created by
+                          sample_dict or feature_dict functions.
+
+    Returns:
+        set: A set of MAG IDs corresponding to empty files.
+    """
+    empty_mags = set()
+    for sample_id, mag_dict in file_dict.items():
+        for mag_id, path in mag_dict.items():
+            if os.path.getsize(path) == 0:
+                empty_mags.add(mag_id)
+    return empty_mags
+
+
 def filter_derep_mags(
     mags: MAGSequencesDirFmt,
-    metadata: Metadata,
+    metadata: Metadata = None,
     where: str = None,
     exclude_ids: bool = False,
+    remove_empty: bool = False,
 ) -> MAGSequencesDirFmt:
     results = MAGSequencesDirFmt()
     features = mags.feature_dict()
-    ids_to_keep = _filter_ids(set(features.keys()), metadata, where, exclude_ids)
+    ids_to_keep = set(features.keys())
+
+    if metadata is not None:
+        ids_to_keep = _filter_ids(set(features.keys()), metadata, where, exclude_ids)
+
+    if remove_empty:
+        empty_mags = _find_empty_mags({"": features})
+        ids_to_keep -= empty_mags
+
     try:
         for _id in ids_to_keep:
             duplicate(features[_id], os.path.join(str(results), f"{_id}.fasta"))
@@ -92,20 +120,29 @@ def filter_derep_mags(
 
 def filter_mags(
     mags: MultiMAGSequencesDirFmt,
-    metadata: Metadata,
+    metadata: Metadata = None,
     where: str = None,
     exclude_ids: bool = False,
     on: str = "mag",
+    remove_empty: bool = False,
 ) -> MultiMAGSequencesDirFmt:
     results = MultiMAGSequencesDirFmt()
     mags_df = _mags_to_df(mags, on)
+    sample_dict = mags.sample_dict()
+    ids_to_keep = set(mags_df.index)
 
-    ids_to_keep = _filter_ids(set(mags_df.index), metadata, where, exclude_ids)
+    if metadata is not None:
+        ids_to_keep = _filter_ids(set(mags_df.index), metadata, where, exclude_ids)
+
+    if remove_empty:
+        empty_mags = _find_empty_mags(sample_dict)
+        ids_to_keep -= empty_mags
 
     filtered_mags = mags_df[mags_df.index.isin(ids_to_keep)]
     filtered_manifest = _filter_manifest(
         mags.manifest.view(pd.DataFrame), ids_to_keep, on=on
     )
+
     filtered_manifest.to_csv(os.path.join(str(results), "MANIFEST"), sep=",")
     try:
         for _id, row in filtered_mags.iterrows():
