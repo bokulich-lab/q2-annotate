@@ -1,4 +1,5 @@
 sample-id,mag-id,filename
 sample1,24dee6fe-9b84-45bb-8145-de7b092533a1,sample1/24dee6fe-9b84-45bb-8145-de7b092533a1.fasta
+sample1,28f9219f-83c5-42ea-a1d9-1e20df03c707,sample1/28f9219f-83c5-42ea-a1d9-1e20df03c707.fasta
 sample2,db03f8b6-28e1-48c5-a47c-9c65f38f7357,sample2/db03f8b6-28e1-48c5-a47c-9c65f38f7357.fasta
 sample2,d65a71fa-4279-4588-b937-0747ed5d604d,sample2/d65a71fa-4279-4588-b937-0747ed5d604d.fasta
