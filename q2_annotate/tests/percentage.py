@@ -5,6 +5,7 @@ from q2_types.feature_data import DNAFASTAFormat
 from q2_types.feature_data import DNAIterator
 
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequencesDirFmt
+
 # from skbio import read
 # from skbio.sequence import DNA
 
@@ -18,14 +19,17 @@ import pandas as pd
 from qiime2.util import duplicate
 
 from q2_types._util import _validate_num_partitions
+
 # from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 ### new for filter_contigs
 from q2_assembly.filter import filter_contigs
 from qiime2 import Metadata
 from q2_annotate.busco.busco import calculate_unbinned_percentage, count_contigs
 from qiime2.core.type import SemanticType
+
+
 # from qiime2.plugin import SampleData
-#filter_contigs, input dataframe->metadata that fits as the input of filter contigs (id:index-ids)
+# filter_contigs, input dataframe->metadata that fits as the input of filter contigs (id:index-ids)
 def partition_sample_data_mags(
     mags_qza, num_partitions: int = None
 ) -> MultiMAGSequencesDirFmt:
@@ -37,9 +41,7 @@ def partition_sample_data_mags(
     partitioned_mags = {}
     mags_all = [{k: v} for k, v in mags.sample_dict().items()]
 
-    num_partitions = _validate_num_partitions(
-        len(mags_all), num_partitions, "sample"
-    )
+    num_partitions = _validate_num_partitions(len(mags_all), num_partitions, "sample")
 
     arrays_of_mags = np.array_split(mags_all, num_partitions)
 
@@ -55,8 +57,7 @@ def partition_sample_data_mags(
                 for mag_id, mag_fp in mag_dict.items():
                     os.makedirs(result.path / sample_id, exist_ok=True)
                     duplicate(
-                        mag_fp,
-                        result.path / sample_id / os.path.basename(mag_fp)
+                        mag_fp, result.path / sample_id / os.path.basename(mag_fp)
                     )
 
         # If num_partitions == num_samples we will only have gone through one
@@ -67,52 +68,66 @@ def partition_sample_data_mags(
             partitioned_mags[sample_id] = result
         else:
             partitioned_mags[i] = result
-    
+
     print("\nFinal Partitioned MAGs Structure:")
     print(partitioned_mags)
     return partitioned_mags
+
+
 def partition_sample_data_unbinned(
     unbinned_qza, mags_partitioned: MultiMAGSequencesDirFmt
-) ->ContigSequencesDirFmt:
+) -> ContigSequencesDirFmt:
     """
     Partition unbinned contigs to match the partitioning of MAGs.
-    
+
     Args:
         unbinned (ContigSequencesDirFmt): The unbinned contigs directory.
         mags_partitioned (MultiMAGSequencesDirFmt): The partitioned MAGs structure.
-        
+
     Returns:
         Dict[str, ContigSequencesDirFmt]: Mapping of partitions to unbinned contigs.
     """
     unbinned = Artifact.load(unbinned_qza).view(ContigSequencesDirFmt)
     partitioned_unbinned = {}
 
-    for partition_id, mag_partition in mags_partitioned.items():  # Loop over MAG partitions
-        result = ContigSequencesDirFmt()  # Temporary storage for partitioned unbinned contigs
-        for sample_id in mag_partition.sample_dict().keys():  # Extract sample names from MAGs
+    for (
+        partition_id,
+        mag_partition,
+    ) in mags_partitioned.items():  # Loop over MAG partitions
+        result = (
+            ContigSequencesDirFmt()
+        )  # Temporary storage for partitioned unbinned contigs
+        for (
+            sample_id
+        ) in mag_partition.sample_dict().keys():  # Extract sample names from MAGs
             expected_unbinned_filename = f"{sample_id}_contigs.fa"
             unbinned_sample_dict = unbinned.sample_dict()  # Get unbinned sample mapping
-            
-            if sample_id in unbinned_sample_dict:  # Check if unbinned contigs exist for this sample
+
+            if (
+                sample_id in unbinned_sample_dict
+            ):  # Check if unbinned contigs exist for this sample
                 unbinned_fp = unbinned_sample_dict[sample_id]
                 os.makedirs(result.path, exist_ok=True)
                 duplicate(unbinned_fp, result.path / expected_unbinned_filename)
-        
-        partitioned_unbinned[partition_id] = result  # Store the partitioned unbinned contigs
+
+        partitioned_unbinned[partition_id] = (
+            result  # Store the partitioned unbinned contigs
+        )
     print("\nFinal Partitioned unbinned Structure:")
     print(partitioned_unbinned)
     return partitioned_unbinned
 
+
 def partition_filtered_unbinned(
     unbinned_qza, mags_partitioned: MultiMAGSequencesDirFmt
-) ->ContigSequencesDirFmt:
+) -> ContigSequencesDirFmt:
     """
     Partition unbinned contigs to match the partitioning of MAGs.
-    
+
     Args:
         unbinned (ContigSequencesDirFmt): The unbinned contigs directory.
         mags_partitioned (MultiMAGSequencesDirFmt): The partitioned MAGs structure.
-        
+
     Returns:
         Dict[str, ContigSequencesDirFmt]: Mapping of partitions to unbinned contigs.
     """
@@ -120,11 +135,13 @@ def partition_filtered_unbinned(
     unbinned = Artifact.load(unbinned_qza).view(ContigSequencesDirFmt)
     partitioned_unbinned = {}
     for unbinned_id, unbinned_path in unbinned.sample_dict().items():
-        binned_sample_dir = MultiMAGSequencesDirFmt(path=mags.path / unbinned_id, mode='r')
+        binned_sample_dir = MultiMAGSequencesDirFmt(
+            path=mags.path / unbinned_id, mode="r"
+        )
         binned_contigs = count_contigs(binned_sample_dir)
         print("\nBinned contigs for sample:", unbinned_id)
         print(binned_contigs)
-        binned_sample_dir = MultiMAGSequencesDirFmt(path=mags.path, mode='r')
+        binned_sample_dir = MultiMAGSequencesDirFmt(path=mags.path, mode="r")
         binned_contigs = count_contigs(binned_sample_dir)
         print("\nALL Binned contigs :", unbinned_id)
         print(binned_contigs)
@@ -148,12 +165,12 @@ def partition_filtered_unbinned(
     #         metadata=metadata,
     #         where=where
     #     )
-        # Filter unbinned using metadata
-        # filtered_unbinned = filter_contigs(
-        #     contigs=unbinned,
-        #     metadata=metadata,
-        #     where=where
-        # )
+    # Filter unbinned using metadata
+    # filtered_unbinned = filter_contigs(
+    #     contigs=unbinned,
+    #     metadata=metadata,
+    #     where=where
+    # )
     #     partitioned_unbinned[partition_id] = filtered_unbinned
     # # for unbinned_id, unbinned_value in filtered_unbinned.items():
     # #     # print("\unbinned_id:", unbinned_id)
@@ -165,9 +182,11 @@ def partition_filtered_unbinned(
     # print("\nFinal Partitioned unbinned Structure:")
     # print(partitioned_unbinned)
     return partitioned_unbinned
+
+
 # def count_binned_contigs(bins: MultiFASTADirectoryFormat) -> int:
 #     """Counts sequences in all FASTA files inside a MultiFASTADirectoryFormat using DNAIterator."""
-    
+
 #     total_sequences = 0
 
 #     #Iterate over sequences directly using QIIME 2's DNAIterator
@@ -180,7 +199,7 @@ def partition_filtered_unbinned(
 
 # def count_unbinned_contigs(unbinned: ContigSequencesDirFmt) -> int:
 #     """Counts sequences in the unbinned FASTA file using DNAIterator."""
-    
+
 #     total_sequences = 0
 
 #     for fasta_fp, dna_iterator in unbinned.sequences.iter_views(DNAIterator):
@@ -192,7 +211,7 @@ def partition_filtered_unbinned(
 
 # def calculate_unbinned_percentage(mags_qza, unbinned_qza):
 #     """Calculates the percentage of unbinned contigs using skbio instead of manual counting."""
-    
+
 #     # Load QIIME2 artifacts and get correct directory formats
 #     mags_dir = Artifact.load(mags_qza).view(MultiMAGSequencesDirFmt)  # Binned MAGs
 #     unbinned_dir = Artifact.load(unbinned_qza).view(ContigSequencesDirFmt)  # Unbinned Contigs
@@ -211,7 +230,7 @@ def partition_filtered_unbinned(
 #     print(f"Unbinned Contigs: {unbinned_contigs_count}")
 #     print(f"Percentage of Unbinned Contigs: {percentage_unbinned:.2f}%")
 
-#     return percentage_unbinned 
+#     return percentage_unbinned
 
 # # Run test
 # calculate_unbinned_percentage("./data/mags.qza", "./data/unbinned_contigs.qza")
@@ -227,16 +246,16 @@ if isinstance(artifact, MultiMAGSequencesDirFmt):
 #     mag_partition.save(output_path)
 # for partition_id, mag_partition in mags_partitioned.items():
 
-    # print("\nmag_partition:", mag_partition)
-    # print("\nmag_partition.keys():", mags_partitioned.keys())
-    # print("\nmag_partition.sample_dict().keys():", mag_partition.sample_dict().keys())
+# print("\nmag_partition:", mag_partition)
+# print("\nmag_partition.keys():", mags_partitioned.keys())
+# print("\nmag_partition.sample_dict().keys():", mag_partition.sample_dict().keys())
 
-    # sample_ids = list(mag_partition.sample_dict().keys())
-    # print("\nsample_ids:", sample_ids)
-    # df = pd.DataFrame(index=pd.Index(sample_ids, name="ID"))
-    # print("\nDF directly:\n", df)
-    # metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
-    # print(metadata.to_dataframe().index)
+# sample_ids = list(mag_partition.sample_dict().keys())
+# print("\nsample_ids:", sample_ids)
+# df = pd.DataFrame(index=pd.Index(sample_ids, name="ID"))
+# print("\nDF directly:\n", df)
+# metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
+# print(metadata.to_dataframe().index)
 # partition_filtered_unbinned("./data/unbinned_contigs.qza","./data/mags.qza")
 # # sample_ids = list(filtered_unbinned.keys())
 # # print("Sample IDs in partitioned MAGs:", sample_ids)

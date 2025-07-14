@@ -26,8 +26,10 @@
                 <div class="card-body">
                     <p>
                         The table below shows the summary statistics of the BUSCO marker count
-                        fractions for the categories <b>Single</b>, <b>Duplicated</b>, <b>Fragmented</b>,
-                        <b>Missing</b>, and <b>Complete</b>, for <b>all MAGs</b>.
+                        fractions for the categories
+                        <b>Single</b>, <b>Duplicated</b>, <b>Fragmented</b>, <b>Missing</b> 
+                        {% if not comp_cont %}and {% else %}, {% endif %}<b>Complete</b>{% if comp_cont %}, <b>Completeness</b> and <b>Contamination</b>{% endif %}
+                        for <b>all MAGs</b>.
                     </p>
                     <table id="summaryTable" class="table table-hover">
                     <thead>
@@ -38,6 +40,10 @@
                             <th scope="col">% fragmented</th>
                             <th scope="col">% missing</th>
                             <th scope="col">% complete</th>
+                            {% if comp_cont %}
+                                <th scope="col">% completeness</th>
+                                <th scope="col">% contamination</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -83,7 +89,23 @@
             </div>
         </div>
     </div>
-
+    {% if comp_cont %}
+    <div class="row" style="margin-bottom: 10px">
+        <div class="col-lg-12">
+            <div class="card">
+                <h5 class="card-header">Completeness vs Contamination</h5>
+                <div class="card-body">
+                    <p>
+                        This scatterplot shows the relationship between BUSCO completeness and contamination
+                        for each MAG across your dataset.
+                    </p>
+                    <div class="col-lg-12" id="scatterDropdownControls" style="margin-bottom: 10px;"></div>
+                    <div id="scatterPlotDiv" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <script id="vega_summary_json" type="application/json">
@@ -102,6 +124,10 @@
     }}
 </script>
 
+<script id="scatter_json" type="application/json">
+    {{ scatter_json | safe }}
+</script>
+
 <script type="text/javascript">
     $(document).ready(function () {
         // temporary hack to make it look good with Bootstrap 5
@@ -112,7 +138,7 @@
 
         const rows = ['rowMinimum', 'rowMedian', 'rowMean', 'rowMaximum', 'rowTotal'];
         const indices = ['min', 'median', 'mean', 'max', 'count'];
-        const cols = ['single', 'duplicated', 'fragmented', 'missing', 'complete'];
+        const cols = ['single', 'duplicated', 'fragmented', 'missing', 'complete', 'completeness', 'contamination'];
         rows.forEach((rowId, index) => {
             let rowElement = document.getElementById(rowId)
             let colVals = summarySpec.data[index]
@@ -135,6 +161,22 @@
                 handleErrors([error], $("#plotMarkers"));
             }
         );
+        const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
+vegaEmbed("#scatterPlotDiv", scatterSpec).then(
+    function (result) {
+        result.view.logLevel(vega.Warn);
+
+        const dropdownWrapper = document.querySelector("#scatterPlotDiv .vega-bindings");
+        const target = document.getElementById('scatterDropdownControls');
+        if (dropdownWrapper && target) {
+            target.appendChild(dropdownWrapper);
+        }
+    }
+).catch(
+    function (error) {
+        handleErrors([error], $("#scatterPlotDiv"));
+    }
+);
     });
 </script>
 

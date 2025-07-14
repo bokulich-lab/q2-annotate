@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2023, QIIME 2 development team.
+# Copyright (c) 2025, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -30,21 +30,19 @@ def _draw_horizontal_histograms(data: pd.DataFrame, columns: List[str]):
     for i, category in enumerate(columns):
         x_title = category.replace("_", " ").capitalize()
         y_title = "MAG count" if i == 0 else None
-        chart = alt.Chart(
-            data[data["category"] == category]
-        ).mark_bar().encode(
-            x=alt.X('metric:Q', bin=True, title=x_title),
-            y=alt.Y('count()', title=y_title),
-            color=alt.value("steelblue")
-        ).properties(
-            width=PLOT_DIM,
-            height=PLOT_DIM
+        chart = (
+            alt.Chart(data[data["category"] == category])
+            .mark_bar()
+            .encode(
+                x=alt.X("metric:Q", bin=True, title=x_title),
+                y=alt.Y("count()", title=y_title),
+                color=alt.value("steelblue"),
+            )
+            .properties(width=PLOT_DIM, height=PLOT_DIM)
         )
         charts.append(chart)
 
-    chart = alt.hconcat(
-        *charts
-    )
+    chart = alt.hconcat(*charts)
 
     return chart
 
@@ -56,19 +54,82 @@ def _draw_marker_summary_histograms(data: pd.DataFrame) -> dict:
     Returns:
         dict: Dictionary containing the Vega spec.
     """
-    chart = _draw_horizontal_histograms(
-        data, columns=["single", "duplicated", "fragmented", "missing"]
-    )
-    chart2 = _draw_horizontal_histograms(
-        data, columns=["scaffolds", "contigs_n50", "scaffold_n50", "length"]
+    cols = [
+        ["single", "duplicated", "fragmented", "missing", "completeness"],
+        ["contamination", "scaffolds", "contigs_n50", "scaffold_n50", "length"],
+    ]
+
+    if not ("completeness" in data.columns and "contamination" in data.columns):
+        cols[0].remove("completeness")
+        cols[1].remove("contamination")
+
+    chart = _draw_horizontal_histograms(data, columns=cols[0])
+    chart2 = _draw_horizontal_histograms(data, columns=cols[1])
+
+    chart = (
+        alt.vconcat(chart, chart2)
+        .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
     )
 
-    chart = alt.vconcat(chart, chart2).configure_axis(
-        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
-    ).configure_legend(
-        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
-    ).configure_header(
-        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
+    return chart.to_dict()
+
+
+def _draw_completeness_vs_contamination(data: pd.DataFrame):
+    """
+    Draws scatterplot of completeness vs. contamination. The user can choose to
+    display all MAGs or choose one with a dropdown menu.
+
+    Returns:
+        dict: Dictionary containing the Vega spec.
+    """
+    color_field = "sample_id" if data["sample_id"].notnull().all() else "mag_id"
+    color_title = "Sample ID" if color_field == "sample_id" else "MAG ID"
+
+    tooltip = [
+        f"{col}:Q" if pd.api.types.is_numeric_dtype(data[col]) else f"{col}:N"
+        for col in data.columns
+    ]
+
+    chart = alt.Chart(data)
+
+    unique_ids = sorted(data[color_field].dropna().unique().tolist())
+    selection = alt.param(
+        name="selected_id",
+        bind=alt.binding_select(options=["All"] + unique_ids, name=f"{color_title}: "),
+        value="All",
+    )
+
+    chart = chart.transform_filter(
+        f"(selected_id == 'All') || (datum.{color_field} == selected_id)"
+    ).add_params(selection)
+
+    chart = (
+        chart.mark_circle(size=60)
+        .encode(
+            x=alt.X(
+                "completeness:Q", title="Completeness", scale=alt.Scale(domain=[0, 100])
+            ),
+            y=alt.Y(
+                "contamination:Q",
+                title="Contamination",
+                scale=alt.Scale(domain=[0, 100]),
+            ),
+            color=alt.Color(
+                f"{color_field}:N", title=color_title, scale=alt.Scale(scheme="viridis")
+            ),
+            tooltip=tooltip,
+        )
+        .properties(width=600, height=600)
+        .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_legend(
+            labelFontSize=LABEL_FONT_SIZE,
+            titleFontSize=TITLE_FONT_SIZE,
+            labelLimit=1000,
+        )
+        .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .interactive()
     )
 
     return chart.to_dict()
@@ -83,9 +144,22 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
         dict: Dictionary containing the Vega spec.
     """
     metrics = [
-        'single', 'duplicated', 'fragmented', 'missing',
-        'scaffolds', 'contigs_n50', 'length'
+        "single",
+        "duplicated",
+        "fragmented",
+        "missing",
+        "completeness",
+        "contamination",
+        "scaffolds",
+        "contigs_n50",
+        "scaffold_n50",
+        "length",
     ]
+
+    if not ("completeness" in data.columns and "contamination" in data.columns):
+        metrics.remove("completeness")
+        metrics.remove("contamination")
+
     data = pd.melt(
         data,
         id_vars=["sample_id", "mag_id", "dataset", "n_markers"],
@@ -96,47 +170,46 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
 
     # Create the dropdown selection with all possible metrics
     selection_metrics = alt.selection_point(
-        fields=['category'],
+        fields=["category"],
         bind=alt.binding_select(options=metrics),
-        name='select_metric',
-        value='single'
+        name="select_metric",
+        value="single",
     )
 
     # Create the sample search box
-    samples = data['sample_id'].unique().tolist()
+    samples = data["sample_id"].unique().tolist()
     selection_box = alt.param(
         value=samples[0],
-        name='select_sample',
+        name="select_sample",
         bind=alt.binding(
-            input='search',
+            input="search",
             placeholder="Sample IDs",
-            name='select_sample',
-        )
+            name="select_sample",
+        ),
     )
 
     # Create the chart
-    chart = alt.Chart(data).mark_bar().encode(
-        x=alt.X('metric:Q', bin=True, title=None),
-        y=alt.Y('count()', title='MAG count'),
-        color=alt.value("steelblue")
-    ).add_params(
-        selection_metrics,
-        selection_box
-    ).transform_filter(
-        'datum.sample_id == trim(select_sample) '
-        '& datum.category == select_metric.category'
-    ).configure_axis(
-        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
-    ).configure_legend(
-        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
-    ).configure_header(
-        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
-    ).properties(
-        width=PLOT_DIM,
-        height=PLOT_DIM
+    chart = (
+        alt.Chart(data)
+        .mark_bar()
+        .encode(
+            x=alt.X("metric:Q", bin=True, title=None),
+            y=alt.Y("count()", title="MAG count"),
+            color=alt.value("steelblue"),
+        )
+        .add_params(selection_metrics, selection_box)
+        .transform_filter(
+            "datum.sample_id == trim(select_sample) "
+            "& datum.category == select_metric.category"
+        )
+        .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .properties(width=PLOT_DIM, height=PLOT_DIM)
     )
 
     return chart.to_dict()
+
 
 def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
     """
@@ -146,8 +219,8 @@ def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
     Returns:
         dict: Dictionary containing the Vega spec.
     """
-    metrics = ['unbinned_contigs', 'unbinned_contigs_count']
-    labels = ['Percentage of Unbinned Contigs', 'Absolute Count of Unbinned Contigs']
+    metrics = ["unbinned_contigs", "unbinned_contigs_count"]
+    labels = ["Percentage of Unbinned Contigs", "Absolute Count of Unbinned Contigs"]
     # Keep only one row per sample
     data = data.drop_duplicates(subset=["sample_id"])
     data = pd.melt(
@@ -159,35 +232,32 @@ def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
     )
 
     selection_metrics = alt.selection_point(
-        fields=['category'],
+        fields=["category"],
         bind=alt.binding_radio(
             options=metrics,
             labels=labels,
-            name='Select metric:',
-            element='#selectableHistogramUnbinnedControls'
+            name="Select metric:",
+            element="#selectableHistogramUnbinnedControls",
         ),
-        name='select_metric',
-        value='unbinned_contigs'
+        name="select_metric",
+        value="unbinned_contigs",
     )
 
     # Create the chart
-    chart = alt.Chart(data).mark_bar().encode(
-        x=alt.X('metric:Q', bin=True, title=None),
-        y=alt.Y('count()', title='Sample count'),
-        color=alt.value("steelblue")
-    ).add_params(
-        selection_metrics
-    ).transform_filter(
-        'datum.category == select_metric.category'
-    ).configure_axis(
-        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
-    ).configure_legend(
-        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
-    ).configure_header(
-        labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
-    ).properties(
-        width=PLOT_DIM,
-        height=PLOT_DIM
+    chart = (
+        alt.Chart(data)
+        .mark_bar()
+        .encode(
+            x=alt.X("metric:Q", bin=True, title=None),
+            y=alt.Y("count()", title="Sample count"),
+            color=alt.value("steelblue"),
+        )
+        .add_params(selection_metrics)
+        .transform_filter("datum.category == select_metric.category")
+        .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .properties(width=PLOT_DIM, height=PLOT_DIM)
     )
 
     return chart.to_dict()

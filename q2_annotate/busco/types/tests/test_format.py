@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2022-2023, QIIME 2 development team.
+# Copyright (c) 2025, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -14,36 +14,33 @@ class TestBUSCOFormats(TestPluginBase):
     package = "q2_annotate.busco.types.tests"
 
     def test_busco_results_format_ok(self):
+        results = BUSCOResultsFormat(self.get_data_path("busco_results.tsv"), mode="r")
+        results.validate(level="min")
+        results.validate(level="max")
+
+    def test_busco_results_format_ok_header_2(self):
         results = BUSCOResultsFormat(
-            self.get_data_path('busco_results.tsv'),
-            mode='r'
+            self.get_data_path("busco_results_header_2.tsv"), mode="r"
         )
-        results.validate(level='min')
-        results.validate(level='max')
-#extra test to check the optional columns 
+        results.validate(level="min")
+        results.validate(level="max")
+
     def test_busco_results_format_with_optional_columns(self):
-        results = BUSCOResultsFormat(
-            self.get_data_path('unbinned_res.tsv'),
-            mode='r'
-        )
+        results = BUSCOResultsFormat(self.get_data_path("unbinned_res.tsv"), mode="r")
         results.validate()
+
     def test_busco_results_format_error_header(self):
         results = BUSCOResultsFormat(
-            self.get_data_path('busco_results_broken_header.tsv'),
-            mode='r'
+            self.get_data_path("busco_results_broken_header.tsv"), mode="r"
         )
-        with self.assertRaisesRegex(ValidationError, 'Invalid header'):
+        with self.assertRaisesRegex(ValidationError, "Invalid header"):
             results.validate()
 
     def test_busco_results_format_error_values(self):
         results = BUSCOResultsFormat(
-            self.get_data_path('busco_results_broken_values.tsv'),
-            mode='r'
+            self.get_data_path("busco_results_broken_values.tsv"), mode="r"
         )
-        with self.assertRaisesRegex(
-                ValidationError,
-                'Line 4 has 14 columns'
-        ):
+        with self.assertRaisesRegex(ValidationError, "Line 4 has 14 columns"):
             results.validate()
 
     def test_BuscoDatabaseDirFmt_valid(self):
@@ -54,8 +51,5 @@ class TestBUSCOFormats(TestPluginBase):
     def test_BuscoDatabaseDirFmt_invalid(self):
         dirpath = self.get_data_path("busco_db_invalid")
         format = BuscoDatabaseDirFmt(dirpath, mode="r")
-        with self.assertRaisesRegex(
-            ValidationError,
-            "Missing one or more files"
-        ):
+        with self.assertRaisesRegex(ValidationError, "Missing one or more files"):
             format.validate()

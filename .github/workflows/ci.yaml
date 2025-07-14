@@ -1,126 +1,14 @@
-name: Test
+name: CI
 on:
   pull_request:
     branches: ["main"]
   push:
     branches: ["main"]
-env:
-    DISTRO: moshpit
+    tags: ["*"]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    outputs:
-      latest-dev-tag: ${{ steps.fetch_latest_tags.outputs.latest-dev-tag }}
-      latest-stable-tag: ${{ steps.fetch_latest_tags.outputs.latest-stable-tag }}
-      commit-msg: ${{ steps.get-commit-msg.outputs.commit-msg }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-            fetch-depth: 0
-
-      - name: Checkout utilities
-        uses: actions/checkout@v4
-        with:
-          repository: bokulich-lab/utilities
-          path: utilities
-
-      - name: Get last commit
-        id: get-commit-msg
-        run: |
-          commit_msg=$(git log --pretty=%B -n 1 --skip 1 2>/dev/null)
-          echo "commit-msg=$commit_msg" >> $GITHUB_OUTPUT
-
-      - name: Install dependencies
-        run: python -m pip install requests yq
-
-      - name: Fetch latest tags
-        id: fetch-tags
-        run: |
-          latest_tags=$(python utilities/ci/get-tags.py)
-          echo "$latest_tags" > tags.txt
-          echo "latest-dev-tag=$(grep 'latest-dev-tag' tags.txt | cut -d '=' -f 2)" >> $GITHUB_OUTPUT
-          echo "latest-stable-tag=$(grep 'latest-stable-tag' tags.txt | cut -d '=' -f 2)" >> $GITHUB_OUTPUT
-
-      - name: Create conda yaml
-        id: create-conda-yaml
-        run: |
-          commit_msg="${{ steps.get-commit-msg.outputs.commit-msg }}"
-          if [[ "$commit_msg" == *"[stable]"* ]] || [[ "$commit_msg" == *"[prod]"* ]]; then
-              tag="${{ steps.fetch-tags.outputs.latest-stable-tag }}"
-          else
-              tag="${{ steps.fetch-tags.outputs.latest-dev-tag }}"
-          fi
-          bash utilities/ci/get-dependencies.sh "$DISTRO" $tag utilities/ci/repositories.yaml
-          cat environment.yml >> $GITHUB_STEP_SUMMARY
-          echo "qiime-deps=$(tr '\n' ' ' < repo-urls.txt | xargs)" >> $GITHUB_OUTPUT
-
-      - name: Setup miniconda
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          python-version: "3.10"
-          mamba-version: "*"
-          channels: conda-forge,defaults
-          channel-priority: true
-          activate-environment: conda-env
-          condarc-file: utilities/ci/condarc
-          # use-only-tar-bz2: true
-
-      - name: Get date
-        id: get-date
-        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - name: Cache conda env
-        uses: actions/cache@v3
-        with:
-          path: /usr/share/miniconda/envs
-          key:
-            conda-${{ runner.os }}--${{ runner.arch }}--${{
-            steps.get-date.outputs.today }}-${{
-            hashFiles('environment.yml') }}-${{ env.CACHE_NUMBER
-            }}
-        env:
-          # Increase this value to reset cache if environment.yml has not changed
-          CACHE_NUMBER: 0
-        id: cache
-
-      - name: Update environment
-        run: mamba env update -n conda-env -f environment.yml
-        if: steps.cache.outputs.cache-hit != 'true'
-
-      - name: Install dev versions of QIIME repos
-        run: mamba run -n conda-env pip install ${{ steps.create-conda-yaml.outputs.qiime-deps }}
-
-      - name: Update specific dependency, if requested
-        if: contains(${{ steps.get-commit-msg.outputs.commit-msg }}, '[add:')
-        run: |
-            commit_msg="${{ steps.get-commit-msg.outputs.commit-msg }}"
-            IFS=',' read -ra ADDR <<< "$commit_msg"
-            for i in "${ADDR[@]}"; do
-                pkg_name=$(echo "$i" | awk -F':' '/\[add/{print $2}')
-                commit_hash=$(echo "$i" | awk -F':' '/\[add/{print $3}' | awk -F']' '{print $1}')
-                if [[ $(yq '.repositories[].name' utilities/ci/repositories.yaml | grep -c $pkg_name) -eq 1 ]]; then
-                    pkg_url=$(yq ".repositories[] | select(.name == \"$pkg_name\") | .url" utilities/ci/repositories.yaml | tr -d '"')
-                    mamba run -n conda-env pip install "git+$pkg_url@$commit_hash"
-                fi
-            done
-
-      - name: Install plugin
-        run: |
-          mamba run -n conda-env pip install .
-          mamba run -n conda-env qiime dev refresh-cache
-
-      - name: Install dev dependencies
-        run: mamba run -n conda-env pip install pytest pytest-cov coverage parameterized
-
-      - name: Run tests
-        id: test
-        run: mamba run -n conda-env make test-cov
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        if: steps.test.outcome == 'success'
-        with:
-          name: coverage
-          path: coverage.xml
+  ci:
+    uses: bokulich-lab/utilities/.github/workflows/ci.yaml@main
+    with:
+      distro: moshpit
+      build_docker: true

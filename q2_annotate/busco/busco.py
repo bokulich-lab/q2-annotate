@@ -1,205 +1,118 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2023, QIIME 2 development team.
+# Copyright (c) 2025, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import glob
 import json
-
 import os
 import tempfile
 from copy import deepcopy
 from shutil import copytree
-from typing import List, Dict, Union
+from typing import List, Union
 
 import pandas as pd
 import q2templates
 
 from q2_annotate.busco.plots_detailed import _draw_detailed_plots
-from q2_annotate.busco.plots_summary import _draw_marker_summary_histograms, \
-    _draw_selectable_summary_histograms, _draw_selectable_unbinned_histograms
+from q2_annotate.busco.plots_summary import (
+    _draw_marker_summary_histograms,
+    _draw_selectable_summary_histograms,
+    _draw_completeness_vs_contamination,
+    _draw_selectable_unbinned_histograms,
+)
 
 from q2_annotate.busco.utils import (
-    _parse_busco_params, _collect_summaries, _rename_columns,
-    _parse_df_columns, _partition_dataframe, _calculate_summary_stats,
-    _get_feature_table, _cleanup_bootstrap, _get_mag_lengths,
-    _validate_lineage_dataset_input
+    _parse_busco_params,
+    _parse_df_columns,
+    _partition_dataframe,
+    _calculate_summary_stats,
+    _get_feature_table,
+    _cleanup_bootstrap,
+    _validate_lineage_dataset_input,
+    _extract_json_data,
+    _validate_parameters,
+    _process_busco_results,
+    filter_unbinned_for_partition,
+    get_fasta_files_from_dir,
+    calculate_unbinned_percentage,
 )
+
 from q2_annotate._utils import _process_common_input_params, run_command
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
 from q2_types.sample_data import SampleData
 from q2_types.feature_data_mag import MAGSequencesDirFmt
-### NEW
-from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequencesDirFmt, MAGs
+from q2_types.per_sample_sequences import (
+    MultiMAGSequencesDirFmt,
+    ContigSequencesDirFmt,
+    MAGs,
+)
 from q2_assembly.filter import filter_contigs
-from qiime2 import Metadata, Artifact
 import warnings
-from skbio import DNA
-from skbio.io import read
-from typing import List
-from pathlib import Path
 
-def filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
-    """
-    Filters the unbinned contigs to match the sample IDs in a MAG partition.
+
+def _run_busco(input_dir: str, output_dir: str, sample_id: str, params: List[str]):
+    """Runs BUSCO on one (sample) directory
 
     Args:
-        unbinned_contigs (ContigSequencesDirFmt): The full unbinned contigs.
-        mag_partition (MultiMAGSequencesDirFmt): One partition of MAGs.
-        _filter_contigs (Action): QIIME 2 action to filter contigs.
-
-    Returns:
-        ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
-    """
-    sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
-    metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
-    id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
-    where = f"ID IN ({id_list})"
-    (filtered_unbinned,) = _filter_contigs(
-        contigs=unbinned_contigs,
-        metadata=metadata,
-        where=where
-    )
-    return filtered_unbinned
-def get_fasta_files_from_dir(directory: Path) -> list:
-    # Only match FASTA extensions starting with '.fa' or '.fna'
-    return [f for f in directory.glob('*') if f.suffix in {'.fa', '.fasta'}]
-
-def count_contigs(file_paths: List[Path]) -> int:
-    """
-    Count the number of DNA sequences across a list of FASTA files.
-
-    Parameters
-    ----------
-    file_paths : list of Path
-        List of FASTA file paths (.fa, .fasta, .fna).
-
-    Returns
-    -------
-    int
-        Total number of sequences across all files.
-    """
-    total_sequences = 0
-
-    for fp in file_paths:
-        total_sequences += sum(1 for _ in read(str(fp), format="fasta", constructor=DNA))
-
-    return total_sequences
-
-def calculate_unbinned_percentage(mags_per_sample, unbinned_contigs_per_sample) -> tuple[float, int]:
-    """
-    Calculate the percentage and absolute count of unbinned contigs for a single sample.
-
-    Parameters
-    ----------
-    mags_per_sample : MultiMAGSequencesDirFmt
-        Binned contigs (MAGs) from one specific sample.
-    
-    sample_unbinned_contigs : ContigSequencesDirFmt
-        Unbinned contigs from one specific sample.
-
-    Returns
-    -------
-    percentage_unbinned : float
-        The percentage of unbinned contigs relative to the total number of contigs 
-        (binned + unbinned) for this sample.
-
-    unbinned_contigs_count : int
-        The number of unbinned contigs in this sample.
-    """
-    # Count sequences
-    binned_contigs = count_contigs(mags_per_sample)
-    unbinned_contigs_count = count_contigs(unbinned_contigs_per_sample)
-
-    # Calculate percentage
-    total = binned_contigs + unbinned_contigs_count
-    percentage_unbinned = (unbinned_contigs_count / total) * 100 if total > 0 else 0
-
-    return percentage_unbinned, unbinned_contigs_count
-
-def _run_busco(
-    output_dir: str,
-    mags: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt],
-    params: List[str]
-) -> Dict[str, str]:
-    """Evaluates bins for all samples using BUSCO.
-
-    Args:
+        input_dir (str): Location where the MAG FASTA files are stored.
         output_dir (str): Location where the final results should be stored.
-        mags (MultiMAGSequencesDirFmt): The mags to be analyzed.
+        sample_id (str): The sample ID.
         params (List[str]): List of parsed arguments to pass to BUSCO.
-
-    Returns:
-        dict: Dictionary where keys are sample IDs and values are the paths
-            to the `batch_summary.txt` generated by BUSCO, e.g.
-            `tmp/busco_output/<sample_id>/batch_summary.txt`.
     """
     base_cmd = ["busco", *params]
+
+    cmd = deepcopy(base_cmd)
+    cmd.extend(["--in", input_dir, "--out_path", output_dir, "-o", sample_id])
+    run_command(cmd, cwd=os.path.dirname(output_dir))
+
+
+def _busco_helper(mags, common_args, additional_metrics):
+    results_all = []
     # Get samples directories from MAGs
     if isinstance(mags, MultiMAGSequencesDirFmt):
-        manifest: pd.DataFrame = mags.manifest.view(pd.DataFrame)
-        manifest["sample_dir"] = manifest.filename.apply(
-            lambda x: os.path.dirname(x)
-        )
-        sample_dirs = manifest["sample_dir"].unique()
-
+        sample_dir = mags.sample_dict()
     elif isinstance(mags, MAGSequencesDirFmt):
-        sample_dirs = [str(mags)]
+        sample_dir = {"feature_data": mags.feature_dict()}
 
-    path_to_run_summaries = {}
-
-    # For every unique sample dir run busco
-    for sample_dir in sample_dirs:
-        sample = os.path.split(sample_dir)[-1]
-
-        cmd = deepcopy(base_cmd)
-        cmd.extend([
-            "--in",
-            sample_dir,
-            "--out_path",
-            output_dir,
-            "-o",
-            sample
-        ])
-        run_command(cmd,  cwd=os.path.dirname(output_dir))
-
-        path_to_run_summary = os.path.join(
-            output_dir, sample, "batch_summary.txt"
-        )
-        if os.path.isfile(path_to_run_summary):
-            path_to_run_summaries[sample] = path_to_run_summary
-        else:
-            raise FileNotFoundError(
-                f"BUSCO batch summary file {path_to_run_summary} not found."
-            )
-
-    return path_to_run_summaries
-
-
-def _busco_helper(bins, common_args):
     with tempfile.TemporaryDirectory() as tmp:
-        path_to_run_summaries = _run_busco(
-            output_dir=os.path.join(tmp, "busco_output"),
-            mags=bins,
-            params=common_args,
-        )
-        # Returns pd.Dataframe
-        all_summaries = _collect_summaries(
-            run_summaries_fp_map=path_to_run_summaries,
-        )
-    all_summaries = _rename_columns(all_summaries)
+        for sample_id, feature_dict in sample_dir.items():
 
-    lengths = _get_mag_lengths(bins)
-    all_summaries = all_summaries.join(lengths, on="mag_id")
+            _run_busco(
+                input_dir=os.path.join(
+                    str(mags), "" if sample_id == "feature_data" else sample_id
+                ),
+                output_dir=str(tmp),
+                sample_id=sample_id,
+                params=common_args,
+            )
+            # Extract and process results from JSON files for one sample
+            for mag_id, mag_fp in feature_dict.items():
 
-    return all_summaries
+                json_path = glob.glob(
+                    os.path.join(
+                        str(tmp), sample_id, os.path.basename(mag_fp), "*.json"
+                    )
+                )[0]
+
+                results = _process_busco_results(
+                    _extract_json_data(json_path),
+                    sample_id,
+                    mag_id,
+                    os.path.basename(mag_fp),
+                    additional_metrics,
+                )
+                results_all.append(results)
+
+    return pd.DataFrame(results_all)
 
 
 def _evaluate_busco(
-    bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt],
-    busco_db: BuscoDatabaseDirFmt,
-    unbinned_contigs: ContigSequencesDirFmt = None, ### NEW unbinned
+    mags: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt],
+    db: BuscoDatabaseDirFmt,
+    unbinned_contigs: ContigSequencesDirFmt = None,  ### NEW unbinned
     mode: str = "genome",
     lineage_dataset: str = None,
     augustus: bool = False,
@@ -209,60 +122,69 @@ def _evaluate_busco(
     auto_lineage_euk: bool = False,
     auto_lineage_prok: bool = False,
     cpu: int = 1,
-    config: str = None,
     contig_break: int = 10,
     evalue: float = 1e-03,
-    force: bool = False,
     limit: int = 3,
     long: bool = False,
     metaeuk_parameters: str = None,
     metaeuk_rerun_parameters: str = None,
     miniprot: bool = False,
-    scaffold_composition: bool = False,
+    additional_metrics: bool = False,
 ) -> pd.DataFrame:
     kwargs = {
-        k: v for k, v in locals().items() if k not in ["bins", "unbinned_contigs", "busco_db"]#exclude unbinned
+        k: v
+        for k, v in locals().items()
+        if k
+        not in ["mags", "unbinned_contigs", "db", "additional_metrics"]  # exclude db
     }
     kwargs["offline"] = True
-    kwargs["download_path"] = f"{str(busco_db)}/busco_downloads"
+    kwargs["download_path"] = str(db)
 
     if lineage_dataset is not None:
         _validate_lineage_dataset_input(
-            lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok,
-            busco_db, kwargs  # kwargs may be modified inside this function
+            lineage_dataset,
+            auto_lineage,
+            auto_lineage_euk,
+            auto_lineage_prok,
+            db,
+            kwargs,  # kwargs may be modified inside this function
         )
 
     # Filter out all kwargs that are None, False or 0.0
     common_args = _process_common_input_params(
         processing_func=_parse_busco_params, params=kwargs
     )
-    if isinstance(bins, MultiMAGSequencesDirFmt):
-        busco_results = _busco_helper(bins, common_args)
+    if isinstance(mags, MultiMAGSequencesDirFmt):
+        busco_results = _busco_helper(mags, common_args, additional_metrics)
         busco_results["unbinned_contigs"] = pd.NA
         busco_results["unbinned_contigs_count"] = pd.NA
-        for unbinned_id, unbinned_path in unbinned_contigs.sample_dict().items(): 
-            binned_dir = bins.path / unbinned_id
+        for unbinned_id, unbinned_path in unbinned_contigs.sample_dict().items():
+            binned_dir = mags.path / unbinned_id
             binned_fasta_paths = get_fasta_files_from_dir(binned_dir)
-            percentage, count = calculate_unbinned_percentage(binned_fasta_paths, [unbinned_path])
-            busco_results.loc[busco_results["sample_id"] == unbinned_id, "unbinned_contigs"] = float(percentage)
-            busco_results.loc[busco_results["sample_id"] == unbinned_id, "unbinned_contigs_count"] = int(count)
+            percentage, count = calculate_unbinned_percentage(
+                binned_fasta_paths, [unbinned_path]
+            )
+            busco_results.loc[
+                busco_results["sample_id"] == unbinned_id, "unbinned_contigs"
+            ] = float(percentage)
+            busco_results.loc[
+                busco_results["sample_id"] == unbinned_id, "unbinned_contigs_count"
+            ] = int(count)
 
-        return busco_results 
-    
-    return _busco_helper(bins, common_args)
+        return busco_results
+
+    return _busco_helper(mags, common_args, additional_metrics)
 
 
-def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
-    busco_results.to_csv(
-        os.path.join(output_dir, "busco_results.csv"),
-        index=False
-    )
+def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
+    results.to_csv(os.path.join(output_dir, "busco_results.csv"), index=False)
+
     # Outputs different df for sample and feature data
-    busco_results = _parse_df_columns(busco_results)
+    results = _parse_df_columns(results)
     max_rows = 100
 
     # Partition data frames
-    if len(busco_results["sample_id"].unique()) >= 2:
+    if len(results["sample_id"].unique()) >= 2:
         counter_col = "sample_id"
         assets_subdir = "sample_data"
         tab_title = ["Sample details", "Feature details"]
@@ -270,42 +192,48 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
 
         # Draw selectable histograms (only for sample data mags)
         tabbed_context = {
-            "vega_summary_selectable_json":
-            json.dumps(_draw_selectable_summary_histograms(busco_results)),
-            "vega_selectable_unbinned_json":
-            json.dumps(_draw_selectable_unbinned_histograms(busco_results)),
-            
+            "vega_summary_selectable_json": json.dumps(
+                _draw_selectable_summary_histograms(results)
+            ).replace("NaN", "null"),
         }
+        if (
+            "unbinned_contigs" in results.columns
+            and "unbinned_contigs_count" in results.columns
+        ):
+            tabbed_context["vega_selectable_unbinned_json"] = json.dumps(
+                _draw_selectable_unbinned_histograms(results)
+            ).replace("NaN", "null")
+            unbinned = True
+        else:
+            tabbed_context["vega_selectable_unbinned_json"] = None
+            unbinned = False
     else:
         counter_col = "mag_id"
         tab_title = ["BUSCO plots", "BUSCO table"]
         assets_subdir = "feature_data"
         is_sample_data = False
         tabbed_context = {}  # Init as empty bc we update it below
+        unbinned = False
 
-    dfs = _partition_dataframe(busco_results, max_rows, is_sample_data)
+    dfs = _partition_dataframe(results, max_rows, is_sample_data)
 
     # Copy BUSCO results from tmp dir to output_dir
     TEMPLATES = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        "assets",
-        "busco"
+        os.path.dirname(os.path.dirname(__file__)), "assets", "busco"
     )
     templates = [
         os.path.join(TEMPLATES, assets_subdir, file_name)
         for file_name in ["index.html", "detailed_view.html", "table.html"]
     ]
     copytree(
-        src=os.path.join(TEMPLATES, assets_subdir),
-        dst=output_dir,
-        dirs_exist_ok=True
+        src=os.path.join(TEMPLATES, assets_subdir), dst=output_dir, dirs_exist_ok=True
     )
     for folder in ["css", "js"]:
         os.makedirs(os.path.join(output_dir, folder))
         copytree(
             src=os.path.join(TEMPLATES, folder),
             dst=os.path.join(output_dir, folder),
-            dirs_exist_ok=True
+            dirs_exist_ok=True,
         )
 
     # Partition data frames and draw detailed plots
@@ -325,34 +253,50 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
             label_font_size=17,
             spacing=20,
         )
-        context.update({
-            f"partition_{i}":
+        context.update(
             {
-                "subcontext": subcontext,
-                "counters": counters,
-                "ids": df[counter_col].unique().tolist(),
+                f"partition_{i}": {
+                    "subcontext": subcontext,
+                    "counters": counters,
+                    "ids": df[counter_col].unique().tolist(),
+                }
             }
-        })
+        )
 
     # Render
-    vega_json = json.dumps(context)
-    vega_json_summary = json.dumps(
-        _draw_marker_summary_histograms(busco_results)
+    vega_json = json.dumps(context).replace("NaN", "null")
+    vega_json_summary = json.dumps(_draw_marker_summary_histograms(results)).replace(
+        "NaN", "null"
     )
-    table_json = _get_feature_table(busco_results)
-    stats_json = _calculate_summary_stats(busco_results)
-    tabbed_context.update({
-        "tabs": [
-            {"title": "QC overview", "url": "index.html"},
-            {"title": tab_title[0], "url": "detailed_view.html"},
-            {"title": tab_title[1], "url": "table.html"}
-        ],
-        "vega_json": vega_json,
-        "vega_summary_json": vega_json_summary,
-        "table": table_json,
-        "summary_stats_json": stats_json,
-        "page_size": 100
-    })
+    table_json = _get_feature_table(results)
+    stats_json = _calculate_summary_stats(results)
+
+    if "completeness" in results.columns and "contamination" in results.columns:
+        scatter_json = json.dumps(_draw_completeness_vs_contamination(results)).replace(
+            "NaN", "null"
+        )
+        comp_cont = True
+    else:
+        scatter_json = None
+        comp_cont = False
+
+    tabbed_context.update(
+        {
+            "tabs": [
+                {"title": "QC overview", "url": "index.html"},
+                {"title": tab_title[0], "url": "detailed_view.html"},
+                {"title": tab_title[1], "url": "table.html"},
+            ],
+            "vega_json": vega_json,
+            "vega_summary_json": vega_json_summary,
+            "table": table_json,
+            "summary_stats_json": stats_json,
+            "scatter_json": scatter_json,
+            "comp_cont": comp_cont,
+            "unbinned": unbinned,
+            "page_size": 100,
+        }
+    )
     q2templates.render(templates, output_dir, context=tabbed_context)
 
     # Final cleanup, needed until we fully migrate to Bootstrap 5
@@ -361,9 +305,9 @@ def _visualize_busco(output_dir: str, busco_results: pd.DataFrame) -> None:
 
 def evaluate_busco(
     ctx,
-    bins,
+    mags,
     unbinned_contigs,
-    busco_db,
+    db,
     mode="genome",
     lineage_dataset=None,
     augustus=False,
@@ -373,51 +317,58 @@ def evaluate_busco(
     auto_lineage_euk=False,
     auto_lineage_prok=False,
     cpu=1,
-    config=None,
     contig_break=10,
     evalue=1e-03,
-    force=False,
     limit=3,
     long=False,
     metaeuk_parameters=None,
     metaeuk_rerun_parameters=None,
     miniprot=False,
-    scaffold_composition=False,
-    num_partitions=None
+    additional_metrics=True,
+    num_partitions=None,
 ):
+    _validate_parameters(
+        lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok
+    )
 
     kwargs = {
-        k: v for k, v in locals().items()
-        if k not in ["bins", "unbinned_contigs", "ctx", "busco_db", "num_partitions"]
+        k: v
+        for k, v in locals().items()
+        if k not in ["mags", "unbinned_contigs", "ctx", "db", "num_partitions"]
     }
     _evaluate_busco = ctx.get_action("annotate", "_evaluate_busco")
     collate_busco_results = ctx.get_action("annotate", "collate_busco_results")
     _visualize_busco = ctx.get_action("annotate", "_visualize_busco")
     _filter_contigs = ctx.get_action("assembly", "filter_contigs")
 
-    #add partition cases for unbinned contigs
-    if bins.type <= SampleData[MAGs]:
+    # add partition cases for unbinned contigs if bins.type <= SampleData[MAGs]:
+    if issubclass(mags.format, MultiMAGSequencesDirFmt):
         partition_action = "partition_sample_data_mags"
     else:
         partition_action = "partition_feature_data_mags"
-        warnings.warn("FeatureData[MAG] artifact was provided - unbinned contigs will be ignored.")
+        warnings.warn(
+            "FeatureData[MAG] artifact was provided - unbinned contigs will be ignored."
+        )
 
     partition_mags = ctx.get_action("types", partition_action)
 
-    (partitioned_mags, ) = partition_mags(bins, num_partitions)
-   
+    (partitioned_mags,) = partition_mags(mags, num_partitions)
     results = []
-    if bins.type <= SampleData[MAGs]:
+    if mags.type <= SampleData[MAGs]:
         for partition_id, mag_partition in partitioned_mags.items():
-            filtered_unbinned = filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs)
-            (busco_result,) = _evaluate_busco(mag_partition, busco_db, filtered_unbinned, **kwargs)
+            filtered_unbinned = filter_unbinned_for_partition(
+                unbinned_contigs, mag_partition, _filter_contigs
+            )
+            (busco_result,) = _evaluate_busco(
+                mag_partition, db, filtered_unbinned, **kwargs
+            )
             results.append(busco_result)
     else:
-        for mag in partitioned_mags.values(): # each mag is a subset of bins
-            (busco_result, ) = _evaluate_busco(mag, busco_db, unbinned_contigs, **kwargs)
+        for mag in partitioned_mags.values():  # each mag is a subset of bins
+            (busco_result,) = _evaluate_busco(mag, db, unbinned_contigs, **kwargs)
             results.append(busco_result)
 
-    collated_results, = collate_busco_results(results)
-    visualization, = _visualize_busco(collated_results)
+    (collated_results,) = collate_busco_results(results)
+    (visualization,) = _visualize_busco(collated_results)
 
     return collated_results, visualization

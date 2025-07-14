@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2022-2023, QIIME 2 development team.
+# Copyright (c) 2025, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -22,26 +22,33 @@ from q2_types.kraken2 import (
 
 
 def _run_bracken_one_sample(
-        bracken_db: str, kraken2_report_fp: str, bracken_report_dir: str,
-        tmp_dir: str, threshold: int, read_len: int, level: str
+    bracken_db: str,
+    kraken2_report_fp: str,
+    bracken_report_dir: str,
+    tmp_dir: str,
+    threshold: int,
+    read_len: int,
+    level: str,
 ) -> pd.DataFrame:
-    sample_id = os.path.basename(
-        kraken2_report_fp).replace(".report.txt", "")
-    bracken_output_fp = os.path.join(
-        tmp_dir, f"{sample_id}.bracken.output.txt"
-    )
-    bracken_report_fp = os.path.join(
-        bracken_report_dir, f"{sample_id}.report.txt"
-    )
+    sample_id = os.path.basename(kraken2_report_fp).replace(".report.txt", "")
+    bracken_output_fp = os.path.join(tmp_dir, f"{sample_id}.bracken.output.txt")
+    bracken_report_fp = os.path.join(bracken_report_dir, f"{sample_id}.report.txt")
     cmd = [
         "bracken",
-        "-d", bracken_db,
-        "-i", str(kraken2_report_fp),
-        "-o", bracken_output_fp,
-        "-w", bracken_report_fp,
-        "-t", str(threshold),
-        "-r", str(read_len),
-        "-l", level,
+        "-d",
+        bracken_db,
+        "-i",
+        str(kraken2_report_fp),
+        "-o",
+        bracken_output_fp,
+        "-w",
+        bracken_report_fp,
+        "-t",
+        str(threshold),
+        "-r",
+        str(read_len),
+        "-l",
+        level,
     ]
     try:
         run_command(cmd=cmd, verbose=True)
@@ -60,24 +67,26 @@ def _run_bracken_one_sample(
 
 
 def _estimate_bracken(
-        kraken_reports: Kraken2ReportDirectoryFormat,
-        bracken_db: BrackenDBDirectoryFormat,
-        threshold: int,
-        read_len: int,
-        level: str
+    kraken2_reports: Kraken2ReportDirectoryFormat,
+    db: BrackenDBDirectoryFormat,
+    threshold: int,
+    read_len: int,
+    level: str,
 ) -> (pd.DataFrame, Kraken2ReportDirectoryFormat):
     bracken_tables = []
     bracken_reports = Kraken2ReportDirectoryFormat()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
-            for report_fp in kraken_reports.path.iterdir():
+            for report_fp in kraken2_reports.path.iterdir():
                 bracken_table = _run_bracken_one_sample(
-                    bracken_db=str(bracken_db),
+                    bracken_db=str(db),
                     kraken2_report_fp=report_fp,
                     bracken_report_dir=str(bracken_reports),
-                    tmp_dir=tmpdir, threshold=threshold,
-                    read_len=read_len, level=level
+                    tmp_dir=tmpdir,
+                    threshold=threshold,
+                    read_len=read_len,
+                    level=level,
                 )
                 bracken_tables.append(bracken_table)
         except subprocess.CalledProcessError as e:
@@ -96,10 +105,8 @@ def _estimate_bracken(
     return bracken_table, bracken_reports
 
 
-def _assert_read_lens_available(
-        bracken_db: BrackenDBDirectoryFormat, read_len: int
-):
-    pattern = r'.+database(\d{2,})mers\.kmer_distrib$'
+def _assert_read_lens_available(bracken_db: BrackenDBDirectoryFormat, read_len: int):
+    pattern = r".+database(\d{2,})mers\.kmer_distrib$"
     lengths = []
     for db in bracken_db.path.iterdir():
         lengths.extend(re.findall(pattern, str(db)))
@@ -113,9 +120,7 @@ def _assert_read_lens_available(
 
 
 def _add_unclassified(
-        table: pd.DataFrame,
-        taxonomy: pd.Series,
-        reports: Kraken2ReportDirectoryFormat
+    table: pd.DataFrame, taxonomy: pd.Series, reports: Kraken2ReportDirectoryFormat
 ) -> (pd.DataFrame, pd.Series):
     """
     Adds unclassified read counts from Kraken2 reports to
@@ -152,21 +157,21 @@ def _add_unclassified(
             else:
                 unclassified_counts[sample] = 0
 
-    if found_unclassified and '0' not in taxonomy:
-        taxonomy.loc['0'] = "d__Unclassified"
+    if found_unclassified and "0" not in taxonomy:
+        taxonomy.loc["0"] = "d__Unclassified"
 
-    table['0'] = table.index.map(unclassified_counts).fillna(0)
+    table["0"] = table.index.map(unclassified_counts).fillna(0)
 
     return table, taxonomy
 
 
 def estimate_bracken(
-    kraken_reports: Kraken2ReportDirectoryFormat,
-    bracken_db: BrackenDBDirectoryFormat,
+    kraken2_reports: Kraken2ReportDirectoryFormat,
+    db: BrackenDBDirectoryFormat,
     threshold: int = 0,
     read_len: int = 100,
-    level: str = 'S',
-    include_unclassified: bool = True
+    level: str = "S",
+    include_unclassified: bool = True,
 ) -> (Kraken2ReportDirectoryFormat, pd.DataFrame, pd.DataFrame):
 
     # Check for macOS and raise an error if detected
@@ -176,20 +181,21 @@ def estimate_bracken(
             "due to the unavailability of the Bracken package. Please try it on Linux."
         )
 
-    _assert_read_lens_available(bracken_db, read_len)
+    _assert_read_lens_available(db, read_len)
 
     table, reports = _estimate_bracken(
-        kraken_reports=kraken_reports, bracken_db=bracken_db,
-        threshold=threshold, read_len=read_len, level=level
+        kraken2_reports=kraken2_reports,
+        db=db,
+        threshold=threshold,
+        read_len=read_len,
+        level=level,
     )
 
-    _, taxonomy = kraken2_to_features(
-        reports=reports, coverage_threshold=0.0
-    )
+    _, taxonomy = kraken2_to_features(reports=reports, coverage_threshold=0.0)
 
     if include_unclassified:
         # Bracken does not report unclassified reads in its output table,
         # so we need to re-add them
-        table, taxonomy = _add_unclassified(table, taxonomy, kraken_reports)
+        table, taxonomy = _add_unclassified(table, taxonomy, kraken2_reports)
 
     return reports, taxonomy, table

@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2022-2023, QIIME 2 development team.
+# Copyright (c) 2025, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -10,83 +10,76 @@ from qiime2.core.exceptions import ValidationError
 from qiime2.plugin import model
 from q2_types.feature_data import AlignedProteinFASTAFormat
 
+
 ### NEW ADDED 2 COLUMNS TO THE END of BUSCOResultsFormat
 class BUSCOResultsFormat(model.TextFileFormat):
     HEADER = [
-        "mag_id", "sample_id", "input_file", "dataset", "complete",
-        "single", "duplicated", "fragmented", "missing", "n_markers",
-        "scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds",
-        "length"
+        "mag_id",
+        "sample_id",
+        "input_file",
+        "dataset",
+        "complete",
+        "single",
+        "duplicated",
+        "fragmented",
+        "missing",
+        "n_markers",
+        "scaffold_n50",
+        "contigs_n50",
+        "percent_gaps",
+        "scaffolds",
+        "length",
     ]
-    ### NEW Optional extra columns allowed at the end
-    # OPTIONAL_COLUMNS = ["unbinned_percentage", "absolute_unbinned_count"]
-    OPTIONAL_COLUMNS = ["unbinned_contigs", "unbinned_contigs_count"]
+    OPTIONAL_UNBINNED = ["unbinned_contigs", "unbinned_contigs_count"]
+    OPTIONAL_COMPLETENESS = ["completeness", "contamination"]
 
     def _validate(self, n_records=None):
         with self.open() as fh:
-            reader = csv.reader(fh, delimiter='\t')
+            reader = csv.reader(fh, delimiter="\t")
             headers = next(reader)
-#change this statement!! subset + additional check 1-set
-            expected_full_header = self.HEADER + self.OPTIONAL_COLUMNS
-            # Check if headers are a subset of the full expected list,
-            # and that the first required part matches exactly in order
-            #use set / HEADER must be a subset of the header file/don't care about the order 
-            
-            if set(headers[:len(self.HEADER)]) != set(self.HEADER):
-                raise ValidationError(
-                    f'Invalid header: {headers}, expected: {self.HEADER}'
-                )
-            # if set(headers) != set(self.HEADER):
-            #     raise ValidationError(
-            #         f'Invalid header: {headers}, expected: {self.HEADER}'
-            #     )
-            #optional columns update len  
-            extra_cols = headers[len(self.HEADER):]
-            # In case of additional columns, check if appropriate ones 
-            if extra_cols and set(extra_cols) != set(self.OPTIONAL_COLUMNS):
-                raise ValidationError(
-                    f"Unexpected columns found: {extra_cols}. "
-                    f"Only allowed optional columns are: {self.OPTIONAL_COLUMNS}"
-                )
-            if set(extra_cols) == set(self.OPTIONAL_COLUMNS):
-                header_legth = len(self.HEADER) + len(self.OPTIONAL_COLUMNS)
-            else:
-                header_legth = len(self.HEADER)
 
-#also check the #col
-            # if len(headers) not in (len(self.HEADER), len(self.HEADER) + len(self.OPTIONAL_COLUMNS)):
-            #     raise ValidationError(
-            #         f"Header has {len(headers)} columns, expected {len(self.HEADER)} "
-            #         f"or {len(self.HEADER) + len(self.OPTIONAL_COLUMNS)}"
-            #     )
-#new ends
+            if set(headers[: len(self.HEADER)]) != set(self.HEADER):
+                raise ValidationError(
+                    f"Invalid header: {headers}, expected: {self.HEADER}"
+                )
+            extra_cols = headers[len(self.HEADER) :]
+            # Define all valid header combinations (unordered)
+            valid_optional_sets = [
+                set(self.OPTIONAL_UNBINNED),
+                set(self.OPTIONAL_COMPLETENESS),
+                set(self.OPTIONAL_UNBINNED + self.OPTIONAL_COMPLETENESS),
+            ]
+            # In case of additional columns, check whether they are valid
+            # and set the header length accordingly
+            if extra_cols and set(extra_cols) in valid_optional_sets:
+                header_length = len(self.HEADER) + len(extra_cols)
+            elif extra_cols and set(extra_cols) not in valid_optional_sets:
+                raise ValidationError(
+                    f"Unexpected optional columns found: {extra_cols}\n\n"
+                    f"Only the following optional column sets are allowed:\n"
+                    f"- {self.OPTIONAL_UNBINNED}\n"
+                    f"- {self.OPTIONAL_COMPLETENESS}\n"
+                    f"- {self.OPTIONAL_COMPLETENESS + self.OPTIONAL_UNBINNED}"
+                )
+            else:
+                header_length = len(self.HEADER)
+
             for i, row in enumerate(reader, start=2):
-                if len(row) != header_legth:
+                if len(row) != header_length:
                     raise ValidationError(
-                        f'Line {i} has {len(row)} columns, '
-                        f'expected {len(self.HEADER)}'
+                        f"Line {i} has {len(row)} columns, " f"expected {header_length}"
                     )
 
                 if n_records is not None and i - 1 >= n_records:
                     break
-            # for i, row in enumerate(reader, start=2):
-            #     if len(row) != len(self.HEADER):
-            #         raise ValidationError(
-            #             f'Line {i} has {len(row)} columns, '
-            #             f'expected {len(self.HEADER)}'
-            #         )
-
-            #     if n_records is not None and i - 1 >= n_records:
-            #         break
 
     def _validate_(self, level):
-        record_count_map = {'min': 100, 'max': None}
+        record_count_map = {"min": 100, "max": None}
         self._validate(record_count_map[level])
 
 
 BUSCOResultsDirectoryFormat = model.SingleFileDirectoryFormat(
-    'BUSCOResultsDirectoryFormat', 'busco_results.tsv',
-    BUSCOResultsFormat
+    "BUSCOResultsDirectoryFormat", "busco_results.tsv", BUSCOResultsFormat
 )
 
 
@@ -101,38 +94,38 @@ class BuscoGenericBinaryFileFmt(model.BinaryFileFormat):
 
 
 class BuscoDatabaseDirFmt(model.DirectoryFormat):
-    # File collections for text files
+    # File collections for text files.
+    # Optional because some of those are not present in some lineages.
     (
         ancestral,
-        dataset,
-        lengths_cutoff,
-        scores_cutoff,
-        links_to_ODB,
         ancestral_variants,
-        ogs_id,
-        species,
+        dataset,
         hmms,
-        refseq_db_md5
+        lengths_cutoff,
+        links_to_ODB,
+        ogs_id,
+        refseq_db_md5,
+        scores_cutoff,
+        species,
     ) = [
-            model.FileCollection(
-                rf"busco_downloads\/lineages\/.+\/{pattern}",
-                format=BuscoGenericTextFileFmt
-            )
-            for pattern in [
-                r'ancestral$',
-                r'dataset\.cfg$',
-                r'lengths_cutoff$',
-                r'scores_cutoff$',
-                r'links_to_ODB.+\.txt$',
-                r'ancestral_variants$',
-                r'info\/ogs\.id\.info$',
-                r'info\/species\.info$',
-                r'hmms\/.+\.hmm$',
-                r'refseq_db\.faa\.gz\.md5'
-            ]
+        model.FileCollection(
+            rf"lineages\/.+\/{pattern}", format=BuscoGenericTextFileFmt, optional=True
+        )
+        for pattern in [
+            r"ancestral$",
+            r"ancestral_variants$",
+            r"dataset\.cfg$",
+            r"hmms\/.+\.hmm$",
+            r"lengths_cutoff$",
+            r"links_to_ODB.+\.txt$",
+            r"info\/ogs\.id\.info$",
+            r"refseq_db\.faa\.gz\.md5",
+            r"scores_cutoff$",
+            r"info\/species\.info$",
         ]
+    ]
 
-    # Placement_files. Optional because they are not in virus DB
+    # Placement files. Optional because they are not in virus DB
     (
         list_of_reference_markers,
         mapping_taxid_lineage,
@@ -140,52 +133,45 @@ class BuscoDatabaseDirFmt(model.DirectoryFormat):
         tree,
         tree_metadata,
     ) = [
-            model.FileCollection(
-                rf"busco_downloads\/placement_files\/{pattern}",
-                format=BuscoGenericTextFileFmt,
-                optional=True
-            )
-            for pattern in [
-                r'list_of_reference_markers\..+\.txt$',
-                r'mapping_taxid-lineage\..+\.txt$',
-                r'mapping_taxids-busco_dataset_name\..+\.txt$',
-                r'tree\..+\.nwk$',
-                r'tree_metadata\..+\.txt$',
-            ]
+        model.FileCollection(
+            rf"placement_files\/{pattern}",
+            format=BuscoGenericTextFileFmt,
+            optional=True,
+        )
+        for pattern in [
+            r"list_of_reference_markers\..+\.txt$",
+            r"mapping_taxid-lineage\..+\.txt$",
+            r"mapping_taxids-busco_dataset_name\..+\.txt$",
+            r"tree\..+\.nwk$",
+            r"tree_metadata\..+\.txt$",
         ]
+    ]
 
     # Others
     supermatrix_aln = model.FileCollection(
-        r'busco_downloads\/placement_files\/supermatrix\.aln\..+\.faa$',
+        r"placement_files\/supermatrix\.aln\..+\.faa$",
         format=AlignedProteinFASTAFormat,
-        optional=True
+        optional=True,
     )
     prfls = model.FileCollection(
-        r'busco_downloads\/lineages\/.+\/prfl\/.+\.prfl$',
-        format=BuscoGenericTextFileFmt,
-        optional=True
+        r"lineages\/.+\/prfl\/.+\.prfl$", format=BuscoGenericTextFileFmt, optional=True
     )
-    version_file = model.File(
-        'busco_downloads/file_versions.tsv', format=BuscoGenericTextFileFmt
-    )
+    version_file = model.File("file_versions.tsv", format=BuscoGenericTextFileFmt)
     refseq_db = model.FileCollection(
-        r'busco_downloads\/lineages\/.+refseq_db\.faa\.gz',
-        format=BuscoGenericBinaryFileFmt
+        r"lineages\/.+refseq_db\.faa(\.gz)?",
+        format=BuscoGenericBinaryFileFmt,
+        optional=True,
     )
     information = model.FileCollection(
-        r'busco_downloads\/information\/.+\.txt$',
-        format=BuscoGenericTextFileFmt,
-        optional=True
+        r"information\/.+\.txt$", format=BuscoGenericTextFileFmt, optional=True
     )
     missing_parasitic = model.File(
-        r'busco_downloads\/lineages\/.+\/missing_in_parasitic\.txt$',
+        r"lineages\/.+\/missing_in_parasitic\.txt$",
         format=BuscoGenericTextFileFmt,
-        optional=True
+        optional=True,
     )
     no_hits = model.File(
-        r'busco_downloads\/lineages\/.+\/no_hits$',
-        format=BuscoGenericTextFileFmt,
-        optional=True
+        r"lineages\/.+\/no_hits$", format=BuscoGenericTextFileFmt, optional=True
     )
 
     def _path_maker(self, name):

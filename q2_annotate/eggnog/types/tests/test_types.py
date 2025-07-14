@@ -1,18 +1,16 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2023, QIIME 2 development team.
+# Copyright (c) 2025, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 from qiime2.plugin.testing import TestPluginBase
-from q2_annotate.eggnog.types import (
-    EggnogHmmerIdmap, EggnogHmmerIdmapDirectoryFmt
-)
+from q2_annotate.eggnog.types import EggnogHmmerIdmap, EggnogHmmerIdmapDirectoryFmt
 
 
 class TestEggnogHmmerIdmap(TestPluginBase):
-    package = 'q2_annotate.eggnog.tests'
+    package = "q2_annotate.eggnog.tests"
 
     def test_hmmer_registration(self):
         self.assertRegisteredSemanticType(EggnogHmmerIdmap)

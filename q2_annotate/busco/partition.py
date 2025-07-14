@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2022-2023, QIIME 2 development team.
+# Copyright (c) 2025, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -13,20 +13,20 @@ from q2_annotate.busco.types import BUSCOResultsDirectoryFormat
 
 
 def collate_busco_results(
-    busco_results: BUSCOResultsDirectoryFormat,
+    results: BUSCOResultsDirectoryFormat,
 ) -> BUSCOResultsDirectoryFormat:
     collated_results = BUSCOResultsDirectoryFormat()
 
-    results = []
-    for result in busco_results:
-        df = pd.read_csv(
-            result.path / "busco_results.tsv", sep='\t', index_col=0
-        )
-        results.append(df)
+    result_dfs = []
+    for result in results:
+        df = pd.read_csv(result.path / "busco_results.tsv", sep="\t", index_col=0)
+        result_dfs.append(df)
 
-    pd.concat(results).to_csv(
-        os.path.join(collated_results.path, 'busco_results.tsv'),
-        sep='\t', index=True, header=True
+    pd.concat(result_dfs).to_csv(
+        os.path.join(collated_results.path, "busco_results.tsv"),
+        sep="\t",
+        index=True,
+        header=True,
     )
 
     return collated_results
