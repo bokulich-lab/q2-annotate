@@ -22,31 +22,20 @@ from q2_annotate.busco.utils import (
     _validate_parameters,
     _calculate_contamination_completeness,
     _process_busco_results,
-    calculate_unbinned_percentage,
-    count_contigs,
-    filter_unbinned_for_partition,
-    get_fasta_files_from_dir,
+    _calculate_unbinned_percentage,
+    _count_contigs,
+    _filter_unbinned_for_partition,
+    _get_fasta_files_from_dir,
 )
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
-
-# from q2_annotate.busco.busco import (
-#     calculate_unbinned_percentage,
-#     count_contigs,
-#     filter_unbinned_for_partition,
-#     get_fasta_files_from_dir,
-# )
 from q2_types.per_sample_sequences import ContigSequencesDirFmt
-
-# ?
 from unittest.mock import patch, ANY, call, MagicMock
-
 from q2_types.per_sample_sequences._methods import partition_sample_data_mags
 from q2_assembly.filter import filter_contigs
 from qiime2 import Metadata
 from pathlib import Path
-import warnings
 from qiime2 import Artifact
 
 
@@ -574,8 +563,8 @@ class TestBUSCOUtils(TestPluginBase):
         # )
         sample_path = Path(self.get_data_path("mags")) / "sample1"
         # Extract all FASTA files from the directory
-        fasta_files = get_fasta_files_from_dir(sample_path)
-        count = count_contigs(fasta_files)
+        fasta_files = _get_fasta_files_from_dir(sample_path)
+        count = _count_contigs(fasta_files)
         self.assertEqual(count, 7)
 
     def test_count_unbinned_contigs(self):
@@ -585,7 +574,7 @@ class TestBUSCOUtils(TestPluginBase):
         # )
         sample_path = Path(self.get_data_path("unbinned")) / "sample1_contigs.fa"
 
-        count = count_contigs([sample_path])
+        count = _count_contigs([sample_path])
         # 3+2=5
         self.assertEqual(count, 3)
 
@@ -594,12 +583,12 @@ class TestBUSCOUtils(TestPluginBase):
         mag_sample_path = Path(self.get_data_path("mags")) / "sample1"
         # Extract all FASTA files from the directory
         # mag_sample_files = [fp for fp in mag_sample_path.glob("*") if fp.suffix in {".fa", ".fasta", ".fna"}]
-        mag_sample_files = get_fasta_files_from_dir(mag_sample_path)
+        mag_sample_files = _get_fasta_files_from_dir(mag_sample_path)
         # mags_count = count_contigs(mags)
         unbinned_sample_path = (
             Path(self.get_data_path("unbinned")) / "sample1_contigs.fa"
         )
-        percentage, count = calculate_unbinned_percentage(
+        percentage, count = _calculate_unbinned_percentage(
             mag_sample_files, [unbinned_sample_path]
         )
 
@@ -617,13 +606,13 @@ class TestBUSCOUtils(TestPluginBase):
         # mags_count = count_contigs(mags)
         mag_sample_path = Path(self.get_data_path("mags")) / "sample1"
         # Extract all files from the directory
-        mag_sample_files = get_fasta_files_from_dir(mag_sample_path)
+        mag_sample_files = _get_fasta_files_from_dir(mag_sample_path)
         # mags_count = count_contigs(mags)
         unbinned_sample_path = (
             Path(self.get_data_path("unbinned_empty")) / "sample1_contigs.fa"
         )
 
-        percentage, count = calculate_unbinned_percentage(
+        percentage, count = _calculate_unbinned_percentage(
             mag_sample_files, [unbinned_sample_path]
         )
         # Type and range checks
@@ -632,43 +621,17 @@ class TestBUSCOUtils(TestPluginBase):
         self.assertEqual(count, 0)
         self.assertEqual(percentage, 0.0)
 
-    # def test_partial_unbinned(self):
-
-    #     # mags_count = count_contigs(mags)
-    #     percentage, count = calculate_unbinned_percentage(mags, unbinned)
-
-    #     expected_count = 3
-    #     expected_percentage = (3 / (3 + 15)) * 100
-
-    #     self.assertEqual(count, expected_count)
-    #     self.assertEqual(percentage, expected_percentage)
-
-    # def test_no_contigs_at_all(self):
-    #     mags = MultiMAGSequencesDirFmt(
-    #         path=self.get_data_path('mags_empty'),  # no .fasta files
-    #         mode='r'
-    #     )
-    #     unbinned = ContigSequencesDirFmt(
-    #         path=self.get_data_path('unbinned_empty'),  # empty .fasta files
-    #         mode='r'
-    #     )
-    #     # mags_count = count_contigs(mags)
-    #     percentage, count = calculate_unbinned_percentage(mags, unbinned)
-
-    #     self.assertEqual(count, 0)
-    #     self.assertEqual(percentage, 0.0)
-
     def test_only_unbinned(self):
         # mags_count = count_contigs(mags)
         mag_sample_path = Path(self.get_data_path("mags_empty")) / "sample1"
         # Extract all files from the directory
-        mag_sample_files = get_fasta_files_from_dir(mag_sample_path)
+        mag_sample_files = _get_fasta_files_from_dir(mag_sample_path)
         # mags_count = count_contigs(mags)
         unbinned_sample_path = (
             Path(self.get_data_path("unbinned")) / "sample1_contigs.fa"
         )
 
-        percentage, count = calculate_unbinned_percentage(
+        percentage, count = _calculate_unbinned_percentage(
             mag_sample_files, [unbinned_sample_path]
         )
         expected_count = 3
@@ -691,7 +654,7 @@ class TestBUSCOUtils(TestPluginBase):
         mock_filter_contigs = MagicMock(return_value=("filtered_result",))
 
         # Call function under test
-        filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
+        _filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
 
         # Check arguments passed to the mock action
         mock_filter_contigs.assert_called_once_with(
@@ -714,7 +677,7 @@ class TestBUSCOUtils(TestPluginBase):
         mock_filter_contigs = MagicMock(return_value=("filtered_result",))
 
         # Call function under test
-        filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
+        _filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
 
         # Check arguments passed to the mock action
         mock_filter_contigs.assert_called_once_with(

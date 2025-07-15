@@ -148,6 +148,7 @@ class TestBUSCOFeatureData(TestPluginBase):
             "scatter_json": json.dumps({"fake4": {"plot": "null"}}),
             "comp_cont": True,
             "unbinned": False,
+            "vega_selectable_unbinned_json": None,
             "page_size": 100,
         }
         mock_render.assert_called_with(ANY, self.temp_dir.name, context=exp_context)

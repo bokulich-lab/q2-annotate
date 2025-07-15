@@ -419,7 +419,7 @@ def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
         return pd.Series(lengths, name="length")
 
 
-def filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
+def _filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
     """
     Filters the unbinned contigs to match the sample IDs in a MAG partition.
 
@@ -441,12 +441,12 @@ def filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_conti
     return filtered_unbinned
 
 
-def get_fasta_files_from_dir(directory: Path) -> list:
+def _get_fasta_files_from_dir(directory: Path) -> list:
     # Only match FASTA extensions starting with '.fa' or '.fna'
     return [f for f in directory.glob("*") if f.suffix in {".fa", ".fasta"}]
 
 
-def count_contigs(file_paths: List[Path]) -> int:
+def _count_contigs(file_paths: List[Path]) -> int:
     """
     Count the number of DNA sequences across a list of FASTA files.
 
@@ -470,7 +470,7 @@ def count_contigs(file_paths: List[Path]) -> int:
     return total_sequences
 
 
-def calculate_unbinned_percentage(
+def _calculate_unbinned_percentage(
     mags_per_sample, unbinned_contigs_per_sample
 ) -> tuple[float, int]:
     """
@@ -494,8 +494,8 @@ def calculate_unbinned_percentage(
         The number of unbinned contigs in this sample.
     """
     # Count sequences
-    binned_contigs = count_contigs(mags_per_sample)
-    unbinned_contigs_count = count_contigs(unbinned_contigs_per_sample)
+    binned_contigs = _count_contigs(mags_per_sample)
+    unbinned_contigs_count = _count_contigs(unbinned_contigs_per_sample)
 
     # Calculate percentage
     total = binned_contigs + unbinned_contigs_count

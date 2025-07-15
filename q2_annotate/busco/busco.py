@@ -35,9 +35,9 @@ from q2_annotate.busco.utils import (
     _extract_json_data,
     _validate_parameters,
     _process_busco_results,
-    filter_unbinned_for_partition,
-    get_fasta_files_from_dir,
-    calculate_unbinned_percentage,
+    _calculate_unbinned_percentage,
+    _filter_unbinned_for_partition,
+    _get_fasta_files_from_dir,
 )
 
 from q2_annotate._utils import _process_common_input_params, run_command
@@ -160,8 +160,8 @@ def _evaluate_busco(
         busco_results["unbinned_contigs_count"] = pd.NA
         for unbinned_id, unbinned_path in unbinned_contigs.sample_dict().items():
             binned_dir = mags.path / unbinned_id
-            binned_fasta_paths = get_fasta_files_from_dir(binned_dir)
-            percentage, count = calculate_unbinned_percentage(
+            binned_fasta_paths = _get_fasta_files_from_dir(binned_dir)
+            percentage, count = _calculate_unbinned_percentage(
                 binned_fasta_paths, [unbinned_path]
             )
             busco_results.loc[
@@ -196,24 +196,13 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
                 _draw_selectable_summary_histograms(results)
             ).replace("NaN", "null"),
         }
-        if (
-            "unbinned_contigs" in results.columns
-            and "unbinned_contigs_count" in results.columns
-        ):
-            tabbed_context["vega_selectable_unbinned_json"] = json.dumps(
-                _draw_selectable_unbinned_histograms(results)
-            ).replace("NaN", "null")
-            unbinned = True
-        else:
-            tabbed_context["vega_selectable_unbinned_json"] = None
-            unbinned = False
     else:
         counter_col = "mag_id"
         tab_title = ["BUSCO plots", "BUSCO table"]
         assets_subdir = "feature_data"
         is_sample_data = False
         tabbed_context = {}  # Init as empty bc we update it below
-        unbinned = False
+        # unbinned = False
 
     dfs = _partition_dataframe(results, max_rows, is_sample_data)
 
@@ -279,7 +268,17 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     else:
         scatter_json = None
         comp_cont = False
-
+    if (
+        "unbinned_contigs" in results.columns
+        and "unbinned_contigs_count" in results.columns
+    ):
+        tabbed_context["vega_selectable_unbinned_json"] = json.dumps(
+            _draw_selectable_unbinned_histograms(results)
+        ).replace("NaN", "null")
+        unbinned = True
+    else:
+        tabbed_context["vega_selectable_unbinned_json"] = None
+        unbinned = False
     tabbed_context.update(
         {
             "tabs": [
@@ -356,7 +355,7 @@ def evaluate_busco(
     results = []
     if mags.type <= SampleData[MAGs]:
         for partition_id, mag_partition in partitioned_mags.items():
-            filtered_unbinned = filter_unbinned_for_partition(
+            filtered_unbinned = _filter_unbinned_for_partition(
                 unbinned_contigs, mag_partition, _filter_contigs
             )
             (busco_result,) = _evaluate_busco(
