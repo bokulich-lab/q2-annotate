@@ -81,8 +81,6 @@ from q2_types.reference_db import (
     EggnogProteinSequences,
 )
 
-from q2_annotate.filtering.filter_reads import filter_reads
-
 citations = Citations.load("citations.bib", package="q2_annotate")
 
 kraken2_params = {
@@ -2056,21 +2054,6 @@ plugin.pipelines.register_function(
     ),
 )
 
-T = TypeMatch([SequencesWithQuality, PairedEndSequencesWithQuality])
-plugin.methods.register_function(
-    function=filter_reads,
-    inputs={"reads": SampleData[T]},
-    parameters=filter_params,
-    outputs=[("filtered_reads", SampleData[T])],
-    input_descriptions={"reads": "Paired-end or single-end reads to filter."},
-    parameter_descriptions={
-        **filter_param_descriptions,
-        "remove_empty": "Remove samples with empty files.",
-    },
-    output_descriptions={"filtered_reads": "Filtered paired-end or single-end reads."},
-    name="Filter reads.",
-    description="Filter reads based on metadata and remove empty samples.",
-)
 
 plugin.register_semantic_types(BUSCOResults, BUSCO)
 plugin.register_formats(

@@ -14,8 +14,6 @@ from qiime2.util import duplicate
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 
-from q2_annotate.filtering.utils import _filter_ids
-
 
 def _filter_manifest(
     manifest: pd.DataFrame, ids_to_keep: set, on: str = "mag"
@@ -98,6 +96,8 @@ def filter_derep_mags(
     exclude_ids: bool = False,
     remove_empty: bool = False,
 ) -> MAGSequencesDirFmt:
+    _validate_parameters(metadata, where, remove_empty)
+
     results = MAGSequencesDirFmt()
     features = mags.feature_dict()
     ids_to_keep = set(features.keys())
@@ -126,6 +126,8 @@ def filter_mags(
     on: str = "mag",
     remove_empty: bool = False,
 ) -> MultiMAGSequencesDirFmt:
+    _validate_parameters(metadata, where, remove_empty)
+
     results = MultiMAGSequencesDirFmt()
     mags_df = _mags_to_df(mags, on)
     sample_dict = mags.sample_dict()
@@ -158,3 +160,48 @@ def filter_mags(
         raise ValueError(f"{_id!r} is not a MAG present in the input data.")
 
     return results
+
+
+def _filter_ids(
+    ids: set, metadata: Metadata = None, where: str = None, exclude_ids: bool = False
+) -> set:
+    """
+    Filters IDs based on the provided metadata.
+
+    Parameters:
+        ids (set): The set of IDs to filter.
+        metadata (Metadata, optional): The metadata to use for filtering.
+            Defaults to None.
+        where (str, optional): The condition to use for filtering.
+            Defaults to None.
+        exclude_ids (bool, optional): Whether to exclude the IDs that
+            match the condition. Defaults to False.
+
+    Returns:
+        set: The filtered set of IDs.
+    """
+    selected_ids = metadata.get_ids(where=where)
+    if not selected_ids:
+        print("The filter query returned no IDs to filter out.")
+    else:
+        if exclude_ids:
+            ids -= set(selected_ids)
+        else:
+            ids &= set(selected_ids)
+    print(f"Found {len(ids)} IDs to keep.")
+
+    return ids
+
+
+def _validate_parameters(metadata, where, remove_empty):
+    if not any([metadata, remove_empty]):
+        raise ValueError(
+            "At least one of the following parameters must be provided: "
+            "metadata, remove_empty."
+        )
+
+    if metadata and not where:
+        raise ValueError(
+            "A filter query must be provided through the 'where' parameter "
+            "when filtering by metadata."
+        )

@@ -34,14 +34,13 @@ from q2_annotate.filtering.filter_mags import (
     filter_derep_mags,
     filter_mags,
     _find_empty_mags,
+    _validate_parameters,
 )
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import (
     MultiMAGSequencesDirFmt,
     CasavaOneEightSingleLanePerSampleDirFmt,
 )
-
-from q2_annotate.filtering.filter_reads import _filter_empty, filter_reads
 
 
 class TestMAGFiltering(TestPluginBase):
@@ -438,48 +437,13 @@ class TestMAGFiltering(TestPluginBase):
         )
         self.assertIsNotNone(generated_index)
 
-    def test_filter_empty(self):
-        obs = _filter_empty(self.reads.manifest)
-        exp = ["sample1"]
-        self.assertListEqual(obs, exp)
-
-    def test_filter_reads(self):
-        obs = filter_reads(
-            self.reads, self.metadata_reads, where="metric<5", remove_empty=True
-        )
-        self.assertTrue(
-            os.path.exists(os.path.join(obs.path, "sample3_00_L001_R1_001.fastq.gz"))
-        )
-        self.assertTrue(
-            os.path.exists(os.path.join(obs.path, "sample3_00_L001_R2_001.fastq.gz"))
-        )
-        self.assertTrue(len([f for f in obs.path.iterdir() if f.is_file()]) == 2)
-
-    def test_filter_reads_feature_data(self):
-        obs = filter_reads(
-            self.feature_data_reads,
-            self.metadata_reads,
-            where="metric<5",
-            remove_empty=True,
-        )
-        self.assertTrue(
-            os.path.exists(os.path.join(obs.path, "sample3_00_L001_R1_001.fastq.gz"))
-        )
-        self.assertTrue(len([f for f in obs.path.iterdir() if f.is_file()]) == 1)
-
-    def test_filter_reads_no_ids_to_keep_error(self):
-        with self.assertRaisesRegex(ValueError, "no samples left after filtering"):
-            filter_reads(
-                self.reads, self.metadata_reads, where="metric<100", exclude_ids=True
-            )
-
-    def test_filter_reads_metadata_where_error(self):
+    def test_validate_parameters_metadata_where_error(self):
         with self.assertRaisesRegex(ValueError, "A filter query must be provided"):
-            filter_reads(self.reads, self.metadata_reads)
+            _validate_parameters("metadata", None, None)
 
-    def test_filter_reads_no_parameter_error(self):
+    def test_validate_parameters_no_parameter_error(self):
         with self.assertRaisesRegex(ValueError, "At least one of the followin"):
-            filter_reads(self.reads)
+            _validate_parameters(None, None, None)
 
 
 if __name__ == "__main__":
