@@ -37,10 +37,7 @@ from q2_annotate.filtering.filter_mags import (
     _validate_parameters,
 )
 from q2_types.feature_data_mag import MAGSequencesDirFmt
-from q2_types.per_sample_sequences import (
-    MultiMAGSequencesDirFmt,
-    CasavaOneEightSingleLanePerSampleDirFmt,
-)
+from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 
 
 class TestMAGFiltering(TestPluginBase):
@@ -55,18 +52,6 @@ class TestMAGFiltering(TestPluginBase):
                 "complete": [20.0, 98.0, 68.5, 100.0, 98.0, 21.3],
             },
             index=pd.Index(["mag1", "mag2", "mag3", "mag4", "mag5", "mag6"], name="id"),
-        )
-        instance = cls()
-        cls.reads = CasavaOneEightSingleLanePerSampleDirFmt(
-            instance.get_data_path("reads"), mode="r"
-        )
-        cls.feature_data_reads = CasavaOneEightSingleLanePerSampleDirFmt(
-            instance.get_data_path("feature_data_reads"), mode="r"
-        )
-        cls.metadata_reads = qiime2.Metadata(
-            pd.read_csv(
-                instance.get_data_path("metadata-reads.tsv"), sep="\t", index_col=0
-            )
         )
 
     def setUp(self):
