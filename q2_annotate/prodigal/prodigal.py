@@ -21,6 +21,12 @@ from q2_types.genome_data import (
 def predict_genes_prodigal(
     seqs: Union[MAGSequencesDirFmt, MultiMAGSequencesDirFmt, ContigSequencesDirFmt],
     translation_table_number: str = "11",
+    mode: str = "single",
+    closed: bool = False,
+    no_shine_dalgarno: bool = False,
+    start_cds: bool = False,
+    mask: bool = False,
+    quiet: bool = False,
 ) -> (LociDirectoryFormat, GenesDirectoryFormat, ProteinsDirectoryFormat):
 
     # Instantiate output directories
@@ -30,6 +36,20 @@ def predict_genes_prodigal(
 
     # Define base command
     base_cmd = ["prodigal", "-g", translation_table_number, "-f", "gff"]
+    
+    # Add conditional parameters
+    if mode != "single":  # single is default prodigal behavior when -p is not specified
+        base_cmd.extend(["-p", mode])
+    if closed:
+        base_cmd.append("-c")
+    if no_shine_dalgarno:
+        base_cmd.append("-n")
+    if start_cds:
+        base_cmd.append("-s")
+    if mask:
+        base_cmd.append("-m")
+    if quiet:
+        base_cmd.append("-q")
 
     def _run_prodigal(path_to_input: str, _id: str, subdir: str = None):
         # If subdirectory is not None, append a "/" s.t. the command

@@ -172,3 +172,68 @@ class TestBUSCO(TestPluginBase):
             ],
             check=True,
         )
+
+    @patch("subprocess.run")
+    def test_run_prodigal_with_meta_mode(self, subp_run):
+        contigs = ContigSequencesDirFmt(self.get_data_path("contigs"), mode="r")
+        loci, genes, prot = predict_genes_prodigal(seqs=contigs, mode="meta")
+
+        subp_run.assert_called_once_with(
+            [
+                "prodigal",
+                "-g",
+                "11",
+                "-f",
+                "gff",
+                "-p",
+                "meta",
+                "-i",
+                os.path.join(contigs.path, "sample1_contigs.fasta"),
+                "-o",
+                os.path.join(loci.path, "sample1.gff"),
+                "-a",
+                os.path.join(prot.path, "sample1.fasta"),
+                "-d",
+                os.path.join(genes.path, "sample1.fasta"),
+            ],
+            check=True,
+        )
+
+    @patch("subprocess.run")
+    def test_run_prodigal_with_all_flags(self, subp_run):
+        contigs = ContigSequencesDirFmt(self.get_data_path("contigs"), mode="r")
+        loci, genes, prot = predict_genes_prodigal(
+            seqs=contigs,
+            mode="meta",
+            closed=True,
+            no_shine_dalgarno=True,
+            start_cds=True,
+            mask=True,
+            quiet=True,
+        )
+
+        subp_run.assert_called_once_with(
+            [
+                "prodigal",
+                "-g",
+                "11",
+                "-f",
+                "gff",
+                "-p",
+                "meta",
+                "-c",
+                "-n",
+                "-s",
+                "-m",
+                "-q",
+                "-i",
+                os.path.join(contigs.path, "sample1_contigs.fasta"),
+                "-o",
+                os.path.join(loci.path, "sample1.gff"),
+                "-a",
+                os.path.join(prot.path, "sample1.fasta"),
+                "-d",
+                os.path.join(genes.path, "sample1.fasta"),
+            ],
+            check=True,
+        )
