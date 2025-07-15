@@ -103,39 +103,15 @@ class TestMAGFiltering(TestPluginBase):
 
     def test_filter_manifest_mags(self):
         ids = {"mag1", "mag2", "mag5"}
-        obs = _filter_manifest(self.manifest_df, ids, on="mag")
+        obs = _filter_manifest(self.manifest_df, ids)
         exp = self.manifest_df[
             self.manifest_df.index.get_level_values("mag-id").isin(ids)
         ]
         pd.testing.assert_frame_equal(obs, exp)
 
-    def test_filter_manifest_samples(self):
-        ids = {
-            "id1",
-        }
-        obs = _filter_manifest(self.manifest_df, ids, on="sample")
-        exp = self.manifest_df[
-            self.manifest_df.index.get_level_values("sample-id").isin(ids)
-        ]
-        pd.testing.assert_frame_equal(obs, exp)
-
-    def test_filter_manifest_error(self):
-        ids = {
-            "id1",
-        }
-        with self.assertRaisesRegex(ValueError, "parameter: unicorn"):
-            _filter_manifest(self.manifest_df, ids, on="unicorn")
-
-    def test_mags_to_df_on_sample(self):
-        mags = MultiMAGSequencesDirFmt(self.mag_data_dir, mode="r")
-        obs = _mags_to_df(mags, on="sample")
-        exp = self.mag_df
-        exp.set_index("sample_id", inplace=True)
-        pd.testing.assert_frame_equal(obs, exp)
-
     def test_mags_to_df_on_mag(self):
         mags = MultiMAGSequencesDirFmt(self.mag_data_dir, mode="r")
-        obs = _mags_to_df(mags, on="mag")
+        obs = _mags_to_df(mags.sample_dict())
         exp = self.mag_df
         exp.set_index("mag_id", inplace=True)
         pd.testing.assert_frame_equal(obs, exp)
@@ -150,6 +126,15 @@ class TestMAGFiltering(TestPluginBase):
         obs_features = obs.feature_dict()
         exp_features = ["db03f8b6-28e1-48c5-a47c-9c65f38f7357"]
         self.assertListEqual(list(obs_features.keys()), exp_features)
+
+    def test_filter_derep_mags_no_mags_remain(self):
+        mags = MAGSequencesDirFmt(self.mag_derep_data_dir, mode="r")
+        metadata = BUSCOResultsFormat(
+            self.get_data_path("metadata-derep.tsv"), mode="r"
+        ).view(qiime2.Metadata)
+
+        with self.assertRaisesRegex(ValueError, "No MAGs remain"):
+            filter_derep_mags(mags, metadata, where="complete<1")
 
     def test_filter_mags_remove_empty(self):
         mags = MultiMAGSequencesDirFmt(self.mag_data_dir, mode="r")
@@ -169,8 +154,8 @@ class TestMAGFiltering(TestPluginBase):
 
     def test_find_empty_mags(self):
         mags = MultiMAGSequencesDirFmt(self.mag_data_dir, mode="r")
-        sample_dict = mags.sample_dict()
-        empty_mags = _find_empty_mags(sample_dict)
+        mags_df = _mags_to_df(mags.sample_dict())
+        empty_mags = _find_empty_mags(mags_df)
         self.assertEqual(empty_mags, {"28f9219f-83c5-42ea-a1d9-1e20df03c707"})
 
     def test_filter_derep_mags_remove_empty(self):
@@ -216,6 +201,25 @@ class TestMAGFiltering(TestPluginBase):
 
         obs_feature_count = len(obs.sample_dict()["sample2"])
         exp_feature_count = 2
+        self.assertEqual(obs_feature_count, exp_feature_count)
+
+    def test_filter_mags_samples_empty(self):
+        mags = MultiMAGSequencesDirFmt(self.mag_data_dir, mode="r")
+        metadata = qiime2.Metadata(
+            pd.read_csv(
+                self.get_data_path("metadata-sample.tsv"), sep="\t", index_col=0
+            )
+        )
+
+        obs = filter_mags(
+            mags, metadata, where="metric>5", on="sample", remove_empty=True
+        )
+        obs_samples = obs.sample_dict()
+        exp_samples = ["sample1"]
+        self.assertListEqual(list(obs_samples.keys()), exp_samples)
+
+        obs_feature_count = len(obs.sample_dict()["sample1"])
+        exp_feature_count = 1
         self.assertEqual(obs_feature_count, exp_feature_count)
 
     @patch("shutil.move")
