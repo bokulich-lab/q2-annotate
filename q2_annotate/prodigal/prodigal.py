@@ -21,12 +21,10 @@ from q2_types.genome_data import (
 def predict_genes_prodigal(
     seqs: Union[MAGSequencesDirFmt, MultiMAGSequencesDirFmt, ContigSequencesDirFmt],
     translation_table_number: str = "11",
-    mode: str = "single",
+    mode: str = "meta",
     closed: bool = False,
     no_shine_dalgarno: bool = False,
-    start_cds: bool = False,
     mask: bool = False,
-    quiet: bool = False,
 ) -> (LociDirectoryFormat, GenesDirectoryFormat, ProteinsDirectoryFormat):
 
     # Instantiate output directories
@@ -37,17 +35,14 @@ def predict_genes_prodigal(
     # Define base command
     base_cmd = ["prodigal", "-g", translation_table_number, "-f", "gff"]
     
-    # Add conditional parameters
-    if mode != "single":  # single is default prodigal behavior when -p is not specified
-        base_cmd.extend(["-p", mode])
+    # Add mode parameter - always specify it explicitly
+    base_cmd.extend(["-p", mode])
     
     # Define flag mappings for boolean parameters
     flag_mappings = {
         closed: "-c",
         no_shine_dalgarno: "-n",
-        start_cds: "-s",
         mask: "-m",
-        quiet: "-q",
     }
     
     # Add flags for enabled boolean parameters

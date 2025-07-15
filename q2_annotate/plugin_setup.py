@@ -1207,9 +1207,7 @@ plugin.methods.register_function(
         "mode": Str % Choices(["single", "meta"]),
         "closed": Bool,
         "no_shine_dalgarno": Bool,
-        "start_cds": Bool,
         "mask": Bool,
-        "quiet": Bool,
     },
     parameter_descriptions={
         "translation_table_number": (
@@ -1220,7 +1218,7 @@ plugin.methods.register_function(
         "mode": (
             "Gene prediction mode. 'single' is suitable for single genome analysis "
             "(e.g., MAGs), 'meta' is suitable for metagenome analysis "
-            "(e.g., contigs from mixed communities)."
+            "(e.g., contigs from mixed communities). Default is 'meta'."
         ),
         "closed": (
             "Treat sequences as complete genomes with closed ends. Use this "
@@ -1232,18 +1230,9 @@ plugin.methods.register_function(
             "Useful for virus, phage, or plasmid sequences that may not follow "
             "standard prokaryotic gene patterns."
         ),
-        "start_cds": (
-            "Print all potential start codons (ATG, GTG, TTG) instead of just "
-            "the most likely one. This provides more comprehensive output for "
-            "downstream analysis."
-        ),
         "mask": (
             "Treat runs of N as masked sequence. Useful for assemblies that "
             "contain gap regions represented by stretches of N nucleotides."
-        ),
-        "quiet": (
-            "Run in quiet mode with reduced output. This suppresses some of the "
-            "informational messages during gene prediction."
         ),
     },
     outputs=[

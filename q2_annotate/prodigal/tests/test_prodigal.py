@@ -51,6 +51,8 @@ class TestBUSCO(TestPluginBase):
                 "11",
                 "-f",
                 "gff",
+                "-p",
+                "meta",
                 "-i",
                 os.path.join(mags.path, f"{fasta_file}.fasta"),
                 "-o",
@@ -91,6 +93,8 @@ class TestBUSCO(TestPluginBase):
                     "11",
                     "-f",
                     "gff",
+                    "-p",
+                    "meta",
                     "-i",
                     os.path.join(mags.path, f"{fasta_file}.fasta"),
                     "-o",
@@ -133,6 +137,8 @@ class TestBUSCO(TestPluginBase):
                             "11",
                             "-f",
                             "gff",
+                            "-p",
+                            "meta",
                             "-i",
                             os.path.join(mags.path, sample, f"{file_id}.fasta"),
                             "-o",
@@ -161,6 +167,34 @@ class TestBUSCO(TestPluginBase):
                 "11",
                 "-f",
                 "gff",
+                "-p",
+                "meta",
+                "-i",
+                os.path.join(contigs.path, "sample1_contigs.fasta"),
+                "-o",
+                os.path.join(loci.path, "sample1.gff"),
+                "-a",
+                os.path.join(prot.path, "sample1.fasta"),
+                "-d",
+                os.path.join(genes.path, "sample1.fasta"),
+            ],
+            check=True,
+        )
+
+    @patch("subprocess.run")
+    def test_run_prodigal_with_single_mode(self, subp_run):
+        contigs = ContigSequencesDirFmt(self.get_data_path("contigs"), mode="r")
+        loci, genes, prot = predict_genes_prodigal(seqs=contigs, mode="single")
+
+        subp_run.assert_called_once_with(
+            [
+                "prodigal",
+                "-g",
+                "11",
+                "-f",
+                "gff",
+                "-p",
+                "single",
                 "-i",
                 os.path.join(contigs.path, "sample1_contigs.fasta"),
                 "-o",
@@ -200,16 +234,14 @@ class TestBUSCO(TestPluginBase):
         )
 
     @patch("subprocess.run")
-    def test_run_prodigal_with_all_flags(self, subp_run):
+    def test_run_prodigal_with_flags(self, subp_run):
         contigs = ContigSequencesDirFmt(self.get_data_path("contigs"), mode="r")
         loci, genes, prot = predict_genes_prodigal(
             seqs=contigs,
             mode="meta",
             closed=True,
             no_shine_dalgarno=True,
-            start_cds=True,
             mask=True,
-            quiet=True,
         )
 
         subp_run.assert_called_once_with(
@@ -223,9 +255,7 @@ class TestBUSCO(TestPluginBase):
                 "meta",
                 "-c",
                 "-n",
-                "-s",
                 "-m",
-                "-q",
                 "-i",
                 os.path.join(contigs.path, "sample1_contigs.fasta"),
                 "-o",
