@@ -40,16 +40,20 @@ def predict_genes_prodigal(
     # Add conditional parameters
     if mode != "single":  # single is default prodigal behavior when -p is not specified
         base_cmd.extend(["-p", mode])
-    if closed:
-        base_cmd.append("-c")
-    if no_shine_dalgarno:
-        base_cmd.append("-n")
-    if start_cds:
-        base_cmd.append("-s")
-    if mask:
-        base_cmd.append("-m")
-    if quiet:
-        base_cmd.append("-q")
+    
+    # Define flag mappings for boolean parameters
+    flag_mappings = {
+        closed: "-c",
+        no_shine_dalgarno: "-n",
+        start_cds: "-s",
+        mask: "-m",
+        quiet: "-q",
+    }
+    
+    # Add flags for enabled boolean parameters
+    for param_value, flag in flag_mappings.items():
+        if param_value:
+            base_cmd.append(flag)
 
     def _run_prodigal(path_to_input: str, _id: str, subdir: str = None):
         # If subdirectory is not None, append a "/" s.t. the command

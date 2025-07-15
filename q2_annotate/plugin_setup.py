@@ -1204,7 +1204,7 @@ plugin.methods.register_function(
                 "25",
             ]
         ),
-        "mode": Str % Choices(["single", "meta", "train"]),
+        "mode": Str % Choices(["single", "meta"]),
         "closed": Bool,
         "no_shine_dalgarno": Bool,
         "start_cds": Bool,
@@ -1220,8 +1220,7 @@ plugin.methods.register_function(
         "mode": (
             "Gene prediction mode. 'single' is suitable for single genome analysis "
             "(e.g., MAGs), 'meta' is suitable for metagenome analysis "
-            "(e.g., contigs from mixed communities), and 'train' is for training "
-            "mode to create custom training files."
+            "(e.g., contigs from mixed communities)."
         ),
         "closed": (
             "Treat sequences as complete genomes with closed ends. Use this "
