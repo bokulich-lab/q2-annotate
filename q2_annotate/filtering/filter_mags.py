@@ -80,7 +80,7 @@ def filter_derep_mags(
     exclude_ids: bool = False,
     remove_empty: bool = False,
 ) -> MAGSequencesDirFmt:
-    _validate_parameters(metadata, where, remove_empty)
+    _validate_parameters(metadata, remove_empty)
 
     results = MAGSequencesDirFmt()
     mags_df = _mags_to_df({"": mags.feature_dict()})
@@ -115,7 +115,7 @@ def filter_mags(
     on: str = "mag",
     remove_empty: bool = False,
 ) -> MultiMAGSequencesDirFmt:
-    _validate_parameters(metadata, where, remove_empty)
+    _validate_parameters(metadata, remove_empty)
 
     results = MultiMAGSequencesDirFmt()
     mags_df = _mags_to_df(mags.sample_dict())
@@ -180,15 +180,9 @@ def _filter_ids(
     return ids
 
 
-def _validate_parameters(metadata, where, remove_empty):
+def _validate_parameters(metadata, remove_empty):
     if not any([metadata, remove_empty]):
         raise ValueError(
             "At least one of the following parameters must be provided: "
             "metadata, remove_empty."
-        )
-
-    if metadata and not where:
-        raise ValueError(
-            "A filter query must be provided through the 'where' parameter "
-            "when filtering by metadata."
         )

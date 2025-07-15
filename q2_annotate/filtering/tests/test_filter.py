@@ -426,13 +426,9 @@ class TestMAGFiltering(TestPluginBase):
         )
         self.assertIsNotNone(generated_index)
 
-    def test_validate_parameters_metadata_where_error(self):
-        with self.assertRaisesRegex(ValueError, "A filter query must be provided"):
-            _validate_parameters("metadata", None, None)
-
     def test_validate_parameters_no_parameter_error(self):
-        with self.assertRaisesRegex(ValueError, "At least one of the followin"):
-            _validate_parameters(None, None, None)
+        with self.assertRaisesRegex(ValueError, "At least one of the"):
+            _validate_parameters(None, None)
 
 
 if __name__ == "__main__":
