@@ -33,10 +33,7 @@ def predict_genes_prodigal(
     proteins = ProteinsDirectoryFormat()
 
     # Define base command
-    base_cmd = ["prodigal", "-g", translation_table_number, "-f", "gff"]
-    
-    # Add mode parameter - always specify it explicitly
-    base_cmd.extend(["-p", mode])
+    base_cmd = ["prodigal", "-g", translation_table_number, "-f", "gff", "-p", mode]
     
     # Define flag mappings for boolean parameters
     flag_mappings = {
