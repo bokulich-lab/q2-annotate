@@ -134,6 +134,9 @@ def filter_mags(
         empty_mags = _find_empty_mags(mags_df)
         ids_to_keep -= empty_mags
 
+    if len(ids_to_keep) == 0:
+        raise ValueError("No MAGs remain after filtering.")
+
     filtered_mags = mags_df[mags_df.index.isin(ids_to_keep)]
     filtered_manifest = _filter_manifest(mags.manifest.view(pd.DataFrame), ids_to_keep)
 

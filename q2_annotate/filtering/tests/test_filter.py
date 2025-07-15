@@ -222,6 +222,18 @@ class TestMAGFiltering(TestPluginBase):
         exp_feature_count = 1
         self.assertEqual(obs_feature_count, exp_feature_count)
 
+    def test_filter_mags_no_mags_remain(self):
+        mags = MultiMAGSequencesDirFmt(self.mag_data_dir, mode="r")
+        metadata = qiime2.Metadata(
+            pd.read_csv(
+                self.get_data_path("metadata-sample.tsv"), sep="\t", index_col=0
+            )
+        )
+        with self.assertRaisesRegex(ValueError, "No MAGs remain after filtering"):
+            filter_mags(
+                mags, metadata, where="metric>50", on="sample", remove_empty=True
+            )
+
     @patch("shutil.move")
     def test_fetch_and_extract_grch38(self, p1):
         fake_results = Mock()
