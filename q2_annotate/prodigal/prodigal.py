@@ -21,7 +21,7 @@ from q2_types.genome_data import (
 def predict_genes_prodigal(
     seqs: Union[MAGSequencesDirFmt, MultiMAGSequencesDirFmt, ContigSequencesDirFmt],
     translation_table_number: str = "11",
-    mode: str = "meta",
+    mode: str = "single",
     closed: bool = False,
     no_shine_dalgarno: bool = False,
     mask: bool = False,
