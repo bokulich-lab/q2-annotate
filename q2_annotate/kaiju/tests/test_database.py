@@ -10,12 +10,16 @@ import tempfile
 import unittest
 from unittest.mock import patch, Mock
 
+import pandas as pd
 from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.kaiju.database import (
     _fetch_and_extract_db,
     _find_latest_db_url,
     fetch_kaiju_db,
+    build_kaiju_db,
+    _fetch_ncbi_taxonomy_files,
+    _create_protein_fasta,
     CHUNK_SIZE,
     ERR_MSG,
     KAIJU_SERVER_URL,
@@ -23,6 +27,8 @@ from q2_annotate.kaiju.database import (
 from requests.exceptions import ConnectionError, RequestException
 
 from q2_types.kaiju import KaijuDBDirectoryFormat
+from q2_types.genome_data import ProteinsDirectoryFormat
+from qiime2 import Metadata
 
 
 class TestDatabaseFunctions(TestPluginBase):
@@ -145,6 +151,101 @@ class TestDatabaseFunctions(TestPluginBase):
             fetch_kaiju_db("nr_euk")
 
         mock_requests.assert_called_with(KAIJU_SERVER_URL)
+
+    @patch("tarfile.open")
+    @patch("requests.get")
+    def test_fetch_ncbi_taxonomy_files(self, mock_requests, mock_tarfile):
+        # Mock the response
+        mock_response = Mock()
+        mock_response.headers = {"content-length": "1024"}
+        mock_response.iter_content.return_value = [b"test"] * 1024
+        mock_requests.return_value = mock_response
+        
+        # Mock the tarfile
+        mock_tar = Mock()
+        mock_member1 = Mock()
+        mock_member1.name = "nodes.dmp"
+        mock_member2 = Mock()
+        mock_member2.name = "names.dmp"
+        mock_member3 = Mock()
+        mock_member3.name = "other_file.txt"
+        mock_tar.getmembers.return_value = [mock_member1, mock_member2, mock_member3]
+        mock_tarfile.return_value.__enter__.return_value = mock_tar
+        
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            _fetch_ncbi_taxonomy_files(tmp_dir)
+            
+            # Verify only the required files were extracted
+            mock_tar.extract.assert_any_call(mock_member1, tmp_dir)
+            mock_tar.extract.assert_any_call(mock_member2, tmp_dir)
+            # Should not extract other_file.txt
+            self.assertEqual(mock_tar.extract.call_count, 2)
+
+    def test_create_protein_fasta(self):
+        # Create a temporary proteins directory
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            proteins_dir = ProteinsDirectoryFormat(tmp_dir, mode='w')
+            
+            # Create some test protein files
+            genome1_path = os.path.join(proteins_dir.path, "genome1.fasta")
+            genome2_path = os.path.join(proteins_dir.path, "genome2.fasta")
+            
+            with open(genome1_path, 'w') as f:
+                f.write(">protein1\nMKLLILLFFFLILSSPGGLGKNTKTKIIT\n")
+                f.write(">protein2\nMLKIFASDFASDFASDFASDFASD\n")
+            
+            with open(genome2_path, 'w') as f:
+                f.write(">protein3\nMQKLIFASDFASDFASDFASDFASD\n")
+            
+            # Create metadata
+            metadata_dict = {
+                'genome1': {'taxon_id': 12345},
+                'genome2': {'taxon_id': 67890}
+            }
+            metadata_df = pd.DataFrame.from_dict(metadata_dict, orient='index')
+            metadata = Metadata(metadata_df)
+            
+            # Test the function
+            output_path = os.path.join(tmp_dir, "combined.fasta")
+            _create_protein_fasta(proteins_dir, metadata, output_path)
+            
+            # Verify the output file exists and has correct content
+            self.assertTrue(os.path.exists(output_path))
+            with open(output_path, 'r') as f:
+                content = f.read()
+                self.assertIn("_taxid_12345", content)
+                self.assertIn("_taxid_67890", content)
+                self.assertIn("MKLLILLFFFLILSSPGGLGKNTKTKKIIT", content)
+
+    @patch("q2_annotate.kaiju.database.run_command")
+    @patch("q2_annotate.kaiju.database._fetch_ncbi_taxonomy_files")
+    @patch("q2_annotate.kaiju.database._create_protein_fasta")
+    @patch("shutil.copy2")
+    def test_build_kaiju_db(self, mock_copy, mock_create_fasta, mock_fetch_tax, mock_run_command):
+        # Create mock inputs
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            proteins_dir = ProteinsDirectoryFormat(tmp_dir, mode='w')
+            
+            # Create simple metadata
+            metadata_dict = {'genome1': {'taxon_id': 12345}}
+            metadata_df = pd.DataFrame.from_dict(metadata_dict, orient='index')
+            metadata = Metadata(metadata_df)
+            
+            # Call the function
+            result = build_kaiju_db(proteins_dir, metadata)
+            
+            # Verify it returns a KaijuDBDirectoryFormat
+            self.assertIsInstance(result, KaijuDBDirectoryFormat)
+            
+            # Verify the required functions were called
+            mock_fetch_tax.assert_called_once()
+            mock_create_fasta.assert_called_once()
+            
+            # Verify kaiju commands were run
+            self.assertEqual(mock_run_command.call_count, 2)
+            
+            # Verify files were copied
+            self.assertEqual(mock_copy.call_count, 3)  # fmi, nodes.dmp, names.dmp
 
 
 if __name__ == "__main__":

@@ -7,12 +7,20 @@
 # ----------------------------------------------------------------------------
 import os
 import tarfile
+import tempfile
+import shutil
+import subprocess
+from urllib.request import urlretrieve
 
 import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+import pandas as pd
 
 from q2_types.kaiju import KaijuDBDirectoryFormat
+from q2_types.genome_data import ProteinsDirectoryFormat
+from qiime2 import Metadata
+from q2_annotate._utils import run_command
 
 CHUNK_SIZE = 8192
 KAIJU_SERVER_URL = "https://bioinformatics-centre.github.io/" "kaiju/downloads.html"
@@ -112,4 +120,202 @@ def fetch_kaiju_db(
     db = KaijuDBDirectoryFormat()
     _fetch_and_extract_db(download_link, str(db.path))
 
+    return db
+
+
+def _fetch_ncbi_taxonomy_files(target_dir: str):
+    """
+    Fetch NCBI taxonomy files (nodes.dmp and names.dmp) needed for Kaiju.
+    
+    Args:
+        target_dir (str): Directory to save the taxonomy files
+    """
+    # NCBI taxonomy FTP URL
+    base_url = "https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/"
+    taxonomy_url = f"{base_url}taxdump.tar.gz"
+    
+    print("Downloading NCBI taxonomy files...")
+    
+    # Download the taxonomy archive
+    response = requests.get(taxonomy_url, stream=True)
+    response.raise_for_status()
+    
+    total_size = int(response.headers.get("content-length", 0))
+    progress_bar = None
+    if total_size > 0:
+        progress_bar = tqdm(
+            desc="Downloading NCBI taxonomy",
+            total=total_size,
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+        )
+    
+    # Save to temporary file
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+            if chunk:
+                tmp_file.write(chunk)
+                if progress_bar:
+                    progress_bar.update(len(chunk))
+        tmp_filepath = tmp_file.name
+    
+    if progress_bar:
+        progress_bar.close()
+    
+    print("Extracting taxonomy files...")
+    
+    # Extract only the files we need (nodes.dmp and names.dmp)
+    with tarfile.open(tmp_filepath, "r:gz") as tar:
+        for member in tar.getmembers():
+            if member.name in ["nodes.dmp", "names.dmp"]:
+                tar.extract(member, target_dir)
+    
+    # Clean up temporary file
+    os.remove(tmp_filepath)
+    print("NCBI taxonomy files downloaded successfully.")
+
+
+def _create_protein_fasta(proteins_dir: ProteinsDirectoryFormat, metadata: Metadata, output_path: str):
+    """
+    Create a single FASTA file from protein files with proper headers containing NCBI taxon IDs.
+    
+    Args:
+        proteins_dir: Directory containing protein FASTA files
+        metadata: Metadata mapping genome IDs to NCBI taxon IDs
+        output_path: Path to output combined FASTA file
+    """
+    metadata_df = metadata.to_dataframe()
+    
+    # Validate that metadata contains the required column
+    if metadata_df.empty:
+        raise ValueError("Metadata is empty")
+    
+    # Assume the taxon ID is in a column named 'taxon_id' or similar
+    # We'll look for columns that might contain taxon IDs
+    taxon_columns = [col for col in metadata_df.columns if 'taxon' in col.lower() or 'tax' in col.lower()]
+    if not taxon_columns:
+        # If no obvious taxon column, use the first column
+        if len(metadata_df.columns) == 0:
+            raise ValueError("Metadata must contain at least one column with taxon IDs")
+        taxon_column = metadata_df.columns[0]
+    else:
+        taxon_column = taxon_columns[0]
+    
+    print(f"Using '{taxon_column}' column for taxon IDs")
+    
+    # Get all protein files
+    protein_files = {}
+    if hasattr(proteins_dir, 'feature_dict'):
+        protein_files = proteins_dir.feature_dict()
+    else:
+        # If feature_dict is not available, look for .fasta files
+        for filename in os.listdir(proteins_dir.path):
+            if filename.endswith('.fasta') or filename.endswith('.fa'):
+                genome_id = os.path.splitext(filename)[0]
+                protein_files[genome_id] = os.path.join(proteins_dir.path, filename)
+    
+    if not protein_files:
+        raise ValueError("No protein files found in the input directory")
+    
+    # Create combined FASTA file
+    with open(output_path, 'w') as outfile:
+        for genome_id, protein_file in protein_files.items():
+            if genome_id not in metadata_df.index:
+                print(f"Warning: Genome ID '{genome_id}' not found in metadata, skipping")
+                continue
+            
+            # Get taxon ID for this genome
+            taxon_id = metadata_df.loc[genome_id, taxon_column]
+            
+            # Read protein sequences and modify headers
+            with open(protein_file, 'r') as infile:
+                for line in infile:
+                    if line.startswith('>'):
+                        # Modify header to include taxon ID
+                        protein_id = line[1:].strip()
+                        new_header = f">{protein_id}_{genome_id}_taxid_{taxon_id}\n"
+                        outfile.write(new_header)
+                    else:
+                        outfile.write(line)
+    
+    print(f"Created combined protein FASTA file with {len(protein_files)} genomes")
+
+
+def build_kaiju_db(
+    proteins: ProteinsDirectoryFormat,
+    metadata: Metadata,
+) -> KaijuDBDirectoryFormat:
+    """
+    Build a custom Kaiju database from protein sequences and metadata.
+    
+    Args:
+        proteins: Directory containing protein FASTA files for each genome
+        metadata: Metadata mapping genome IDs to NCBI taxon IDs
+        
+    Returns:
+        KaijuDBDirectoryFormat: The built Kaiju database
+    """
+    # Create output directory
+    db = KaijuDBDirectoryFormat()
+    
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Step 1: Fetch NCBI taxonomy files
+        _fetch_ncbi_taxonomy_files(tmp_dir)
+        
+        # Step 2: Create combined protein FASTA file
+        protein_fasta_path = os.path.join(tmp_dir, "proteins.faa")
+        _create_protein_fasta(proteins, metadata, protein_fasta_path)
+        
+        # Step 3: Run kaiju-mkbwt
+        print("Running kaiju-mkbwt to create BWT index...")
+        bwt_output = os.path.join(tmp_dir, "proteins.bwt")
+        sa_output = os.path.join(tmp_dir, "proteins.sa")
+        
+        mkbwt_cmd = [
+            "kaiju-mkbwt",
+            "-a", "ACDEFGHIKLMNPQRSTVWY",  # Protein alphabet
+            "-o", bwt_output,
+            protein_fasta_path
+        ]
+        
+        try:
+            run_command(cmd=mkbwt_cmd, verbose=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(
+                f"An error was encountered while running kaiju-mkbwt "
+                f"(return code {e.returncode}), please inspect "
+                "stdout and stderr to learn more."
+            )
+        
+        # Step 4: Run kaiju-mkfmi
+        print("Running kaiju-mkfmi to create FMI index...")
+        fmi_output = os.path.join(tmp_dir, "proteins.fmi")
+        
+        mkfmi_cmd = [
+            "kaiju-mkfmi",
+            bwt_output,
+            sa_output,
+            fmi_output
+        ]
+        
+        try:
+            run_command(cmd=mkfmi_cmd, verbose=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(
+                f"An error was encountered while running kaiju-mkfmi "
+                f"(return code {e.returncode}), please inspect "
+                "stdout and stderr to learn more."
+            )
+        
+        # Step 5: Copy required files to final database directory
+        # Copy the FMI index
+        shutil.copy2(fmi_output, os.path.join(db.path, "kaiju_db.fmi"))
+        
+        # Copy taxonomy files
+        shutil.copy2(os.path.join(tmp_dir, "nodes.dmp"), db.path)
+        shutil.copy2(os.path.join(tmp_dir, "names.dmp"), db.path)
+        
+        print("Kaiju database built successfully!")
+    
     return db
