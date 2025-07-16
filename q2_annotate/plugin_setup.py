@@ -1203,14 +1203,37 @@ plugin.methods.register_function(
                 "24",
                 "25",
             ]
-        )
+        ),
+        "mode": Str % Choices(["single", "meta"]),
+        "closed": Bool,
+        "no_shine_dalgarno": Bool,
+        "mask": Bool,
     },
     parameter_descriptions={
         "translation_table_number": (
             "Translation table to be used to translate genes into sequences of "
             "amino acids. See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/"
             "wprintgc.cgi for reference."
-        )
+        ),
+        "mode": (
+            "Gene prediction mode. 'single' is suitable for single genome analysis "
+            "(e.g., MAGs), 'meta' is suitable for metagenome analysis "
+            "(e.g., contigs from mixed communities)."
+        ),
+        "closed": (
+            "Treat sequences as complete genomes with closed ends. Use this "
+            "for finished genomes where the sequences represent complete chromosomes "
+            "or plasmids."
+        ),
+        "no_shine_dalgarno": (
+            "Bypass Shine-Dalgarno trainer and use a more generic model. "
+            "Useful for virus, phage, or plasmid sequences that may not follow "
+            "standard prokaryotic gene patterns."
+        ),
+        "mask": (
+            "Treat runs of N as masked sequence. Useful for assemblies that "
+            "contain gap regions represented by stretches of N nucleotides."
+        ),
     },
     outputs=[
         ("loci", GenomeData[Loci]),
