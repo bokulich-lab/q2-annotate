@@ -6,13 +6,18 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import os
+import tempfile
+import subprocess
 import tarfile
+from typing import List
 
 import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 from q2_types.kaiju import KaijuDBDirectoryFormat
+from q2_types.feature_data import DNAFASTAFormat
+from q2_annotate._utils import run_command
 
 CHUNK_SIZE = 8192
 KAIJU_SERVER_URL = "https://bioinformatics-centre.github.io/" "kaiju/downloads.html"
@@ -96,6 +101,109 @@ def _find_latest_db_url(response: bytes, database_type: str) -> str:
                             return url["href"]
 
     raise ValueError(f"URL for database type '{database_type}' not found.")
+
+
+def _build_kaiju_bwt_index(fasta_file: str, output_dir: str, threads: int):
+    """
+    Build BWT index using kaiju-mkbwt.
+    
+    Args:
+        fasta_file: Path to input FASTA file
+        output_dir: Directory where index files will be created
+        threads: Number of threads to use
+    """
+    bwt_file = os.path.join(output_dir, "kaiju_db_idx.bwt")
+    sa_file = os.path.join(output_dir, "kaiju_db_idx.sa")
+    
+    cmd = [
+        "kaiju-mkbwt",
+        "-n", str(threads),
+        "-a", "ACDEFGHIKLMNPQRSTVWY",
+        "-o", bwt_file,
+        fasta_file
+    ]
+    
+    try:
+        run_command(cmd=cmd, verbose=True)
+    except subprocess.CalledProcessError as e:
+        raise Exception(
+            f"An error was encountered while building the BWT index, "
+            f"(return code {e.returncode}), please inspect "
+            "stdout and stderr to learn more."
+        )
+
+
+def _build_kaiju_fmi_index(output_dir: str):
+    """
+    Build FM index using kaiju-mkfmi.
+    
+    Args:
+        output_dir: Directory containing BWT files and where FM index will be created
+    """
+    bwt_file = os.path.join(output_dir, "kaiju_db_idx.bwt")
+    fmi_file = os.path.join(output_dir, "kaiju_db_idx.fmi")
+    
+    cmd = [
+        "kaiju-mkfmi",
+        bwt_file
+    ]
+    
+    try:
+        run_command(cmd=cmd, verbose=True)
+    except subprocess.CalledProcessError as e:
+        raise Exception(
+            f"An error was encountered while building the FM index, "
+            f"(return code {e.returncode}), please inspect "
+            "stdout and stderr to learn more."
+        )
+
+
+def build_kaiju_db(
+    seqs: List[DNAFASTAFormat],
+    threads: int = 1,
+) -> KaijuDBDirectoryFormat:
+    """
+    Build custom Kaiju database from DNA sequences.
+    
+    Args:
+        seqs: List of DNA FASTA sequences to include in the database
+        threads: Number of threads to use for index construction
+        
+    Returns:
+        KaijuDBDirectoryFormat: Built Kaiju database
+    """
+    if not seqs:
+        raise ValueError("At least one sequence file must be provided.")
+    
+    db = KaijuDBDirectoryFormat()
+    
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Combine all FASTA files into a single file
+        combined_fasta = os.path.join(tmp_dir, "combined_seqs.faa")
+        
+        with open(combined_fasta, 'w') as outfile:
+            for seq_file in seqs:
+                with open(str(seq_file.path), 'r') as infile:
+                    content = infile.read()
+                    outfile.write(content)
+                    # Ensure there's a newline at the end if missing
+                    if content and not content.endswith('\n'):
+                        outfile.write('\n')
+        
+        # Build BWT index
+        _build_kaiju_bwt_index(combined_fasta, tmp_dir, threads)
+        
+        # Build FM index  
+        _build_kaiju_fmi_index(tmp_dir)
+        
+        # Copy index files to final destination
+        for index_file in ["kaiju_db_idx.fmi", "kaiju_db_idx.bwt", "kaiju_db_idx.sa"]:
+            src_path = os.path.join(tmp_dir, index_file)
+            dst_path = os.path.join(str(db.path), index_file)
+            if os.path.exists(src_path):
+                os.rename(src_path, dst_path)
+    
+    return db
 
 
 def fetch_kaiju_db(

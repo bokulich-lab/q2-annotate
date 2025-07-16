@@ -1304,6 +1304,33 @@ plugin.methods.register_function(
     citations=[citations["menzel2016"]],
 )
 
+plugin.methods.register_function(
+    function=q2_annotate.kaiju.build_kaiju_db,
+    inputs={"seqs": List[FeatureData[Sequence]]},
+    parameters={
+        "threads": Int % Range(1, None),
+    },
+    outputs=[
+        ("db", KaijuDB),
+    ],
+    input_descriptions={
+        "seqs": "DNA sequences to be added to the Kaiju database."
+    },
+    parameter_descriptions={
+        "threads": "Number of threads to use for index construction.",
+    },
+    output_descriptions={
+        "db": "Kaiju database.",
+    },
+    name="Build custom Kaiju database.",
+    description=(
+        "This method builds a custom Kaiju database from provided DNA sequences "
+        "using kaiju-mkbwt and kaiju-mkfmi utilities to construct the database "
+        "indices."
+    ),
+    citations=[citations["menzel2016"]],
+)
+
 kaiju_params = {
     "z": Int % Range(1, None),
     "a": Str % Choices(["greedy", "mem"]),

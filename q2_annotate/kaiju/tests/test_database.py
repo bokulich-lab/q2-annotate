@@ -8,7 +8,7 @@
 import os
 import tempfile
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, mock_open
 
 from qiime2.plugin.testing import TestPluginBase
 
@@ -16,6 +16,9 @@ from q2_annotate.kaiju.database import (
     _fetch_and_extract_db,
     _find_latest_db_url,
     fetch_kaiju_db,
+    build_kaiju_db,
+    _build_kaiju_bwt_index,
+    _build_kaiju_fmi_index,
     CHUNK_SIZE,
     ERR_MSG,
     KAIJU_SERVER_URL,
@@ -23,6 +26,7 @@ from q2_annotate.kaiju.database import (
 from requests.exceptions import ConnectionError, RequestException
 
 from q2_types.kaiju import KaijuDBDirectoryFormat
+from q2_types.feature_data import DNAFASTAFormat
 
 
 class TestDatabaseFunctions(TestPluginBase):
@@ -71,6 +75,13 @@ class TestDatabaseFunctions(TestPluginBase):
             </table>
             </body></html>
             """
+        
+        # Create test FASTA content
+        self.test_fasta_content = """>seq1
+ATCGATCGATCGATCG
+>seq2
+GCTAGCTAGCTAGCTA
+"""
 
     @patch("requests.get")
     @patch("q2_annotate.kaiju.database.tqdm")
@@ -145,6 +156,85 @@ class TestDatabaseFunctions(TestPluginBase):
             fetch_kaiju_db("nr_euk")
 
         mock_requests.assert_called_with(KAIJU_SERVER_URL)
+
+
+class TestBuildKaijuDB(TestPluginBase):
+    package = "q2_annotate.kaiju.tests"
+
+    def setUp(self):
+        super().setUp()
+        self.test_fasta_content = """>seq1
+ATCGATCGATCGATCG
+>seq2
+GCTAGCTAGCTAGCTA
+"""
+
+    @patch("q2_annotate.kaiju.database.run_command")
+    @patch("os.path.exists")
+    @patch("os.rename")
+    def test_build_kaiju_bwt_index(self, mock_rename, mock_exists, mock_run_command):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            fasta_file = os.path.join(tmp_dir, "test.faa")
+            
+            _build_kaiju_bwt_index(fasta_file, tmp_dir, 2)
+            
+            # Check that kaiju-mkbwt was called with correct parameters
+            expected_cmd = [
+                "kaiju-mkbwt",
+                "-n", "2",
+                "-a", "ACDEFGHIKLMNPQRSTVWY",
+                "-o", os.path.join(tmp_dir, "kaiju_db_idx.bwt"),
+                fasta_file
+            ]
+            mock_run_command.assert_called_with(cmd=expected_cmd, verbose=True)
+
+    @patch("q2_annotate.kaiju.database.run_command")
+    def test_build_kaiju_fmi_index(self, mock_run_command):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            _build_kaiju_fmi_index(tmp_dir)
+            
+            # Check that kaiju-mkfmi was called with correct parameters
+            expected_cmd = [
+                "kaiju-mkfmi",
+                os.path.join(tmp_dir, "kaiju_db_idx.bwt")
+            ]
+            mock_run_command.assert_called_with(cmd=expected_cmd, verbose=True)
+
+    @patch("q2_annotate.kaiju.database._build_kaiju_fmi_index")
+    @patch("q2_annotate.kaiju.database._build_kaiju_bwt_index")
+    @patch("os.path.exists")
+    @patch("os.rename")
+    def test_build_kaiju_db(self, mock_rename, mock_exists, mock_bwt, mock_fmi):
+        mock_exists.return_value = True
+        
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # Create test FASTA files
+            fasta1 = DNAFASTAFormat()
+            with open(str(fasta1.path), 'w') as f:
+                f.write(self.test_fasta_content)
+            
+            fasta2 = DNAFASTAFormat()
+            with open(str(fasta2.path), 'w') as f:
+                f.write(">seq3\nAAGGCCTT\n")
+            
+            # Call the function
+            result = build_kaiju_db([fasta1, fasta2], threads=4)
+            
+            # Check that it returns a KaijuDBDirectoryFormat
+            self.assertIsInstance(result, KaijuDBDirectoryFormat)
+            
+            # Check that the build functions were called
+            mock_bwt.assert_called_once()
+            mock_fmi.assert_called_once()
+            
+            # Verify that files would be copied
+            for index_file in ["kaiju_db_idx.fmi", "kaiju_db_idx.bwt", "kaiju_db_idx.sa"]:
+                mock_rename.assert_any_call(unittest.mock.ANY, unittest.mock.ANY)
+
+    def test_build_kaiju_db_empty_seqs(self):
+        """Test that build_kaiju_db handles empty sequence list gracefully"""
+        with self.assertRaises(ValueError):
+            build_kaiju_db([], threads=1)
 
 
 if __name__ == "__main__":
