@@ -86,11 +86,14 @@ def _run_semibin2_multi(sample_set, loc, common_args):
     with open(combined_contigs, 'w') as outfile:
         for samp_name, props in sample_set.items():
             # Read contigs and prefix with sample name to avoid conflicts
-            with open(props["contigs"], 'r') as infile:
-                content = infile.read()
-                # Prefix contig IDs with sample name
-                content = content.replace('>', f'>{samp_name}_')
-                outfile.write(content)
+            if os.path.exists(props["contigs"]):
+                with open(props["contigs"], 'r') as infile:
+                    for line in infile:
+                        if line.startswith('>'):
+                            # Prefix contig IDs with sample name
+                            outfile.write(f'>{samp_name}_{line[1:]}')
+                        else:
+                            outfile.write(line)
             bam_files.append(props["map"])
     
     cmd = [

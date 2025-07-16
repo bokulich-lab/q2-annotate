@@ -148,21 +148,29 @@ class TestSemiBin2(TestPluginBase):
     @patch("subprocess.run")
     def test_run_semibin2_multi_ok(self, p1):
         """Test SemiBin2 multi-sample execution."""
-        fake_sample_set = {
-            "samp1": {"contigs": "/a/b/samp1.fa", "map": "/a/b/samp1.bam"},
-            "samp2": {"contigs": "/a/b/samp2.fa", "map": "/a/b/samp2.bam"},
-        }
         fake_args = ["--threads", "4", "--min-len", "1000"]
 
-        with tempfile.TemporaryDirectory() as fake_loc:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create fake contig files and sample set within temp directory
+            fake_sample_set = {
+                "samp1": {
+                    "contigs": os.path.join(temp_dir, "samp1.fa"), 
+                    "map": os.path.join(temp_dir, "samp1.bam")
+                },
+                "samp2": {
+                    "contigs": os.path.join(temp_dir, "samp2.fa"), 
+                    "map": os.path.join(temp_dir, "samp2.bam")
+                },
+            }
+
             # Create fake contig files for testing
-            os.makedirs("/a/b", exist_ok=True)
             for samp in fake_sample_set:
-                with open(fake_sample_set[samp]["contigs"], "w") as f:
+                contig_file = fake_sample_set[samp]["contigs"]
+                with open(contig_file, "w") as f:
                     f.write(f">contig1_{samp}\nATCG\n>contig2_{samp}\nGCTA\n")
 
-            obs_fp = _run_semibin2_multi(fake_sample_set, fake_loc, fake_args)
-            exp_fp = os.path.join(fake_loc, "multi_sample_bins")
+            obs_fp = _run_semibin2_multi(fake_sample_set, temp_dir, fake_args)
+            exp_fp = os.path.join(temp_dir, "multi_sample_bins")
 
             self.assertEqual(exp_fp, obs_fp)
 

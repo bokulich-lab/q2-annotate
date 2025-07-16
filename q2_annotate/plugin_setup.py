@@ -269,6 +269,7 @@ plugin.methods.register_function(
         "models for different sequencing data types."
     ),
     citations=[
+        citations["pan2022semibin"],
         citations["heng2009samtools"],
         citations["scikit_bio_release"],
     ],
