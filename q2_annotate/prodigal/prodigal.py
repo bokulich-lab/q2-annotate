@@ -34,14 +34,14 @@ def predict_genes_prodigal(
 
     # Define base command
     base_cmd = ["prodigal", "-g", translation_table_number, "-f", "gff", "-p", mode]
-    
+
     # Define flag mappings for boolean parameters
     flag_mappings = {
         closed: "-c",
         no_shine_dalgarno: "-n",
         mask: "-m",
     }
-    
+
     # Add flags for enabled boolean parameters
     for param_value, flag in flag_mappings.items():
         if param_value:
