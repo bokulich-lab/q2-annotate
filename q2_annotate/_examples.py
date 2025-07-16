@@ -22,3 +22,31 @@ def diamond_makedb(use):
             db="diamond_db",
         ),
     )
+
+
+def build_kaiju_db_example(use):
+    # This example shows how to build a custom Kaiju database from protein sequences
+    # Note: This is a simplified example - in practice you would have real genome protein data
+    
+    proteins = use.init_artifact(
+        'proteins',
+        # Placeholder for GenomeData[Proteins] - would contain protein FASTA files
+        # for each genome, e.g., genome1.fasta, genome2.fasta, etc.
+    )
+    
+    metadata = use.init_metadata(
+        'genome_metadata',
+        # Metadata mapping genome IDs to NCBI taxon IDs
+        # Format: genome_id -> taxon_id (e.g., genome1 -> 511145)
+    )
+    
+    kaiju_db_result = use.action(
+        use.UsageAction("annotate", "build_kaiju_db"),
+        use.UsageInputs(
+            proteins=proteins,
+            metadata=metadata,
+        ),
+        use.UsageOutputNames(
+            db="custom_kaiju_db",
+        ),
+    )

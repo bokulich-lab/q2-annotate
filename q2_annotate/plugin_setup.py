@@ -1337,6 +1337,7 @@ plugin.methods.register_function(
         "classification with Kaiju."
     ),
     citations=[citations["menzel2016"]],
+    examples={"Build custom Kaiju database": ex.build_kaiju_db_example},
 )
 
 kaiju_params = {
