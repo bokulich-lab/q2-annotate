@@ -1306,7 +1306,7 @@ plugin.methods.register_function(
 
 plugin.methods.register_function(
     function=q2_annotate.kaiju.build_kaiju_db,
-    inputs={"seqs": List[FeatureData[Sequence]]},
+    inputs={"seqs": List[FeatureData[ProteinSequence]], "taxonomy": ReferenceDB[NCBITaxonomy]},
     parameters={
         "threads": Int % Range(1, None),
     },
@@ -1314,7 +1314,8 @@ plugin.methods.register_function(
         ("db", KaijuDB),
     ],
     input_descriptions={
-        "seqs": "DNA sequences to be added to the Kaiju database."
+        "seqs": "Protein sequences to be added to the Kaiju database.",
+        "taxonomy": "NCBI taxonomy reference database containing nodes.dmp and names.dmp files.",
     },
     parameter_descriptions={
         "threads": "Number of threads to use for index construction.",
@@ -1324,7 +1325,7 @@ plugin.methods.register_function(
     },
     name="Build custom Kaiju database.",
     description=(
-        "This method builds a custom Kaiju database from provided DNA sequences "
+        "This method builds a custom Kaiju database from provided protein sequences "
         "using kaiju-mkbwt and kaiju-mkfmi utilities to construct the database "
         "indices."
     ),

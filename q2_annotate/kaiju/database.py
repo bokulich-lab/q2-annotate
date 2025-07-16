@@ -16,7 +16,8 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 from q2_types.kaiju import KaijuDBDirectoryFormat
-from q2_types.feature_data import DNAFASTAFormat
+from q2_types.feature_data import ProteinFASTAFormat
+from q2_types.reference_db import ReferenceDB, NCBITaxonomy
 from q2_annotate._utils import run_command
 
 CHUNK_SIZE = 8192
@@ -103,7 +104,7 @@ def _find_latest_db_url(response: bytes, database_type: str) -> str:
     raise ValueError(f"URL for database type '{database_type}' not found.")
 
 
-def _build_kaiju_bwt_index(fasta_file: str, output_dir: str, threads: int):
+def _build_kaiju_bwt_index(fasta_file: str, output_dir: str, threads: int) -> str:
     """
     Build BWT index using kaiju-mkbwt.
     
@@ -111,9 +112,11 @@ def _build_kaiju_bwt_index(fasta_file: str, output_dir: str, threads: int):
         fasta_file: Path to input FASTA file
         output_dir: Directory where index files will be created
         threads: Number of threads to use
+        
+    Returns:
+        str: Path to the generated BWT file
     """
     bwt_file = os.path.join(output_dir, "kaiju_db_idx.bwt")
-    sa_file = os.path.join(output_dir, "kaiju_db_idx.sa")
     
     cmd = [
         "kaiju-mkbwt",
@@ -131,18 +134,20 @@ def _build_kaiju_bwt_index(fasta_file: str, output_dir: str, threads: int):
             f"(return code {e.returncode}), please inspect "
             "stdout and stderr to learn more."
         )
+    
+    return bwt_file
 
 
-def _build_kaiju_fmi_index(output_dir: str):
+def _build_kaiju_fmi_index(bwt_file: str) -> str:
     """
     Build FM index using kaiju-mkfmi.
     
     Args:
-        output_dir: Directory containing BWT files and where FM index will be created
+        bwt_file: Path to BWT file
+        
+    Returns:
+        str: Path to the generated FMI file
     """
-    bwt_file = os.path.join(output_dir, "kaiju_db_idx.bwt")
-    fmi_file = os.path.join(output_dir, "kaiju_db_idx.fmi")
-    
     cmd = [
         "kaiju-mkfmi",
         bwt_file
@@ -156,17 +161,23 @@ def _build_kaiju_fmi_index(output_dir: str):
             f"(return code {e.returncode}), please inspect "
             "stdout and stderr to learn more."
         )
+    
+    # The FMI file is created with the same base name as the BWT file
+    fmi_file = bwt_file.replace('.bwt', '.fmi')
+    return fmi_file
 
 
 def build_kaiju_db(
-    seqs: DNAFASTAFormat,
+    seqs: List[ProteinFASTAFormat],
+    taxonomy: ReferenceDB[NCBITaxonomy],
     threads: int = 1,
 ) -> KaijuDBDirectoryFormat:
     """
-    Build custom Kaiju database from DNA sequences.
+    Build custom Kaiju database from protein sequences.
     
     Args:
-        seqs: List of DNA FASTA sequences to include in the database
+        seqs: List of protein FASTA sequences to include in the database
+        taxonomy: NCBI taxonomy reference database containing nodes.dmp and names.dmp
         threads: Number of threads to use for index construction
         
     Returns:
@@ -191,17 +202,27 @@ def build_kaiju_db(
                         outfile.write('\n')
         
         # Build BWT index
-        _build_kaiju_bwt_index(combined_fasta, tmp_dir, threads)
+        bwt_file = _build_kaiju_bwt_index(combined_fasta, tmp_dir, threads)
         
         # Build FM index  
-        _build_kaiju_fmi_index(tmp_dir)
+        fmi_file = _build_kaiju_fmi_index(bwt_file)
         
-        # Copy index files to final destination
-        for index_file in ["kaiju_db_idx.fmi", "kaiju_db_idx.bwt", "kaiju_db_idx.sa"]:
-            src_path = os.path.join(tmp_dir, index_file)
-            dst_path = os.path.join(str(db.path), index_file)
-            if os.path.exists(src_path):
-                os.rename(src_path, dst_path)
+        # Copy FMI file to final destination
+        dst_fmi_path = os.path.join(str(db.path), "kaiju_db_idx.fmi")
+        if os.path.exists(fmi_file):
+            os.rename(fmi_file, dst_fmi_path)
+        
+        # Copy taxonomy files to final destination
+        import shutil
+        nodes_src = os.path.join(str(taxonomy.path), "nodes.dmp")
+        names_src = os.path.join(str(taxonomy.path), "names.dmp")
+        nodes_dst = os.path.join(str(db.path), "nodes.dmp")
+        names_dst = os.path.join(str(db.path), "names.dmp")
+        
+        if os.path.exists(nodes_src):
+            shutil.copy2(nodes_src, nodes_dst)
+        if os.path.exists(names_src):
+            shutil.copy2(names_src, names_dst)
     
     return db
 

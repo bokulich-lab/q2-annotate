@@ -26,7 +26,8 @@ from q2_annotate.kaiju.database import (
 from requests.exceptions import ConnectionError, RequestException
 
 from q2_types.kaiju import KaijuDBDirectoryFormat
-from q2_types.feature_data import DNAFASTAFormat
+from q2_types.feature_data import ProteinFASTAFormat
+from q2_types.reference_db import ReferenceDB, NCBITaxonomy
 
 
 class TestDatabaseFunctions(TestPluginBase):
@@ -76,11 +77,11 @@ class TestDatabaseFunctions(TestPluginBase):
             </body></html>
             """
         
-        # Create test FASTA content
+        # Create test FASTA content with protein sequences
         self.test_fasta_content = """>seq1
-ATCGATCGATCGATCG
+MKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE
 >seq2
-GCTAGCTAGCTAGCTA
+MTYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFT
 """
 
     @patch("requests.get")
@@ -164,19 +165,17 @@ class TestBuildKaijuDB(TestPluginBase):
     def setUp(self):
         super().setUp()
         self.test_fasta_content = """>seq1
-ATCGATCGATCGATCG
+MKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE
 >seq2
-GCTAGCTAGCTAGCTA
+MTYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFT
 """
 
     @patch("q2_annotate.kaiju.database.run_command")
-    @patch("os.path.exists")
-    @patch("os.rename")
-    def test_build_kaiju_bwt_index(self, mock_rename, mock_exists, mock_run_command):
+    def test_build_kaiju_bwt_index(self, mock_run_command):
         with tempfile.TemporaryDirectory() as tmp_dir:
             fasta_file = os.path.join(tmp_dir, "test.faa")
             
-            _build_kaiju_bwt_index(fasta_file, tmp_dir, 2)
+            result = _build_kaiju_bwt_index(fasta_file, tmp_dir, 2)
             
             # Check that kaiju-mkbwt was called with correct parameters
             expected_cmd = [
@@ -187,38 +186,63 @@ GCTAGCTAGCTAGCTA
                 fasta_file
             ]
             mock_run_command.assert_called_with(cmd=expected_cmd, verbose=True)
+            
+            # Check that it returns the BWT file path
+            expected_bwt_file = os.path.join(tmp_dir, "kaiju_db_idx.bwt")
+            self.assertEqual(result, expected_bwt_file)
 
     @patch("q2_annotate.kaiju.database.run_command")
     def test_build_kaiju_fmi_index(self, mock_run_command):
         with tempfile.TemporaryDirectory() as tmp_dir:
-            _build_kaiju_fmi_index(tmp_dir)
+            bwt_file = os.path.join(tmp_dir, "kaiju_db_idx.bwt")
+            
+            result = _build_kaiju_fmi_index(bwt_file)
             
             # Check that kaiju-mkfmi was called with correct parameters
             expected_cmd = [
                 "kaiju-mkfmi",
-                os.path.join(tmp_dir, "kaiju_db_idx.bwt")
+                bwt_file
             ]
             mock_run_command.assert_called_with(cmd=expected_cmd, verbose=True)
+            
+            # Check that it returns the FMI file path
+            expected_fmi_file = os.path.join(tmp_dir, "kaiju_db_idx.fmi")
+            self.assertEqual(result, expected_fmi_file)
 
     @patch("q2_annotate.kaiju.database._build_kaiju_fmi_index")
     @patch("q2_annotate.kaiju.database._build_kaiju_bwt_index")
     @patch("os.path.exists")
     @patch("os.rename")
-    def test_build_kaiju_db(self, mock_rename, mock_exists, mock_bwt, mock_fmi):
+    @patch("shutil.copy2")
+    def test_build_kaiju_db(self, mock_copy2, mock_rename, mock_exists, mock_bwt, mock_fmi):
         mock_exists.return_value = True
+        mock_bwt.return_value = "/tmp/kaiju_db_idx.bwt"
+        mock_fmi.return_value = "/tmp/kaiju_db_idx.fmi"
         
         with tempfile.TemporaryDirectory() as tmp_dir:
             # Create test FASTA files
-            fasta1 = DNAFASTAFormat()
+            fasta1 = ProteinFASTAFormat()
             with open(str(fasta1.path), 'w') as f:
                 f.write(self.test_fasta_content)
             
-            fasta2 = DNAFASTAFormat()
+            fasta2 = ProteinFASTAFormat()
             with open(str(fasta2.path), 'w') as f:
-                f.write(">seq3\nAAGGCCTT\n")
+                f.write(">seq3\nMKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWT\n")
+            
+            # Create mock taxonomy object
+            mock_taxonomy = Mock()
+            mock_taxonomy.path = tmp_dir
+            
+            # Create mock taxonomy files
+            nodes_file = os.path.join(tmp_dir, "nodes.dmp")
+            names_file = os.path.join(tmp_dir, "names.dmp")
+            with open(nodes_file, 'w') as f:
+                f.write("1\t|\t1\t|\tno rank\t|\t\t|\t8\t|\t0\t|\t1\t|\t0\t|\t0\t|\t0\t|\t0\t|\t0\t|\t\t|\n")
+            with open(names_file, 'w') as f:
+                f.write("1\t|\troot\t|\t\t|\tscientific name\t|\n")
             
             # Call the function
-            result = build_kaiju_db([fasta1, fasta2], threads=4)
+            result = build_kaiju_db([fasta1, fasta2], mock_taxonomy, threads=4)
             
             # Check that it returns a KaijuDBDirectoryFormat
             self.assertIsInstance(result, KaijuDBDirectoryFormat)
@@ -228,13 +252,14 @@ GCTAGCTAGCTAGCTA
             mock_fmi.assert_called_once()
             
             # Verify that files would be copied
-            for index_file in ["kaiju_db_idx.fmi", "kaiju_db_idx.bwt", "kaiju_db_idx.sa"]:
-                mock_rename.assert_any_call(unittest.mock.ANY, unittest.mock.ANY)
+            mock_rename.assert_called_once()  # For the FMI file
+            self.assertEqual(mock_copy2.call_count, 2)  # For nodes.dmp and names.dmp
 
     def test_build_kaiju_db_empty_seqs(self):
         """Test that build_kaiju_db handles empty sequence list gracefully"""
+        mock_taxonomy = Mock()
         with self.assertRaises(ValueError):
-            build_kaiju_db([], threads=1)
+            build_kaiju_db([], mock_taxonomy, threads=1)
 
 
 if __name__ == "__main__":
