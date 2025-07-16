@@ -1218,7 +1218,7 @@ plugin.methods.register_function(
         "mode": (
             "Gene prediction mode. 'single' is suitable for single genome analysis "
             "(e.g., MAGs), 'meta' is suitable for metagenome analysis "
-            "(e.g., contigs from mixed communities). Default is 'meta'."
+            "(e.g., contigs from mixed communities)."
         ),
         "closed": (
             "Treat sequences as complete genomes with closed ends. Use this "
