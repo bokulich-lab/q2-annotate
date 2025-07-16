@@ -159,7 +159,7 @@ def _build_kaiju_fmi_index(output_dir: str):
 
 
 def build_kaiju_db(
-    seqs: List[DNAFASTAFormat],
+    seqs: DNAFASTAFormat,
     threads: int = 1,
 ) -> KaijuDBDirectoryFormat:
     """
