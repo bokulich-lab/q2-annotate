@@ -213,6 +213,7 @@ def _create_protein_fasta(proteins_dir: ProteinsDirectoryFormat, metadata: Metad
         for filename in os.listdir(proteins_dir.path):
             if filename.endswith('.fasta') or filename.endswith('.fa'):
                 genome_id = os.path.splitext(filename)[0]
+                genome_id = genome_id.replace("_proteins", "")
                 protein_files[genome_id] = os.path.join(proteins_dir.path, filename)
     
     if not protein_files:
@@ -221,6 +222,7 @@ def _create_protein_fasta(proteins_dir: ProteinsDirectoryFormat, metadata: Metad
     # Create combined FASTA file
     with open(output_path, 'w') as outfile:
         for genome_id, protein_file in protein_files.items():
+            genome_id = genome_id.replace("_proteins", "")
             if genome_id not in metadata_df.index:
                 print(f"Warning: Genome ID '{genome_id}' not found in metadata, skipping")
                 continue
@@ -302,13 +304,14 @@ def build_kaiju_db(
             
             # Step 3: Run kaiju-mkbwt
             print("Step 3/5: Running kaiju-mkbwt to create BWT index...")
-            bwt_output = os.path.join(tmp_dir, "proteins.bwt")
-            sa_output = os.path.join(tmp_dir, "proteins.sa")
+            output_prefix = os.path.join(tmp_dir, "proteins")
+            bwt_output = f"{output_prefix}.bwt"
+            sa_output = f"{output_prefix}.sa"
             
             mkbwt_cmd = [
                 "kaiju-mkbwt",
                 "-a", "ACDEFGHIKLMNPQRSTVWY",  # Protein alphabet
-                "-o", bwt_output,
+                "-o", output_prefix,
                 protein_fasta_path
             ]
             
@@ -333,9 +336,7 @@ def build_kaiju_db(
             
             mkfmi_cmd = [
                 "kaiju-mkfmi",
-                bwt_output,
-                sa_output,
-                fmi_output
+                output_prefix
             ]
             
             try:
