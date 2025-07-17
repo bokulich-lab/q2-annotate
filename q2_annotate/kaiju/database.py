@@ -292,104 +292,96 @@ def build_kaiju_db(
     db = KaijuDBDirectoryFormat()
     
     with tempfile.TemporaryDirectory() as tmp_dir:
+        # Step 1: Fetch NCBI taxonomy files
+        print("Step 1/5: Fetching NCBI taxonomy files...")
+        _fetch_ncbi_taxonomy_files(tmp_dir)
+
+        # Step 2: Create combined protein FASTA file
+        print("Step 2/5: Creating combined protein FASTA file...")
+        protein_fasta_path = os.path.join(tmp_dir, "proteins.faa")
+        _create_protein_fasta(proteins, metadata, protein_fasta_path)
+
+        # Step 3: Run kaiju-mkbwt
+        print("Step 3/5: Running kaiju-mkbwt to create BWT index...")
+        output_prefix = os.path.join(tmp_dir, "proteins")
+        bwt_output = f"{output_prefix}.bwt"
+        sa_output = f"{output_prefix}.sa"
+
+        mkbwt_cmd = [
+            "kaiju-mkbwt",
+            "-a", "ACDEFGHIKLMNPQRSTVWY",  # Protein alphabet
+            "-o", output_prefix,
+            protein_fasta_path
+        ]
+
         try:
-            # Step 1: Fetch NCBI taxonomy files
-            print("Step 1/5: Fetching NCBI taxonomy files...")
-            _fetch_ncbi_taxonomy_files(tmp_dir)
-            
-            # Step 2: Create combined protein FASTA file
-            print("Step 2/5: Creating combined protein FASTA file...")
-            protein_fasta_path = os.path.join(tmp_dir, "proteins.faa")
-            _create_protein_fasta(proteins, metadata, protein_fasta_path)
-            
-            # Step 3: Run kaiju-mkbwt
-            print("Step 3/5: Running kaiju-mkbwt to create BWT index...")
-            output_prefix = os.path.join(tmp_dir, "proteins")
-            bwt_output = f"{output_prefix}.bwt"
-            sa_output = f"{output_prefix}.sa"
-            
-            mkbwt_cmd = [
-                "kaiju-mkbwt",
-                "-a", "ACDEFGHIKLMNPQRSTVWY",  # Protein alphabet
-                "-o", output_prefix,
-                protein_fasta_path
-            ]
-            
-            try:
-                run_command(cmd=mkbwt_cmd, verbose=True)
-            except subprocess.CalledProcessError as e:
-                raise Exception(
-                    f"kaiju-mkbwt failed (return code {e.returncode}). "
-                    "Please ensure kaiju is installed and accessible. "
-                    "Check that the protein sequences are valid."
-                )
-            
-            # Verify BWT files were created
-            if not os.path.exists(bwt_output):
-                raise Exception("kaiju-mkbwt did not create the expected BWT file")
-            if not os.path.exists(sa_output):
-                raise Exception("kaiju-mkbwt did not create the expected SA file")
-            
-            # Step 4: Run kaiju-mkfmi
-            print("Step 4/5: Running kaiju-mkfmi to create FMI index...")
-            fmi_output = os.path.join(tmp_dir, "proteins.fmi")
-            
-            mkfmi_cmd = [
-                "kaiju-mkfmi",
-                output_prefix
-            ]
-            
-            try:
-                run_command(cmd=mkfmi_cmd, verbose=True)
-            except subprocess.CalledProcessError as e:
-                raise Exception(
-                    f"kaiju-mkfmi failed (return code {e.returncode}). "
-                    "Please ensure kaiju is installed and accessible. "
-                    "The BWT index may be corrupted."
-                )
-            
-            # Verify FMI file was created
-            if not os.path.exists(fmi_output):
-                raise Exception("kaiju-mkfmi did not create the expected FMI file")
-            
-            # Step 5: Copy required files to final database directory
-            print("Step 5/5: Assembling final database...")
-            
-            # Copy the FMI index
-            final_fmi_path = os.path.join(db.path, "kaiju_db.fmi")
-            shutil.copy2(fmi_output, final_fmi_path)
-            
-            # Copy taxonomy files
-            nodes_src = os.path.join(tmp_dir, "nodes.dmp")
-            names_src = os.path.join(tmp_dir, "names.dmp")
-            
-            if not os.path.exists(nodes_src):
-                raise Exception("nodes.dmp file not found after taxonomy download")
-            if not os.path.exists(names_src):
-                raise Exception("names.dmp file not found after taxonomy download")
-                
-            shutil.copy2(nodes_src, db.path)
-            shutil.copy2(names_src, db.path)
-            
-            # Verify final database structure
-            required_files = ["kaiju_db.fmi", "nodes.dmp", "names.dmp"]
-            for filename in required_files:
-                filepath = os.path.join(db.path, filename)
-                if not os.path.exists(filepath):
-                    raise Exception(f"Required database file '{filename}' is missing")
-                
-            print("✓ Kaiju database built successfully!")
-            print(f"Database contains {len(os.listdir(db.path))} files:")
-            for filename in os.listdir(db.path):
-                filepath = os.path.join(db.path, filename)
-                size_mb = os.path.getsize(filepath) / (1024 * 1024)
-                print(f"  - {filename}: {size_mb:.2f} MB")
-        
-        except Exception as e:
-            # Clean up partial database on error
-            if os.path.exists(db.path):
-                shutil.rmtree(db.path)
-                os.makedirs(db.path)
-            raise e
+            run_command(cmd=mkbwt_cmd, verbose=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(
+                f"kaiju-mkbwt failed (return code {e.returncode}). "
+                "Please ensure kaiju is installed and accessible. "
+                "Check that the protein sequences are valid."
+            )
+
+        # Verify BWT files were created
+        if not os.path.exists(bwt_output):
+            raise Exception("kaiju-mkbwt did not create the expected BWT file")
+        if not os.path.exists(sa_output):
+            raise Exception("kaiju-mkbwt did not create the expected SA file")
+
+        # Step 4: Run kaiju-mkfmi
+        print("Step 4/5: Running kaiju-mkfmi to create FMI index...")
+        fmi_output = os.path.join(tmp_dir, "proteins.fmi")
+
+        mkfmi_cmd = [
+            "kaiju-mkfmi",
+            output_prefix
+        ]
+
+        try:
+            run_command(cmd=mkfmi_cmd, verbose=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(
+                f"kaiju-mkfmi failed (return code {e.returncode}). "
+                "Please ensure kaiju is installed and accessible. "
+                "The BWT index may be corrupted."
+            )
+
+        # Verify FMI file was created
+        if not os.path.exists(fmi_output):
+            raise Exception("kaiju-mkfmi did not create the expected FMI file")
+
+        # Step 5: Copy required files to final database directory
+        print("Step 5/5: Assembling final database...")
+
+        # Copy the FMI index
+        final_fmi_path = os.path.join(db.path, "kaiju_db_custom.fmi")
+        shutil.copy2(fmi_output, final_fmi_path)
+
+        # Copy taxonomy files
+        nodes_src = os.path.join(tmp_dir, "nodes.dmp")
+        names_src = os.path.join(tmp_dir, "names.dmp")
+
+        if not os.path.exists(nodes_src):
+            raise Exception("nodes.dmp file not found after taxonomy download")
+        if not os.path.exists(names_src):
+            raise Exception("names.dmp file not found after taxonomy download")
+
+        shutil.copy2(nodes_src, db.path)
+        shutil.copy2(names_src, db.path)
+
+        # Verify final database structure
+        required_files = ["kaiju_db_custom.fmi", "nodes.dmp", "names.dmp"]
+        for filename in required_files:
+            filepath = os.path.join(db.path, filename)
+            if not os.path.exists(filepath):
+                raise Exception(f"Required database file '{filename}' is missing")
+
+        print("✓ Kaiju database built successfully!")
+        print(f"Database contains {len(os.listdir(db.path))} files:")
+        for filename in os.listdir(db.path):
+            filepath = os.path.join(db.path, filename)
+            size_mb = os.path.getsize(filepath) / (1024 * 1024)
+            print(f"  - {filename}: {size_mb:.2f} MB")
     
     return db
