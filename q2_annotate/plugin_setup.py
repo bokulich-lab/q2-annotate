@@ -231,7 +231,6 @@ plugin.methods.register_function(
     outputs=[
         ("mags", SampleData[MAGs]),
         ("contig_map", FeatureMap[MAGtoContigs]),
-        ("unbinned_contigs", SampleData[Contigs % Properties("unbinned")]),
     ],
     input_descriptions={
         "contigs": "Contigs to be binned.",
@@ -259,7 +258,6 @@ plugin.methods.register_function(
             "Mapping of MAG identifiers to the contig identifiers "
             "contained in each MAG."
         ),
-        "unbinned_contigs": "Contigs that were not binned into any MAG.",
     },
     name="Bin contigs into MAGs using SemiBin2.",
     description=(

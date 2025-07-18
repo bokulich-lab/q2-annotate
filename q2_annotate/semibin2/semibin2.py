@@ -6,6 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import glob
+import gzip
 import re
 from uuid import uuid4
 from pathlib import Path
@@ -62,7 +63,7 @@ def _run_semibin2_single(samp_name, samp_props, loc, common_args, multi_sample=F
     os.makedirs(bins_dp, exist_ok=True)
     
     cmd = [
-        "SemiBin",
+        "semibin2",
         "single_easy_bin" if not multi_sample else "multi_easy_bin",
         "-i", samp_props["contigs"],
         "-b", samp_props["map"],
@@ -97,7 +98,7 @@ def _run_semibin2_multi(sample_set, loc, common_args):
             bam_files.append(props["map"])
     
     cmd = [
-        "SemiBin",
+        "semibin2",
         "multi_easy_bin",
         "-i", combined_contigs,
         "-b", *bam_files,
@@ -109,7 +110,7 @@ def _run_semibin2_multi(sample_set, loc, common_args):
     return bins_dp
 
 
-def _process_semibin2_outputs(bins_dp, samp_name, result_loc, unbinned_loc):
+def _process_semibin2_outputs(bins_dp, samp_name, result_loc):
     """Process SemiBin2 outputs and organize them like MetaBAT2."""
     # SemiBin2 outputs bins to output_recluster_bins/ directory
     semibin_bins_dir = os.path.join(bins_dp, "output_recluster_bins")
@@ -117,21 +118,26 @@ def _process_semibin2_outputs(bins_dp, samp_name, result_loc, unbinned_loc):
     if not os.path.exists(semibin_bins_dir):
         # Fallback to output_bins if recluster_bins doesn't exist
         semibin_bins_dir = os.path.join(bins_dp, "output_bins")
+        print(f"WARNING: output_recluster_bins/ directory not found, using output_bins/ instead.")
     
     if not os.path.exists(semibin_bins_dir):
+        print(f"WARNING: No bins found for sample {samp_name}.")
         return  # No bins generated
     
-    all_outputs = glob.glob(os.path.join(semibin_bins_dir, "*.fa"))
+    all_outputs = glob.glob(os.path.join(semibin_bins_dir, "*.fa.gz"))
     
     # Rename bins using UUID v4 (following MetaBAT2 pattern)
     bin_dest_dir = os.path.join(str(result_loc), samp_name)
     os.makedirs(bin_dest_dir, exist_ok=True)
     for old_bin in all_outputs:
+        print(f"Moving {old_bin} to {bin_dest_dir}")
         new_bin = os.path.join(bin_dest_dir, f"{uuid4()}.fa")
-        shutil.move(old_bin, new_bin)
+        with gzip.open(old_bin, 'rb') as f_in:
+            with open(new_bin, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
 
-def _process_sample(samp_name, samp_props, common_args, result_loc, unbinned_loc, multi_sample=False):
+def _process_sample(samp_name, samp_props, common_args, result_loc, multi_sample=False):
     """Process a single sample through the SemiBin2 pipeline."""
     with tempfile.TemporaryDirectory() as tmp:
         # Sort alignment map
@@ -141,7 +147,7 @@ def _process_sample(samp_name, samp_props, common_args, result_loc, unbinned_loc
         bins_dp = _run_semibin2_single(samp_name, props, tmp, common_args, multi_sample)
 
         # Process outputs
-        _process_semibin2_outputs(bins_dp, samp_name, result_loc, unbinned_loc)
+        _process_semibin2_outputs(bins_dp, samp_name, result_loc)
 
 
 def _generate_contig_map(bins: MultiFASTADirectoryFormat) -> dict:
@@ -163,12 +169,11 @@ def _bin_contigs_semibin2(
     alignment_maps: BAMDirFmt, 
     common_args: list,
     multi_sample: bool = False
-) -> (MultiFASTADirectoryFormat, dict, ContigSequencesDirFmt):
+) -> (MultiFASTADirectoryFormat, dict):
     """Main function to bin contigs using SemiBin2."""
     sample_set = _assert_samples(contigs, alignment_maps)
 
     bins = MultiFASTADirectoryFormat()
-    unbinned = ContigSequencesDirFmt()
     
     if multi_sample and len(sample_set) > 1:
         # Run multi-sample binning
@@ -184,11 +189,11 @@ def _bin_contigs_semibin2(
             # In multi-sample mode, we need to distribute bins back to samples
             # This is more complex and may require parsing SemiBin2's contig-to-bin mapping
             for samp in sample_set:
-                _process_semibin2_outputs(bins_dp, samp, str(bins), str(unbinned))
+                _process_semibin2_outputs(bins_dp, samp, str(bins))
     else:
         # Run single-sample binning for each sample
         for samp, props in sample_set.items():
-            _process_sample(samp, props, common_args, str(bins), str(unbinned), False)
+            _process_sample(samp, props, common_args, str(bins), False)
 
     if not glob.glob(os.path.join(str(bins), "*/*.fa")):
         raise ValueError(
@@ -197,7 +202,7 @@ def _bin_contigs_semibin2(
 
     contig_map = _generate_contig_map(bins)
 
-    return bins, contig_map, unbinned
+    return bins, contig_map
 
 
 def bin_contigs_semibin2(
@@ -210,7 +215,7 @@ def bin_contigs_semibin2(
     epochs: int = None,
     random_seed: int = None,
     sequencing_type: str = None,
-) -> (MultiFASTADirectoryFormat, dict, ContigSequencesDirFmt):
+) -> (MultiFASTADirectoryFormat, dict):
     """
     Bin contigs into MAGs using SemiBin2.
     
@@ -241,8 +246,6 @@ def bin_contigs_semibin2(
         The resulting MAGs.
     contig_map : dict
         Mapping of MAG identifiers to contig identifiers.
-    unbinned_contigs : ContigSequencesDirFmt
-        Contigs that were not binned into any MAG.
     """
     kwargs = {
         k: v for k, v in locals().items() 
