@@ -19,6 +19,7 @@ from .kraken2 import (
     helpers as kraken_helpers,
 )
 from .metabat2 import metabat2
+from .semibin2 import semibin2
 from ._utils import (
     get_feature_lengths,
     multiply_tables,
@@ -34,6 +35,7 @@ except ModuleNotFoundError:
 
 __all__ = [
     "metabat2",
+    "semibin2",
     "bracken",
     "kraken_class",
     "kraken_db",
