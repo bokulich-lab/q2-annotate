@@ -63,7 +63,7 @@ def _run_semibin2_single(samp_name, samp_props, loc, common_args, multi_sample=F
     os.makedirs(bins_dp, exist_ok=True)
     
     cmd = [
-        "semibin2",
+        "SemiBin2",
         "single_easy_bin" if not multi_sample else "multi_easy_bin",
         "-i", samp_props["contigs"],
         "-b", samp_props["map"],
@@ -98,7 +98,7 @@ def _run_semibin2_multi(sample_set, loc, common_args):
             bam_files.append(props["map"])
     
     cmd = [
-        "semibin2",
+        "SemiBin2",
         "multi_easy_bin",
         "-i", combined_contigs,
         "-b", *bam_files,
