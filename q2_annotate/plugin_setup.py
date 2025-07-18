@@ -1211,14 +1211,37 @@ plugin.methods.register_function(
                 "24",
                 "25",
             ]
-        )
+        ),
+        "mode": Str % Choices(["single", "meta"]),
+        "closed": Bool,
+        "no_shine_dalgarno": Bool,
+        "mask": Bool,
     },
     parameter_descriptions={
         "translation_table_number": (
             "Translation table to be used to translate genes into sequences of "
             "amino acids. See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/"
             "wprintgc.cgi for reference."
-        )
+        ),
+        "mode": (
+            "Gene prediction mode. 'single' is suitable for single genome analysis "
+            "(e.g., MAGs), 'meta' is suitable for metagenome analysis "
+            "(e.g., contigs from mixed communities)."
+        ),
+        "closed": (
+            "Treat sequences as complete genomes with closed ends. Use this "
+            "for finished genomes where the sequences represent complete chromosomes "
+            "or plasmids."
+        ),
+        "no_shine_dalgarno": (
+            "Bypass Shine-Dalgarno trainer and use a more generic model. "
+            "Useful for virus, phage, or plasmid sequences that may not follow "
+            "standard prokaryotic gene patterns."
+        ),
+        "mask": (
+            "Treat runs of N as masked sequence. Useful for assemblies that "
+            "contain gap regions represented by stretches of N nucleotides."
+        ),
     },
     outputs=[
         ("loci", GenomeData[Loci]),
@@ -1430,12 +1453,13 @@ plugin.methods.register_function(
     citations=[],
 )
 
-filter_mags_params = {
+filter_params = {
     "metadata": Metadata,
     "where": Str,
     "exclude_ids": Bool,
+    "remove_empty": Bool,
 }
-filter_contigs_param_descriptions = {
+filter_param_descriptions = {
     "metadata": (
         "Sample metadata indicating which MAG ids to filter. "
         "The optional `where` parameter may be used to filter ids "
@@ -1459,10 +1483,13 @@ filter_contigs_param_descriptions = {
 plugin.methods.register_function(
     function=q2_annotate.filtering.filter_derep_mags,
     inputs={"mags": FeatureData[MAG]},
-    parameters=filter_mags_params,
+    parameters=filter_params,
     outputs={"filtered_mags": FeatureData[MAG]},
     input_descriptions={"mags": "Dereplicated MAGs to filter."},
-    parameter_descriptions=filter_contigs_param_descriptions,
+    parameter_descriptions={
+        **filter_param_descriptions,
+        "remove_empty": "Remove empty MAGs.",
+    },
     name="Filter dereplicated MAGs.",
     description="Filter dereplicated MAGs based on metadata.",
 )
@@ -1471,14 +1498,15 @@ plugin.methods.register_function(
     function=q2_annotate.filtering.filter_mags,
     inputs={"mags": SampleData[MAGs]},
     parameters={
-        **filter_mags_params,
+        **filter_params,
         "on": Str % Choices(["sample", "mag"]),
     },
     outputs={"filtered_mags": SampleData[MAGs]},
     input_descriptions={"mags": "MAGs to filter."},
     parameter_descriptions={
-        **filter_contigs_param_descriptions,
+        **filter_param_descriptions,
         "on": "Whether to filter based on sample or MAG metadata.",
+        "remove_empty": "Remove empty MAGs.",
     },
     name="Filter MAGs.",
     description="Filter MAGs based on metadata.",
@@ -2056,6 +2084,7 @@ plugin.pipelines.register_function(
         "classified taxa by relative abundance."
     ),
 )
+
 
 plugin.register_semantic_types(BUSCOResults, BUSCO)
 plugin.register_formats(
