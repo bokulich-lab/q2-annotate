@@ -11,6 +11,29 @@
     white-space: nowrap
 }
 
+#selectableHistogramUnbinnedControls .vega-bind {
+  display: flex;
+  align-items: center;     /* vertically center label with buttons block */
+  margin-bottom: 15px; /* Match dropdown */
+  gap: 10px;
+}
+
+#selectableHistogramUnbinnedControls .vega-bind-name {
+  white-space: nowrap;
+  font-weight: normal;
+}
+
+#selectableHistogramUnbinnedControls .vega-bind-radio {
+  display: flex;
+  flex-direction: column; /* stack radio buttons vertically */
+  gap: 8px;
+}
+
+/* Add space between the radio button and its label */
+#selectableHistogramUnbinnedControls .vega-bind-radio input[type="radio"] {
+  margin-right: 8px;            /* horizontal gap between circle and label text */
+}
+
 .header-inline {
     display: inline-block;
     float: left;

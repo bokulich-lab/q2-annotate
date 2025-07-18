@@ -147,6 +147,8 @@ class TestBUSCOFeatureData(TestPluginBase):
             "summary_stats_json": "stats1",
             "scatter_json": json.dumps({"fake4": {"plot": "null"}}),
             "comp_cont": True,
+            "unbinned": False,
+            "vega_selectable_unbinned_json": None,
             "page_size": 100,
         }
         mock_render.assert_called_with(ANY, self.temp_dir.name, context=exp_context)
@@ -154,22 +156,47 @@ class TestBUSCOFeatureData(TestPluginBase):
 
     # TODO: maybe this could be turned into an actual test
     @patch("q2_annotate.busco.busco._validate_parameters")
+    # def test_evaluate_busco_action(self, mock_validate):
+    #     mock_action = MagicMock(
+    #         side_effect=[
+    #             lambda x, **kwargs: (0,),
+    #             lambda x: ("collated_result",),
+    #             lambda x: ("visualization",),
+    #             lambda x, y: ({"mag1": {}, "mag2": {}},),
+    #         ]
+    #     )
     def test_evaluate_busco_action(self, mock_validate):
+        fake_partition = MagicMock()
+        fake_partition.view.return_value.sample_dict.return_value = {
+            "sample1": {},
+            "sample2": {},
+        }
         mock_action = MagicMock(
             side_effect=[
-                lambda x, **kwargs: (0,),
-                lambda x: ("collated_result",),
-                lambda x: ("visualization",),
-                lambda x, y: ({"mag1": {}, "mag2": {}},),
+                lambda x, **kwargs: (0,),  # evaluate_busco
+                lambda x: ("collated_result",),  # collate
+                lambda x: ("visualization",),  # visualize
+                # lambda x, y: ({"mag1": {}, "mag2": {}},),
+                lambda *args, **kwargs: ("filtered_unbinned",),  # filter_contigs
+                lambda x, y: (fake_partition,),  # partition
             ]
         )
+        #     mock_ctx = MagicMock(get_action=mock_action)
+
         mock_ctx = MagicMock(get_action=mock_action)
         mags = qiime2.Artifact.import_data(
             "FeatureData[MAG]", self.get_data_path("mags/sample2")
         )
+
         busco_db = qiime2.Artifact.import_data(
             "ReferenceDB[BUSCO]", self.get_data_path("busco_db")
         )
-        obs = evaluate_busco(ctx=mock_ctx, mags=mags, db=busco_db, num_partitions=2)
+        obs = evaluate_busco(
+            ctx=mock_ctx,
+            mags=mags,
+            unbinned_contigs=None,
+            db=busco_db,
+            num_partitions=2,
+        )
         exp = ("collated_result", "visualization")
         self.assertTupleEqual(obs, exp)

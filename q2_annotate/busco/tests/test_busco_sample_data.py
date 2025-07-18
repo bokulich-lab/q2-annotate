@@ -18,7 +18,7 @@ from q2_annotate.busco.busco import (
 )
 from unittest.mock import patch, ANY, call, MagicMock
 from qiime2.plugin.testing import TestPluginBase
-from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
+from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt, ContigSequencesDirFmt
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
 
 
@@ -31,6 +31,10 @@ class TestBUSCOSampleData(TestPluginBase):
             path=self.get_data_path("mags"),
             mode="r",
         )
+        self.unbinned = ContigSequencesDirFmt(
+            path=self.get_data_path("unbinned"), mode="r"
+        )
+
         self.busco_db = BuscoDatabaseDirFmt(
             path=self.get_data_path("busco_db"), mode="r"
         )
@@ -74,7 +78,11 @@ class TestBUSCOSampleData(TestPluginBase):
         mock_process.side_effect = busco_list
 
         obs = _busco_helper(self.mags, ["--lineage_dataset", "bacteria_odb10"], True)
-
+        # new
+        # unbinned = ContigSequencesDirFmt(
+        #     path=self.get_data_path('unbinned'),
+        #     mode='r'
+        # )
         exp = pd.read_csv(
             self.get_data_path("busco_results/results_all/busco_results.tsv"), sep="\t"
         )
@@ -149,6 +157,7 @@ class TestBUSCOSampleData(TestPluginBase):
     def test_evaluate_busco_offline(self, mock_helper):
         _evaluate_busco(
             mags=self.mags,
+            unbinned_contigs=self.unbinned,  # new
             db=self.busco_db,
             mode="some_mode",
             lineage_dataset="lineage_1",
@@ -191,6 +200,10 @@ class TestBUSCOSampleData(TestPluginBase):
         "q2_annotate.busco.busco._draw_completeness_vs_contamination",
         return_value={"fake4": {"plot": "NaN"}},
     )
+    @patch(
+        "q2_annotate.busco.busco._draw_selectable_unbinned_histograms",
+        return_value={"fake5": {"plot": "NaN"}},
+    )
     @patch("q2_annotate.busco.busco._get_feature_table", return_value="table1")
     @patch("q2_annotate.busco.busco._calculate_summary_stats", return_value="stats1")
     @patch("q2templates.render")
@@ -203,20 +216,21 @@ class TestBUSCOSampleData(TestPluginBase):
         mock_table,
         mock_scatter,
         mock_selectable,
+        mock_selectable_unbinned,
         mock_marker,
         mock_detailed,
     ):
         _visualize_busco(
             output_dir=self.temp_dir.name,
             results=pd.read_csv(
-                self.get_data_path("summaries/all_renamed_with_lengths.csv")
+                self.get_data_path("summaries/all_renamed_with_lengths_unbinned.csv")
             ),
         )
 
         mock_detailed.assert_called_once()
         mock_marker.assert_called_once()
         mock_selectable.assert_called_once()
-
+        mock_selectable_unbinned.assert_called_once()
         exp_context = {
             "tabs": [
                 {"title": "QC overview", "url": "index.html"},
@@ -234,10 +248,12 @@ class TestBUSCOSampleData(TestPluginBase):
             ),
             "vega_summary_json": json.dumps({"fake2": {"plot": "null"}}),
             "vega_summary_selectable_json": json.dumps({"fake3": {"plot": "null"}}),
+            "scatter_json": json.dumps({"fake4": {"plot": "null"}}),
+            "vega_selectable_unbinned_json": json.dumps({"fake5": {"plot": "null"}}),
             "table": "table1",
             "summary_stats_json": "stats1",
-            "scatter_json": json.dumps({"fake4": {"plot": "null"}}),
             "comp_cont": True,
+            "unbinned": True,
             "page_size": 100,
         }
         mock_render.assert_called_with(ANY, self.temp_dir.name, context=exp_context)
@@ -246,21 +262,38 @@ class TestBUSCOSampleData(TestPluginBase):
     # TODO: maybe this could be turned into an actual test
     @patch("q2_annotate.busco.busco._validate_parameters")
     def test_evaluate_busco_action(self, mock_validate):
+        fake_partition = MagicMock()
+        fake_partition.view.return_value.sample_dict.return_value = {
+            "sample1": {},
+            "sample2": {},
+        }
         mock_action = MagicMock(
             side_effect=[
                 lambda x, **kwargs: (0,),
                 lambda x: ("collated_result",),
                 lambda x: ("visualization",),
-                lambda x, y: ({"mag1": {}, "mag2": {}},),
+                lambda *args, **kwargs: ("filtered_unbinned",),  # filter_contigs
+                lambda x, y: (fake_partition,),  # map id to fasta file in data dir
+                # lambda x, y: ({"mag1": {}, "mag2": {}},),
             ]
         )
+
         mock_ctx = MagicMock(get_action=mock_action)
         mags = qiime2.Artifact.import_data(
             "SampleData[MAGs]", self.get_data_path("mags")
         )
+        unbinned = qiime2.Artifact.import_data(
+            "SampleData[Contigs]", self.get_data_path("unbinned")
+        )
         busco_db = qiime2.Artifact.import_data(
             "ReferenceDB[BUSCO]", self.get_data_path("busco_db")
         )
-        obs = evaluate_busco(ctx=mock_ctx, mags=mags, db=busco_db, num_partitions=2)
+        obs = evaluate_busco(
+            ctx=mock_ctx,
+            mags=mags,
+            db=busco_db,
+            unbinned_contigs=unbinned,
+            num_partitions=2,
+        )
         exp = ("collated_result", "visualization")
         self.assertTupleEqual(obs, exp)

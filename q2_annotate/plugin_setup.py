@@ -159,7 +159,7 @@ plugin.methods.register_function(
     outputs=[
         ("mags", SampleData[MAGs]),
         ("contig_map", FeatureMap[MAGtoContigs]),
-        ("unbinned_contigs", SampleData[Contigs % Properties("unbinned")]),
+        ("unbinned_contigs", SampleData[Contigs % Properties("unbinned")]),  # ??
     ],
     input_descriptions={
         "contigs": "Contigs to be binned.",
@@ -1140,7 +1140,11 @@ plugin.visualizers.register_function(
 
 plugin.methods.register_function(
     function=q2_annotate.busco._evaluate_busco,
-    inputs={"mags": SampleData[MAGs] | FeatureData[MAG], "db": ReferenceDB[BUSCO]},
+    inputs={
+        "mags": SampleData[MAGs] | FeatureData[MAG],
+        "unbinned_contigs": SampleData[Contigs],
+        "db": ReferenceDB[BUSCO],
+    },
     parameters=busco_params,
     outputs={"results": BUSCOResults},
     input_descriptions={"mags": "MAGs to be analyzed.", "db": "BUSCO database."},
@@ -1156,7 +1160,11 @@ plugin.methods.register_function(
 
 plugin.pipelines.register_function(
     function=q2_annotate.busco.evaluate_busco,
-    inputs={"mags": SampleData[MAGs] | FeatureData[MAG], "db": ReferenceDB[BUSCO]},
+    inputs={
+        "mags": SampleData[MAGs] | FeatureData[MAG],
+        "unbinned_contigs": SampleData[Contigs],
+        "db": ReferenceDB[BUSCO],
+    },
     parameters={**busco_params, **partition_params},
     outputs={"results": BUSCOResults, "visualization": Visualization},
     input_descriptions={"mags": "MAGs to be analyzed.", "db": "BUSCO database."},
