@@ -1445,12 +1445,13 @@ plugin.methods.register_function(
     citations=[],
 )
 
-filter_mags_params = {
+filter_params = {
     "metadata": Metadata,
     "where": Str,
     "exclude_ids": Bool,
+    "remove_empty": Bool,
 }
-filter_contigs_param_descriptions = {
+filter_param_descriptions = {
     "metadata": (
         "Sample metadata indicating which MAG ids to filter. "
         "The optional `where` parameter may be used to filter ids "
@@ -1474,10 +1475,13 @@ filter_contigs_param_descriptions = {
 plugin.methods.register_function(
     function=q2_annotate.filtering.filter_derep_mags,
     inputs={"mags": FeatureData[MAG]},
-    parameters=filter_mags_params,
+    parameters=filter_params,
     outputs={"filtered_mags": FeatureData[MAG]},
     input_descriptions={"mags": "Dereplicated MAGs to filter."},
-    parameter_descriptions=filter_contigs_param_descriptions,
+    parameter_descriptions={
+        **filter_param_descriptions,
+        "remove_empty": "Remove empty MAGs.",
+    },
     name="Filter dereplicated MAGs.",
     description="Filter dereplicated MAGs based on metadata.",
 )
@@ -1486,14 +1490,15 @@ plugin.methods.register_function(
     function=q2_annotate.filtering.filter_mags,
     inputs={"mags": SampleData[MAGs]},
     parameters={
-        **filter_mags_params,
+        **filter_params,
         "on": Str % Choices(["sample", "mag"]),
     },
     outputs={"filtered_mags": SampleData[MAGs]},
     input_descriptions={"mags": "MAGs to filter."},
     parameter_descriptions={
-        **filter_contigs_param_descriptions,
+        **filter_param_descriptions,
         "on": "Whether to filter based on sample or MAG metadata.",
+        "remove_empty": "Remove empty MAGs.",
     },
     name="Filter MAGs.",
     description="Filter MAGs based on metadata.",
@@ -2071,6 +2076,7 @@ plugin.pipelines.register_function(
         "classified taxa by relative abundance."
     ),
 )
+
 
 plugin.register_semantic_types(BUSCOResults, BUSCO)
 plugin.register_formats(
