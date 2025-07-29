@@ -77,24 +77,21 @@ def _run_semibin2_single(samp_name, samp_props, loc, common_args, multi_sample=F
 
 def _concatenate_contigs_with_semibin2(sample_set, loc):
     """Concatenate contigs using SemiBin2's concatenate_fasta command."""
-    # Create a directory for input contig files
-    contig_input_dir = os.path.join(loc, "input_contigs")
-    os.makedirs(contig_input_dir, exist_ok=True)
-    
-    # Copy contig files to input directory
+    # Collect all contig file paths
+    contig_files = []
     for samp_name, props in sample_set.items():
         if os.path.exists(props["contigs"]):
-            dest_file = os.path.join(contig_input_dir, f"{samp_name}.fa")
-            shutil.copy2(props["contigs"], dest_file)
+            contig_files.append(props["contigs"])
     
     # Use SemiBin2 concatenate_fasta to combine and rename contigs
     combined_contigs = os.path.join(loc, "combined_contigs.fa")
     cmd = [
         "SemiBin2",
         "concatenate_fasta",
-        "-i", f"{contig_input_dir}/*.fa",
-        "-o", combined_contigs
+        "-i",
     ]
+    cmd.extend(contig_files)  # Add all contig file paths
+    cmd.extend(["-o", combined_contigs])
     run_command(cmd, verbose=True)
     return combined_contigs
 

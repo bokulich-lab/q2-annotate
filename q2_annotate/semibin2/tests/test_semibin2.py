@@ -179,6 +179,16 @@ class TestSemiBin2(TestPluginBase):
             self.assertEqual(expected_call_args[1], "concatenate_fasta")
             self.assertIn("-i", expected_call_args)
             self.assertIn("-o", expected_call_args)
+            
+            # Verify that the individual contig files are passed directly
+            i_index = expected_call_args.index("-i")
+            o_index = expected_call_args.index("-o")
+            contig_files = expected_call_args[i_index + 1:o_index]
+            expected_contig_files = [
+                os.path.join(temp_dir, "samp1.fa"),
+                os.path.join(temp_dir, "samp2.fa")
+            ]
+            self.assertEqual(sorted(contig_files), sorted(expected_contig_files))
 
     @patch("q2_annotate.semibin2.semibin2._concatenate_contigs_with_semibin2")
     @patch("subprocess.run")
