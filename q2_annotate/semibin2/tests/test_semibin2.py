@@ -22,6 +22,7 @@ from q2_annotate.semibin2.semibin2 import (
     _sort_bams,
     _run_semibin2_single,
     _run_semibin2_multi,
+    _concatenate_contigs_with_semibin2,
     _process_semibin2_outputs,
     _process_sample,
     _bin_contigs_semibin2,
@@ -135,7 +136,7 @@ class TestSemiBin2(TestPluginBase):
             self.assertEqual(exp_fp, obs_fp)
 
             exp_cmd = [
-                "SemiBin",
+                "SemiBin2",
                 "single_easy_bin",
                 "-i", fake_props["contigs"],
                 "-b", fake_props["map"],
@@ -146,10 +147,8 @@ class TestSemiBin2(TestPluginBase):
             p1.assert_called_once_with(exp_cmd, check=True)
 
     @patch("subprocess.run")
-    def test_run_semibin2_multi_ok(self, p1):
-        """Test SemiBin2 multi-sample execution."""
-        fake_args = ["--threads", "4", "--min-len", "1000"]
-
+    def test_concatenate_contigs_with_semibin2(self, p1):
+        """Test SemiBin2 concatenate_fasta helper function."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create fake contig files and sample set within temp directory
             fake_sample_set = {
@@ -169,16 +168,53 @@ class TestSemiBin2(TestPluginBase):
                 with open(contig_file, "w") as f:
                     f.write(f">contig1_{samp}\nATCG\n>contig2_{samp}\nGCTA\n")
 
+            obs_combined = _concatenate_contigs_with_semibin2(fake_sample_set, temp_dir)
+            exp_combined = os.path.join(temp_dir, "combined_contigs.fa")
+
+            self.assertEqual(exp_combined, obs_combined)
+
+            # Verify SemiBin2 concatenate_fasta was called correctly
+            expected_call_args = p1.call_args[0][0]
+            self.assertEqual(expected_call_args[0], "SemiBin2")
+            self.assertEqual(expected_call_args[1], "concatenate_fasta")
+            self.assertIn("-i", expected_call_args)
+            self.assertIn("-o", expected_call_args)
+
+    @patch("q2_annotate.semibin2.semibin2._concatenate_contigs_with_semibin2")
+    @patch("subprocess.run")
+    def test_run_semibin2_multi_ok(self, p1, p_concat):
+        """Test SemiBin2 multi-sample execution."""
+        fake_args = ["--threads", "4", "--min-len", "1000"]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fake_sample_set = {
+                "samp1": {
+                    "contigs": os.path.join(temp_dir, "samp1.fa"), 
+                    "map": os.path.join(temp_dir, "samp1.bam")
+                },
+                "samp2": {
+                    "contigs": os.path.join(temp_dir, "samp2.fa"), 
+                    "map": os.path.join(temp_dir, "samp2.bam")
+                },
+            }
+
+            combined_contigs = os.path.join(temp_dir, "combined_contigs.fa")
+            p_concat.return_value = combined_contigs
+
             obs_fp = _run_semibin2_multi(fake_sample_set, temp_dir, fake_args)
             exp_fp = os.path.join(temp_dir, "multi_sample_bins")
 
             self.assertEqual(exp_fp, obs_fp)
 
+            # Check that concatenate_contigs_with_semibin2 was called
+            p_concat.assert_called_once_with(fake_sample_set, temp_dir)
+
             # Check that the command was called with the expected arguments
             expected_call_args = p1.call_args[0][0]
-            self.assertEqual(expected_call_args[0], "SemiBin")
+            self.assertEqual(expected_call_args[0], "SemiBin2")
             self.assertEqual(expected_call_args[1], "multi_easy_bin")
             self.assertIn("-i", expected_call_args)
+            self.assertIn(combined_contigs, expected_call_args)
             self.assertIn("-b", expected_call_args)
             self.assertIn("-o", expected_call_args)
             self.assertIn("--verbose", expected_call_args)

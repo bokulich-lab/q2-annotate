@@ -75,27 +75,40 @@ def _run_semibin2_single(samp_name, samp_props, loc, common_args, multi_sample=F
     return bins_dp
 
 
+def _concatenate_contigs_with_semibin2(sample_set, loc):
+    """Concatenate contigs using SemiBin2's concatenate_fasta command."""
+    # Create a directory for input contig files
+    contig_input_dir = os.path.join(loc, "input_contigs")
+    os.makedirs(contig_input_dir, exist_ok=True)
+    
+    # Copy contig files to input directory
+    for samp_name, props in sample_set.items():
+        if os.path.exists(props["contigs"]):
+            dest_file = os.path.join(contig_input_dir, f"{samp_name}.fa")
+            shutil.copy2(props["contigs"], dest_file)
+    
+    # Use SemiBin2 concatenate_fasta to combine and rename contigs
+    combined_contigs = os.path.join(loc, "combined_contigs.fa")
+    cmd = [
+        "SemiBin2",
+        "concatenate_fasta",
+        "-i", f"{contig_input_dir}/*.fa",
+        "-o", combined_contigs
+    ]
+    run_command(cmd, verbose=True)
+    return combined_contigs
+
+
 def _run_semibin2_multi(sample_set, loc, common_args):
     """Run SemiBin2 in multi-sample mode."""
     bins_dp = os.path.join(loc, "multi_sample_bins")
     os.makedirs(bins_dp, exist_ok=True)
     
-    # Create a combined contigs file and collect all BAM files
-    combined_contigs = os.path.join(loc, "combined_contigs.fa")
-    bam_files = []
+    # Use SemiBin2's concatenate_fasta command to combine contigs with proper naming
+    combined_contigs = _concatenate_contigs_with_semibin2(sample_set, loc)
     
-    with open(combined_contigs, 'w') as outfile:
-        for samp_name, props in sample_set.items():
-            # Read contigs and prefix with sample name to avoid conflicts
-            if os.path.exists(props["contigs"]):
-                with open(props["contigs"], 'r') as infile:
-                    for line in infile:
-                        if line.startswith('>'):
-                            # Prefix contig IDs with sample name
-                            outfile.write(f'>{samp_name}_{line[1:]}')
-                        else:
-                            outfile.write(line)
-            bam_files.append(props["map"])
+    # Collect all BAM files
+    bam_files = [props["map"] for props in sample_set.values()]
     
     cmd = [
         "SemiBin2",
