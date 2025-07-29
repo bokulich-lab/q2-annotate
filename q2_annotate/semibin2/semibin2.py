@@ -85,13 +85,7 @@ def _concatenate_contigs_with_semibin2(sample_set, loc):
     
     # Use SemiBin2 concatenate_fasta to combine and rename contigs
     combined_contigs = os.path.join(loc, "combined_contigs.fa")
-    cmd = [
-        "SemiBin2",
-        "concatenate_fasta",
-        "-i",
-    ]
-    cmd.extend(contig_files)  # Add all contig file paths
-    cmd.extend(["-o", combined_contigs])
+    cmd = ["SemiBin2", "concatenate_fasta", "-i"] + contig_files + ["-o", combined_contigs]
     run_command(cmd, verbose=True)
     return combined_contigs
 
