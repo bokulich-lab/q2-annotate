@@ -169,7 +169,7 @@ class TestSemiBin2(TestPluginBase):
                     f.write(f">contig1_{samp}\nATCG\n>contig2_{samp}\nGCTA\n")
 
             obs_combined = _concatenate_contigs_with_semibin2(fake_sample_set, temp_dir)
-            exp_combined = os.path.join(temp_dir, "combined_contigs.fa")
+            exp_combined = os.path.join(temp_dir, "concatenated_contigs", "concatenated.fa")
 
             self.assertEqual(exp_combined, obs_combined)
 
@@ -180,9 +180,13 @@ class TestSemiBin2(TestPluginBase):
             self.assertIn("-i", expected_call_args)
             self.assertIn("-o", expected_call_args)
             
+            # Verify that the -o parameter is the directory, not the file
+            o_index = expected_call_args.index("-o")
+            output_dir = expected_call_args[o_index + 1]
+            self.assertEqual(output_dir, os.path.join(temp_dir, "concatenated_contigs"))
+            
             # Verify that the individual contig files are passed directly
             i_index = expected_call_args.index("-i")
-            o_index = expected_call_args.index("-o")
             contig_files = expected_call_args[i_index + 1:o_index]
             expected_contig_files = [
                 os.path.join(temp_dir, "samp1.fa"),
@@ -208,7 +212,7 @@ class TestSemiBin2(TestPluginBase):
                 },
             }
 
-            combined_contigs = os.path.join(temp_dir, "combined_contigs.fa")
+            combined_contigs = os.path.join(temp_dir, "concatenated_contigs", "concatenated.fa")
             p_concat.return_value = combined_contigs
 
             obs_fp = _run_semibin2_multi(fake_sample_set, temp_dir, fake_args)
