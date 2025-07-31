@@ -18,6 +18,7 @@ import tempfile
 from copy import deepcopy
 
 import skbio.io
+from q2_assembly._utils import concatenate_files
 from q2_types.feature_data import DNAIterator
 
 from q2_types.per_sample_sequences import ContigSequencesDirFmt, BAMDirFmt
@@ -76,39 +77,17 @@ def _run_semibin2_single(samp_name, samp_props, loc, common_args, multi_sample=F
     return bins_dp
 
 
-def concatenate_files(input_files, output_file):
-    """Concatenate the content of the files in input_files and
-    save the content in the output_file.
-
-    Args:
-        input_files (list): list of all files to be concatenated
-        output_file (str): the path to the resulting file
-    """
-    cmd = ["cat", *input_files]
-    subprocess.run(cmd, stdout=open(output_file, "w"), check=True)
-
-
-def _concatenate_contigs_with_semibin2(sample_set, loc):
+def _concatenate_contigs(sample_set, loc):
     """Concatenate contigs using SemiBin2's concatenate_fasta command."""
     # Collect all contig file paths
     contig_files = []
     for samp_name, props in sample_set.items():
         if os.path.exists(props["contigs"]):
             contig_files.append(props["contigs"])
-    
-    # Use SemiBin2 concatenate_fasta to combine and rename contigs
-    # The -o parameter should be a directory, and concatenated.fa will be created inside
-    # concatenate_dir = os.path.join(loc, "concatenated_contigs")
-    # os.makedirs(concatenate_dir, exist_ok=True)
-    # cmd = ["SemiBin2", "concatenate_fasta", "-i"] + contig_files + ["-o", concatenate_dir]
-    # run_command(cmd, verbose=True)
-    
-    # Manual concatenation using our own implementation
-    concatenated_file = os.path.join(loc, "concatenated.fa")
-    concatenate_files(contig_files, concatenated_file)
-    
-    # Return the path to the actual concatenated file
-    return concatenated_file
+
+    concatenated_fp = os.path.join(loc, "concatenated.fa")
+    concatenate_files(contig_files, concatenated_fp)
+    return concatenated_fp
 
 
 def _run_semibin2_multi(sample_set, loc, common_args):
@@ -117,7 +96,7 @@ def _run_semibin2_multi(sample_set, loc, common_args):
     os.makedirs(bins_dp, exist_ok=True)
     
     # Use SemiBin2's concatenate_fasta command to combine contigs with proper naming
-    combined_contigs = _concatenate_contigs_with_semibin2(sample_set, loc)
+    combined_contigs = _concatenate_contigs(sample_set, loc)
     
     # Collect all BAM files
     bam_files = [props["map"] for props in sample_set.values()]
@@ -128,9 +107,9 @@ def _run_semibin2_multi(sample_set, loc, common_args):
         "-i", combined_contigs,
         "-b", *bam_files,
         "-o", bins_dp,
-        "--verbose",  # Always run in verbose mode as specified in requirements
+        "--verbose",
+        *common_args
     ]
-    cmd.extend(common_args)
     run_command(cmd, verbose=True)
     return bins_dp
 

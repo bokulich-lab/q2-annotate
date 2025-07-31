@@ -22,7 +22,7 @@ from q2_annotate.semibin2.semibin2 import (
     _sort_bams,
     _run_semibin2_single,
     _run_semibin2_multi,
-    _concatenate_contigs_with_semibin2,
+    _concatenate_contigs,
     _process_semibin2_outputs,
     _process_sample,
     _bin_contigs_semibin2,
@@ -168,7 +168,7 @@ class TestSemiBin2(TestPluginBase):
                 with open(contig_file, "w") as f:
                     f.write(f">contig1_{samp}\nATCG\n>contig2_{samp}\nGCTA\n")
 
-            obs_combined = _concatenate_contigs_with_semibin2(fake_sample_set, temp_dir)
+            obs_combined = _concatenate_contigs(fake_sample_set, temp_dir)
             exp_combined = os.path.join(temp_dir, "concatenated.fa")
 
             self.assertEqual(exp_combined, obs_combined)
