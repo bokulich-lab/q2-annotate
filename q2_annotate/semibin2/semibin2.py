@@ -8,6 +8,7 @@
 import glob
 import gzip
 import re
+import subprocess
 from uuid import uuid4
 from pathlib import Path
 
@@ -75,6 +76,18 @@ def _run_semibin2_single(samp_name, samp_props, loc, common_args, multi_sample=F
     return bins_dp
 
 
+def concatenate_files(input_files, output_file):
+    """Concatenate the content of the files in input_files and
+    save the content in the output_file.
+
+    Args:
+        input_files (list): list of all files to be concatenated
+        output_file (str): the path to the resulting file
+    """
+    cmd = ["cat", *input_files]
+    subprocess.run(cmd, stdout=open(output_file, "w"), check=True)
+
+
 def _concatenate_contigs_with_semibin2(sample_set, loc):
     """Concatenate contigs using SemiBin2's concatenate_fasta command."""
     # Collect all contig file paths
@@ -85,13 +98,17 @@ def _concatenate_contigs_with_semibin2(sample_set, loc):
     
     # Use SemiBin2 concatenate_fasta to combine and rename contigs
     # The -o parameter should be a directory, and concatenated.fa will be created inside
-    concatenate_dir = os.path.join(loc, "concatenated_contigs")
-    os.makedirs(concatenate_dir, exist_ok=True)
-    cmd = ["SemiBin2", "concatenate_fasta", "-i"] + contig_files + ["-o", concatenate_dir]
-    run_command(cmd, verbose=True)
+    # concatenate_dir = os.path.join(loc, "concatenated_contigs")
+    # os.makedirs(concatenate_dir, exist_ok=True)
+    # cmd = ["SemiBin2", "concatenate_fasta", "-i"] + contig_files + ["-o", concatenate_dir]
+    # run_command(cmd, verbose=True)
+    
+    # Manual concatenation using our own implementation
+    concatenated_file = os.path.join(loc, "concatenated.fa")
+    concatenate_files(contig_files, concatenated_file)
     
     # Return the path to the actual concatenated file
-    return os.path.join(concatenate_dir, "concatenated.fa")
+    return concatenated_file
 
 
 def _run_semibin2_multi(sample_set, loc, common_args):

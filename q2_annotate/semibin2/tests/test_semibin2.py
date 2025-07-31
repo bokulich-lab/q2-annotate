@@ -148,7 +148,7 @@ class TestSemiBin2(TestPluginBase):
 
     @patch("subprocess.run")
     def test_concatenate_contigs_with_semibin2(self, p1):
-        """Test SemiBin2 concatenate_fasta helper function."""
+        """Test manual contig concatenation helper function."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create fake contig files and sample set within temp directory
             fake_sample_set = {
@@ -169,25 +169,16 @@ class TestSemiBin2(TestPluginBase):
                     f.write(f">contig1_{samp}\nATCG\n>contig2_{samp}\nGCTA\n")
 
             obs_combined = _concatenate_contigs_with_semibin2(fake_sample_set, temp_dir)
-            exp_combined = os.path.join(temp_dir, "concatenated_contigs", "concatenated.fa")
+            exp_combined = os.path.join(temp_dir, "concatenated.fa")
 
             self.assertEqual(exp_combined, obs_combined)
 
-            # Verify SemiBin2 concatenate_fasta was called correctly
+            # Verify cat command was called correctly for concatenation
             expected_call_args = p1.call_args[0][0]
-            self.assertEqual(expected_call_args[0], "SemiBin2")
-            self.assertEqual(expected_call_args[1], "concatenate_fasta")
-            self.assertIn("-i", expected_call_args)
-            self.assertIn("-o", expected_call_args)
+            self.assertEqual(expected_call_args[0], "cat")
             
-            # Verify that the -o parameter is the directory, not the file
-            o_index = expected_call_args.index("-o")
-            output_dir = expected_call_args[o_index + 1]
-            self.assertEqual(output_dir, os.path.join(temp_dir, "concatenated_contigs"))
-            
-            # Verify that the individual contig files are passed directly
-            i_index = expected_call_args.index("-i")
-            contig_files = expected_call_args[i_index + 1:o_index]
+            # Verify that the individual contig files are passed to cat
+            contig_files = expected_call_args[1:]
             expected_contig_files = [
                 os.path.join(temp_dir, "samp1.fa"),
                 os.path.join(temp_dir, "samp2.fa")
