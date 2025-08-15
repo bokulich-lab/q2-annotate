@@ -21,7 +21,7 @@ requirements:
   - gfatools
   - kaiju
   - kraken2
-  - metabat2
+  - metabat2 # [linux]
   - pandas
   - parameterized
   - qiime2 >={{ qiime2 }}
