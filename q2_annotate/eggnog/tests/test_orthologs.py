@@ -188,8 +188,8 @@ class TestHMMER(TestPluginBase):
                 "-m",
                 "f",
                 "g",
-                '--genepred',
-                'prodigal',
+                "--genepred",
+                "prodigal",
                 "--itype",
                 "metagenome",
                 "--output_dir",
@@ -200,7 +200,7 @@ class TestHMMER(TestPluginBase):
                 "--dbmem",
             ],
             check=True,
-            cwd='c'
+            cwd="c",
         )
 
 
