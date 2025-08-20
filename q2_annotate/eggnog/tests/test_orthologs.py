@@ -178,7 +178,7 @@ class TestHMMER(TestPluginBase):
     @patch("subprocess.run")
     def test_search_runner(self, mock_run):
         _search_runner("a", "b", "c", "d", True, ["f", "g"])
-        mock_run.called_once_with(
+        mock_run.assert_called_once_with(
             [
                 "emapper.py",
                 "-i",
@@ -188,6 +188,8 @@ class TestHMMER(TestPluginBase):
                 "-m",
                 "f",
                 "g",
+                '--genepred',
+                'prodigal',
                 "--itype",
                 "metagenome",
                 "--output_dir",
@@ -198,6 +200,7 @@ class TestHMMER(TestPluginBase):
                 "--dbmem",
             ],
             check=True,
+            cwd='c'
         )
 
 
