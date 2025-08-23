@@ -220,7 +220,7 @@ def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
         dict: Dictionary containing the Vega spec.
     """
     metrics = ["unbinned_contigs", "unbinned_contigs_count"]
-    labels = ["Percentage of Unbinned Contigs", "Absolute Count of Unbinned Contigs"]
+    labels = ["Percentage of unbinned contigs", "Absolute count of unbinned contigs"]
     # Keep only one row per sample
     data = data.drop_duplicates(subset=["sample_id"])
     data = pd.melt(

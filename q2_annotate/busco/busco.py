@@ -38,6 +38,7 @@ from q2_annotate.busco.utils import (
     _calculate_unbinned_percentage,
     _filter_unbinned_for_partition,
     _get_fasta_files_from_dir,
+    _add_unbinned_metrics,
 )
 
 from q2_annotate._utils import _process_common_input_params, run_command
@@ -51,7 +52,6 @@ from q2_types.per_sample_sequences import (
 )
 from q2_assembly.filter import filter_contigs
 import warnings
-
 
 def _run_busco(input_dir: str, output_dir: str, sample_id: str, params: List[str]):
     """Runs BUSCO on one (sample) directory
@@ -107,12 +107,10 @@ def _busco_helper(mags, common_args, additional_metrics):
                 results_all.append(results)
 
     return pd.DataFrame(results_all)
-
-
 def _evaluate_busco(
     mags: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt],
     db: BuscoDatabaseDirFmt,
-    unbinned_contigs: ContigSequencesDirFmt = None,  ### NEW unbinned
+    unbinned_contigs: ContigSequencesDirFmt = None,  # NEW unbinned
     mode: str = "genome",
     lineage_dataset: str = None,
     augustus: bool = False,
@@ -134,8 +132,7 @@ def _evaluate_busco(
     kwargs = {
         k: v
         for k, v in locals().items()
-        if k
-        not in ["mags", "unbinned_contigs", "db", "additional_metrics"]  # exclude db
+        if k not in ["mags", "unbinned_contigs", "db", "additional_metrics"]
     }
     kwargs["offline"] = True
     kwargs["download_path"] = str(db)
@@ -147,34 +144,22 @@ def _evaluate_busco(
             auto_lineage_euk,
             auto_lineage_prok,
             db,
-            kwargs,  # kwargs may be modified inside this function
+            kwargs,
         )
 
     # Filter out all kwargs that are None, False or 0.0
     common_args = _process_common_input_params(
         processing_func=_parse_busco_params, params=kwargs
     )
+
+    # Always call _busco_helper once
+    busco_results = _busco_helper(mags, common_args, additional_metrics)
+
+    # If mags is MultiMAGSequencesDirFmt, add unbinned contigs info
     if isinstance(mags, MultiMAGSequencesDirFmt):
-        busco_results = _busco_helper(mags, common_args, additional_metrics)
-        busco_results["unbinned_contigs"] = pd.NA
-        busco_results["unbinned_contigs_count"] = pd.NA
-        for unbinned_id, unbinned_path in unbinned_contigs.sample_dict().items():
-            binned_dir = mags.path / unbinned_id
-            binned_fasta_paths = _get_fasta_files_from_dir(binned_dir)
-            percentage, count = _calculate_unbinned_percentage(
-                binned_fasta_paths, [unbinned_path]
-            )
-            busco_results.loc[
-                busco_results["sample_id"] == unbinned_id, "unbinned_contigs"
-            ] = float(percentage)
-            busco_results.loc[
-                busco_results["sample_id"] == unbinned_id, "unbinned_contigs_count"
-            ] = int(count)
+        busco_results = _add_unbinned_metrics(busco_results, mags, unbinned_contigs)
 
-        return busco_results
-
-    return _busco_helper(mags, common_args, additional_metrics)
-
+    return busco_results
 
 def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     results.to_csv(os.path.join(output_dir, "busco_results.csv"), index=False)
@@ -340,19 +325,21 @@ def evaluate_busco(
     _visualize_busco = ctx.get_action("annotate", "_visualize_busco")
     _filter_contigs = ctx.get_action("assembly", "filter_contigs")
 
-    # add partition cases for unbinned contigs if bins.type <= SampleData[MAGs]:
     if issubclass(mags.format, MultiMAGSequencesDirFmt):
         partition_action = "partition_sample_data_mags"
     else:
         partition_action = "partition_feature_data_mags"
-        warnings.warn(
-            "FeatureData[MAG] artifact was provided - unbinned contigs will be ignored."
-        )
+        if unbinned_contigs is not None:
+            warnings.warn(
+                "FeatureData[MAG] artifact was provided - unbinned contigs will be ignored."
+            )
 
     partition_mags = ctx.get_action("types", partition_action)
 
     (partitioned_mags,) = partition_mags(mags, num_partitions)
     results = []
+
+    # Check if the input is SampleData[MAGs] why 
     if mags.type <= SampleData[MAGs]:
         for partition_id, mag_partition in partitioned_mags.items():
             filtered_unbinned = _filter_unbinned_for_partition(

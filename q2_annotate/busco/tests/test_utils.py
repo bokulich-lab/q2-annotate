@@ -26,6 +26,7 @@ from q2_annotate.busco.utils import (
     _count_contigs,
     _filter_unbinned_for_partition,
     _get_fasta_files_from_dir,
+    _add_unbinned_metrics,
 )
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
@@ -649,37 +650,68 @@ class TestBUSCOUtils(TestPluginBase):
         expected_metadata = Metadata(
             pd.DataFrame(index=pd.Index(["sample1"], name="ID"))
         )
-        expected_where = "ID IN ('sample1')"
+
         # Mock _filter_contigs
         mock_filter_contigs = MagicMock(return_value=("filtered_result",))
 
         # Call function under test
         _filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
 
-        # Check arguments passed to the mock action
+        # Check arguments passed to the mock action (no `where` now)
         mock_filter_contigs.assert_called_once_with(
-            contigs=unbinned, metadata=expected_metadata, where=expected_where
+            contigs=unbinned,
+            metadata=expected_metadata,
         )
+
 
     def test_filtered_unbinned_matches_partition_2_samples(self):
         mag_fmt = MultiMAGSequencesDirFmt(
             path=self.get_data_path("partition_2_samples"), mode="r"
         )
         partitioned_mags = Artifact.import_data("SampleData[MAGs]", mag_fmt)
-        # Load unbinned contigs
+
         unbinned = ContigSequencesDirFmt(path=self.get_data_path("unbinned"), mode="r")
         expected_metadata = Metadata(
             pd.DataFrame(index=pd.Index(["sample1", "sample2"], name="ID"))
         )
-        expected_where = "ID IN ('sample1', 'sample2')"
-        # Mock _filter_contigs
-        # mock_filter_contigs = MagicMock(return_value="filtered_result")
+
         mock_filter_contigs = MagicMock(return_value=("filtered_result",))
 
         # Call function under test
         _filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
 
-        # Check arguments passed to the mock action
+        # Check arguments passed to the mock action (no `where` now)
         mock_filter_contigs.assert_called_once_with(
-            contigs=unbinned, metadata=expected_metadata, where=expected_where
+            contigs=unbinned,
+            metadata=expected_metadata,
         )
+    @patch("q2_annotate.busco.utils._calculate_unbinned_percentage", return_value=(10.0, 5))
+    def test_add_unbinned_metrics(self, mock_calculate):
+        df = pd.DataFrame({
+            "sample_id": ["sample1"],
+            "busco_score": [95.0]
+        })
+
+        # Mock mags and unbinned_contigs
+        mags_mock = MagicMock()
+        mags_mock.sample_dict.return_value = {
+            "sample1": {"bin1": "fake_bin1.fasta"}
+        }
+
+        unbinned_mock = MagicMock()
+        unbinned_mock.sample_dict.return_value = {
+            "sample1": "fake_unbinned.fasta"
+        }
+
+        # Call through the module (NOT the directly imported function)
+        result = _add_unbinned_metrics(df, mags_mock, unbinned_mock)
+
+        mags_mock.sample_dict.assert_called_once()
+        unbinned_mock.sample_dict.assert_called_once()
+
+        self.assertIn("unbinned_contigs", result.columns)
+        self.assertIn("unbinned_contigs_count", result.columns)
+
+        row = result[result["sample_id"] == "sample1"].iloc[0]
+        self.assertEqual(row["unbinned_contigs"], 10.0)
+        self.assertEqual(row["unbinned_contigs_count"], 5)

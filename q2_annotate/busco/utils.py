@@ -11,10 +11,12 @@ import warnings
 import pandas as pd
 from typing import List, Union
 import skbio.io
-from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
-
+from q2_types.per_sample_sequences import (
+    MultiMAGSequencesDirFmt,
+    ContigSequencesDirFmt,
+)
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
 from pathlib import Path
 from qiime2 import Metadata
@@ -33,8 +35,6 @@ MARKER_COLS = [
     "fragmented",
     "missing",
     "complete",
-    "completeness",
-    "contamination",
 ]
 
 
@@ -223,9 +223,8 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     cols = MARKER_COLS.copy()
 
-    if not ("completeness" in df.columns and "contamination" in df.columns):
-        cols.remove("completeness")
-        cols.remove("contamination")
+    if "completeness" in df.columns and "contamination" in df.columns:
+        cols.extend(["completeness", "contamination"])
     if "unbinned_contigs" in df.columns:
         cols.append("unbinned_contigs")
 
@@ -239,30 +238,6 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     df["n_markers"] = df["n_markers"].map(int)
     return df
 
-
-# def _rename_columns(df):
-#     cols = {
-#         "Input_file": "input_file", "Dataset": "dataset",
-#         "Complete": "complete", "Single": "single",
-#         "Duplicated": "duplicated", "Fragmented": "fragmented",
-#         "Missing": "missing", "n_markers": "n_markers",
-#         "Scaffold N50": "scaffold_n50", "Contigs N50": "contigs_n50",
-#         "Percent gaps": "percent_gaps", "Number of scaffolds": "scaffolds",
-#         "sample_id": "sample_id"
-#     }
-
-#     cols_reshuffled = [
-#         "mag_id", "sample_id", "input_file", "dataset", "complete",
-#         "single", "duplicated", "fragmented", "missing", "n_markers",
-#         "scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds",
-#     ]
-
-#     df = df.rename(columns=cols, inplace=False)
-#     df["mag_id"] = df["input_file"].str.split(".", expand=True)[0]
-
-#     return df[cols_reshuffled]
-
-
 def _cleanup_bootstrap(output_dir):
     # Remove unwanted files
     # until Bootstrap 3 is replaced with v5, remove the v3 scripts as
@@ -273,10 +248,8 @@ def _cleanup_bootstrap(output_dir):
 
 def _calculate_summary_stats(df: pd.DataFrame) -> json:
     cols = MARKER_COLS.copy()
-    if not ("completeness" in df.columns and "contamination" in df.columns):
-        cols.remove("completeness")
-        cols.remove("contamination")
-
+    if "completeness" in df.columns and "contamination" in df.columns:
+        cols.extend(["completeness", "contamination"])
     if "unbinned_contigs" in df.columns:
         cols.append("unbinned_contigs")
 
@@ -419,6 +392,27 @@ def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
         return pd.Series(lengths, name="length")
 
 
+# def _filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
+#     """
+#     Filters the unbinned contigs to match the sample IDs in a MAG partition.
+
+#     Args:
+#         unbinned_contigs (ContigSequencesDirFmt): The full unbinned contigs.
+#         mag_partition (MultiMAGSequencesDirFmt): One partition of MAGs.
+#         _filter_contigs (Action): QIIME 2 action to filter contigs.
+
+#     Returns:
+#         ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
+#     """
+#     sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
+#     metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
+#     id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
+#     where = f"ID IN ({id_list})"
+#     (filtered_unbinned,) = _filter_contigs(
+#         contigs=unbinned_contigs, metadata=metadata, where=where
+#     )
+#     return filtered_unbinned
+
 def _filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
     """
     Filters the unbinned contigs to match the sample IDs in a MAG partition.
@@ -431,15 +425,17 @@ def _filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_cont
     Returns:
         ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
     """
+    # Collect sample IDs from the MAG partition
     sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
+    # Create Metadata object with these sample IDs
     metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
-    id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
-    where = f"ID IN ({id_list})"
+
+    # Call the filter action (no `where` needed with new q2-assembly)
     (filtered_unbinned,) = _filter_contigs(
-        contigs=unbinned_contigs, metadata=metadata, where=where
+        contigs=unbinned_contigs,
+        metadata=metadata,
     )
     return filtered_unbinned
-
 
 def _get_fasta_files_from_dir(directory: Path) -> list:
     # Only match FASTA extensions starting with '.fa' or '.fna'
@@ -471,7 +467,7 @@ def _count_contigs(file_paths: List[Path]) -> int:
 
 
 def _calculate_unbinned_percentage(
-    mags_per_sample, unbinned_contigs_per_sample
+    mags_per_sample: MultiMAGSequencesDirFmt, unbinned_contigs_per_sample: ContigSequencesDirFmt
 ) -> tuple[float, int]:
     """
     Calculate the percentage and absolute count of unbinned contigs for a single sample.
@@ -502,3 +498,36 @@ def _calculate_unbinned_percentage(
     percentage_unbinned = (unbinned_contigs_count / total) * 100 if total > 0 else 0
 
     return percentage_unbinned, unbinned_contigs_count
+
+def _add_unbinned_metrics(
+    busco_results: pd.DataFrame,
+    mags: MultiMAGSequencesDirFmt,
+    unbinned_contigs: ContigSequencesDirFmt
+) -> pd.DataFrame:
+    """Add unbinned contigs percentage and count columns to BUSCO results."""
+
+    mags_dict = mags.sample_dict()
+    rows = []
+
+    for unbinned_id, unbinned_path in unbinned_contigs.sample_dict().items():
+        # Get all FASTA paths for this bin
+        binned_fasta_paths = list(mags_dict[unbinned_id].values())
+
+        percentage, count = _calculate_unbinned_percentage(
+            binned_fasta_paths, [unbinned_path]
+        )
+        rows.append({
+            "sample_id": unbinned_id,
+            "unbinned_contigs": float(percentage),
+            "unbinned_contigs_count": int(count)
+        })
+
+    if rows:
+        unbinned_df = pd.DataFrame(rows)
+        # Merge so that only matching sample_id rows are updated
+        busco_results = busco_results.merge(unbinned_df, on="sample_id", how="left")
+    else:
+        busco_results["unbinned_contigs"] = pd.NA
+        busco_results["unbinned_contigs_count"] = pd.NA
+
+    return busco_results
