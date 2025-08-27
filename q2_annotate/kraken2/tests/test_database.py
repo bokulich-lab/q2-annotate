@@ -12,6 +12,8 @@ import tarfile
 import tempfile
 import unittest
 from copy import deepcopy
+
+import requests
 from requests.exceptions import ConnectionError
 from subprocess import CalledProcessError
 from tempfile import TemporaryDirectory
@@ -386,7 +388,7 @@ class TestKraken2Database(TestPluginBase):
 
         _fetch_db_collection("viral", "/tmp")
 
-        mock_requests_get.has_calls(
+        mock_requests_get.assert_has_calls(
             [
                 call(S3_COLLECTIONS_URL),
                 call(f"{S3_COLLECTIONS_URL}/kraken/k2_viral.tar.gz", stream=True),
@@ -429,10 +431,10 @@ class TestKraken2Database(TestPluginBase):
         ]
     )
     @patch("requests.get")
-    @patch("shutil.move")
     @patch("os.listdir")
     @patch("tarfile.open")
     @patch("q2_annotate.kraken2.database.tqdm")
+    @patch("q2_annotate.kraken2.database._move_files_one_level_up")
     def test_fetch_db_collection_16S_success(
         self,
         latest_db,
@@ -440,10 +442,10 @@ class TestKraken2Database(TestPluginBase):
         unzipped_folder,
         folder_name,
         collection,
+        mock_move,
         mock_tqdm,
         mock_tarfile_open,
         mock_os_listdir,
-        mock_shutil_move,
         mock_requests_get,
     ):
         with patch(
@@ -459,18 +461,14 @@ class TestKraken2Database(TestPluginBase):
             ]
 
             mock_os_listdir.return_value = [zipped_folder, unzipped_folder]
-            expected_calls = self.create_expected_calls(
-                folder_name, "/tmp", seq=collection
-            )
 
             _fetch_db_collection(collection, "/tmp")
 
-            mock_shutil_move.has_calls(expected_calls)
-
-            mock_requests_get.has_calls(
+            mock_move.assert_called_once_with("/tmp")
+            mock_requests_get.assert_has_calls(
                 [
                     call(S3_COLLECTIONS_URL),
-                    call(f"{S3_COLLECTIONS_URL}/kraken/{zipped_folder}", stream=True),
+                    call(f"{S3_COLLECTIONS_URL}/{latest_db}", stream=True),
                 ]
             )
             mock_tqdm.assert_not_called()
@@ -497,7 +495,7 @@ class TestKraken2Database(TestPluginBase):
 
         _fetch_db_collection("viral", "/tmp")
 
-        mock_requests_get.has_calls(
+        mock_requests_get.assert_has_calls(
             [
                 call(S3_COLLECTIONS_URL),
                 call(f"{S3_COLLECTIONS_URL}/kraken/k2_viral.tar.gz", stream=True),
@@ -546,10 +544,10 @@ class TestKraken2Database(TestPluginBase):
         ]
     )
     @patch("requests.get")
-    @patch("shutil.move")
     @patch("os.listdir")
     @patch("tarfile.open")
     @patch("q2_annotate.kraken2.database.tqdm")
+    @patch("q2_annotate.kraken2.database._move_files_one_level_up")
     def test_fetch_db_collection_16S_tqdm_success(
         self,
         latest_db,
@@ -557,10 +555,10 @@ class TestKraken2Database(TestPluginBase):
         unzipped_folder,
         folder_name,
         collection,
+        mock_move,
         mock_tqdm,
         mock_tarfile_open,
         mock_os_listdir,
-        mock_shutil_move,
         mock_requests_get,
     ):
         with patch(
@@ -576,18 +574,14 @@ class TestKraken2Database(TestPluginBase):
             ]
 
             mock_os_listdir.return_value = [zipped_folder, unzipped_folder]
-            expected_calls = self.create_expected_calls(
-                folder_name, "/tmp", seq=collection
-            )
 
             _fetch_db_collection(collection, "/tmp")
 
-            mock_shutil_move.has_calls(expected_calls)
-
-            mock_requests_get.has_calls(
+            mock_move.assert_called_once_with("/tmp")
+            mock_requests_get.assert_has_calls(
                 [
                     call(S3_COLLECTIONS_URL),
-                    call(f"{S3_COLLECTIONS_URL}/kraken/{zipped_folder}", stream=True),
+                    call(f"{S3_COLLECTIONS_URL}/{latest_db}", stream=True),
                 ]
             )
             mock_tqdm.assert_called_once_with(
@@ -686,7 +680,7 @@ class TestKraken2Database(TestPluginBase):
                 call(kraken2_db_dir=tmp_dir, threads=1, kmer_len=35, read_len=150),
             ]
         )
-        mock_move.has_calls(
+        mock_move.assert_has_calls(
             [
                 call(tmp_dir, str(kraken2_db.path), extension="k2d"),
                 call(tmp_dir, str(bracken_db.path), extension="kmer_distrib"),

@@ -50,8 +50,16 @@ class TestTreeMerging(TestPluginBase):
         exp_df = self._get_tree_df("no-unclassified/merged-tree.report.txt")
 
         assert_frame_equal(
-            obs_df.sort_values(by="perc_frags_covered").reset_index(drop=True),
-            exp_df.sort_values(by="perc_frags_covered").reset_index(drop=True),
+            obs_df.sort_values(
+                by="perc_frags_covered",
+                kind="stable",
+                key=lambda s: s.astype(float).round(2),
+            ).reset_index(drop=True),
+            exp_df.sort_values(
+                by="perc_frags_covered",
+                kind="stable",
+                key=lambda s: s.astype(float).round(2),
+            ).reset_index(drop=True),
             check_dtype=False,
         )
 
@@ -67,8 +75,16 @@ class TestTreeMerging(TestPluginBase):
         exp_df = self._get_tree_df("one-unclassified/merged-tree.report.txt")
 
         assert_frame_equal(
-            obs_df.sort_values(by="perc_frags_covered").reset_index(drop=True),
-            exp_df.sort_values(by="perc_frags_covered").reset_index(drop=True),
+            obs_df.sort_values(
+                by="perc_frags_covered",
+                kind="stable",
+                key=lambda s: s.astype(float).round(2),
+            ).reset_index(drop=True),
+            exp_df.sort_values(
+                by="perc_frags_covered",
+                kind="stable",
+                key=lambda s: s.astype(float).round(2),
+            ).reset_index(drop=True),
             check_dtype=False,
         )
 
@@ -84,8 +100,16 @@ class TestTreeMerging(TestPluginBase):
         exp_df = self._get_tree_df("two-unclassified/merged-tree.report.txt")
 
         assert_frame_equal(
-            obs_df.sort_values(by="perc_frags_covered").reset_index(drop=True),
-            exp_df.sort_values(by="perc_frags_covered").reset_index(drop=True),
+            obs_df.sort_values(
+                by="perc_frags_covered",
+                kind="stable",
+                key=lambda s: s.astype(float).round(2),
+            ).reset_index(drop=True),
+            exp_df.sort_values(
+                by="perc_frags_covered",
+                kind="stable",
+                key=lambda s: s.astype(float).round(2),
+            ).reset_index(drop=True),
             check_dtype=False,
         )
 
