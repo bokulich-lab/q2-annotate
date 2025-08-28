@@ -22,10 +22,22 @@ from q2_annotate.busco.utils import (
     _validate_parameters,
     _calculate_contamination_completeness,
     _process_busco_results,
+    _calculate_unbinned_percentage,
+    _count_contigs,
+    _filter_unbinned_for_partition,
+    _get_fasta_files_from_dir,
+    _add_unbinned_metrics,
 )
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
+from q2_types.per_sample_sequences import ContigSequencesDirFmt
+from unittest.mock import patch, ANY, call, MagicMock
+from q2_types.per_sample_sequences._methods import partition_sample_data_mags
+from q2_assembly.filter import filter_contigs
+from qiime2 import Metadata
+from pathlib import Path
+from qiime2 import Artifact
 
 
 class TestBUSCOUtils(TestPluginBase):
@@ -544,3 +556,162 @@ class TestBUSCOUtils(TestPluginBase):
             _validate_parameters(True, True, False, False)
         with self.assertRaisesRegex(ValueError, "If 'lineage-dataset' is provided"):
             _validate_parameters(True, False, False, True)
+
+    def test_count_binned_contigs(self):
+        # Load synthetic test data with known number of contigs
+        # bins = MultiMAGSequencesDirFmt(
+        #     path=self.get_data_path("mags"), mode='r'
+        # )
+        sample_path = Path(self.get_data_path("mags")) / "sample1"
+        # Extract all FASTA files from the directory
+        fasta_files = _get_fasta_files_from_dir(sample_path)
+        count = _count_contigs(fasta_files)
+        self.assertEqual(count, 7)
+
+    def test_count_unbinned_contigs(self):
+        # Load synthetic test data with known number of contigs
+        # bins = MultiMAGSequencesDirFmt(
+        #     path=self.get_data_path("unbinned"), mode='r'
+        # )
+        sample_path = Path(self.get_data_path("unbinned")) / "sample1_contigs.fa"
+
+        count = _count_contigs([sample_path])
+        # 3+2=5
+        self.assertEqual(count, 3)
+
+    def test_calculate_unbinned_percentage(self):
+
+        mag_sample_path = Path(self.get_data_path("mags")) / "sample1"
+        # Extract all FASTA files from the directory
+        # mag_sample_files = [fp for fp in mag_sample_path.glob("*") if fp.suffix in {".fa", ".fasta", ".fna"}]
+        mag_sample_files = _get_fasta_files_from_dir(mag_sample_path)
+        # mags_count = count_contigs(mags)
+        unbinned_sample_path = (
+            Path(self.get_data_path("unbinned")) / "sample1_contigs.fa"
+        )
+        percentage, count = _calculate_unbinned_percentage(
+            mag_sample_files, [unbinned_sample_path]
+        )
+
+        # Type checks
+        self.assertIsInstance(percentage, float)
+        self.assertIsInstance(count, int)
+
+        expected_count = 3
+        expected_percentage = (3 / (3 + 7)) * 100
+
+        self.assertEqual(count, expected_count)
+        self.assertEqual(percentage, expected_percentage)
+
+    def test_no_unbinned(self):
+        # mags_count = count_contigs(mags)
+        mag_sample_path = Path(self.get_data_path("mags")) / "sample1"
+        # Extract all files from the directory
+        mag_sample_files = _get_fasta_files_from_dir(mag_sample_path)
+        # mags_count = count_contigs(mags)
+        unbinned_sample_path = (
+            Path(self.get_data_path("unbinned_empty")) / "sample1_contigs.fa"
+        )
+
+        percentage, count = _calculate_unbinned_percentage(
+            mag_sample_files, [unbinned_sample_path]
+        )
+        # Type and range checks
+        self.assertIsInstance(percentage, float)
+        self.assertIsInstance(count, int)
+        self.assertEqual(count, 0)
+        self.assertEqual(percentage, 0.0)
+
+    def test_only_unbinned(self):
+        # mags_count = count_contigs(mags)
+        mag_sample_path = Path(self.get_data_path("mags_empty")) / "sample1"
+        # Extract all files from the directory
+        mag_sample_files = _get_fasta_files_from_dir(mag_sample_path)
+        # mags_count = count_contigs(mags)
+        unbinned_sample_path = (
+            Path(self.get_data_path("unbinned")) / "sample1_contigs.fa"
+        )
+
+        percentage, count = _calculate_unbinned_percentage(
+            mag_sample_files, [unbinned_sample_path]
+        )
+        expected_count = 3
+        self.assertEqual(count, expected_count)
+        self.assertEqual(percentage, 100)
+
+    def test_filtered_unbinned_matches_partition_1_sample(self):
+        mag_fmt = MultiMAGSequencesDirFmt(
+            path=self.get_data_path("partition_1_sample"), mode="r"
+        )
+        partitioned_mags = Artifact.import_data("SampleData[MAGs]", mag_fmt)
+
+        unbinned = ContigSequencesDirFmt(path=self.get_data_path("unbinned"), mode="r")
+
+        expected_metadata = Metadata(
+            pd.DataFrame(index=pd.Index(["sample1"], name="ID"))
+        )
+
+        # Mock _filter_contigs
+        mock_filter_contigs = MagicMock(return_value=("filtered_result",))
+
+        # Call function under test
+        _filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
+
+        # Check arguments passed to the mock action (no `where` now)
+        mock_filter_contigs.assert_called_once_with(
+            contigs=unbinned,
+            metadata=expected_metadata,
+        )
+
+
+    def test_filtered_unbinned_matches_partition_2_samples(self):
+        mag_fmt = MultiMAGSequencesDirFmt(
+            path=self.get_data_path("partition_2_samples"), mode="r"
+        )
+        partitioned_mags = Artifact.import_data("SampleData[MAGs]", mag_fmt)
+
+        unbinned = ContigSequencesDirFmt(path=self.get_data_path("unbinned"), mode="r")
+        expected_metadata = Metadata(
+            pd.DataFrame(index=pd.Index(["sample1", "sample2"], name="ID"))
+        )
+
+        mock_filter_contigs = MagicMock(return_value=("filtered_result",))
+
+        # Call function under test
+        _filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
+
+        # Check arguments passed to the mock action (no `where` now)
+        mock_filter_contigs.assert_called_once_with(
+            contigs=unbinned,
+            metadata=expected_metadata,
+        )
+    @patch("q2_annotate.busco.utils._calculate_unbinned_percentage", return_value=(10.0, 5))
+    def test_add_unbinned_metrics(self, mock_calculate):
+        df = pd.DataFrame({
+            "sample_id": ["sample1"],
+            "busco_score": [95.0]
+        })
+
+        # Mock mags and unbinned_contigs
+        mags_mock = MagicMock()
+        mags_mock.sample_dict.return_value = {
+            "sample1": {"bin1": "fake_bin1.fasta"}
+        }
+
+        unbinned_mock = MagicMock()
+        unbinned_mock.sample_dict.return_value = {
+            "sample1": "fake_unbinned.fasta"
+        }
+
+        # Call through the module (NOT the directly imported function)
+        result = _add_unbinned_metrics(df, mags_mock, unbinned_mock)
+
+        mags_mock.sample_dict.assert_called_once()
+        unbinned_mock.sample_dict.assert_called_once()
+
+        self.assertIn("unbinned_contigs", result.columns)
+        self.assertIn("unbinned_contigs_count", result.columns)
+
+        row = result[result["sample_id"] == "sample1"].iloc[0]
+        self.assertEqual(row["unbinned_contigs"], 10.0)
+        self.assertEqual(row["unbinned_contigs_count"], 5)

@@ -209,3 +209,55 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
     )
 
     return chart.to_dict()
+
+
+def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
+    """
+    Draws summary histograms for the MAG assembly metrics where users
+    can indicate which metric and for which sample they want to see.
+
+    Returns:
+        dict: Dictionary containing the Vega spec.
+    """
+    metrics = ["unbinned_contigs", "unbinned_contigs_count"]
+    labels = ["Percentage of unbinned contigs", "Absolute count of unbinned contigs"]
+    # Keep only one row per sample
+    data = data.drop_duplicates(subset=["sample_id"])
+    data = pd.melt(
+        data,
+        id_vars=["sample_id"],
+        value_vars=metrics,
+        value_name="metric",
+        var_name="category",
+    )
+
+    selection_metrics = alt.selection_point(
+        fields=["category"],
+        bind=alt.binding_radio(
+            options=metrics,
+            labels=labels,
+            name="Select metric:",
+            element="#selectableHistogramUnbinnedControls",
+        ),
+        name="select_metric",
+        value="unbinned_contigs",
+    )
+
+    # Create the chart
+    chart = (
+        alt.Chart(data)
+        .mark_bar()
+        .encode(
+            x=alt.X("metric:Q", bin=True, title=None),
+            y=alt.Y("count()", title="Sample count"),
+            color=alt.value("steelblue"),
+        )
+        .add_params(selection_metrics)
+        .transform_filter("datum.category == select_metric.category")
+        .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .properties(width=PLOT_DIM, height=PLOT_DIM)
+    )
+
+    return chart.to_dict()

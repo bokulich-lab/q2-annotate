@@ -11,6 +11,7 @@ from qiime2.plugin import model
 from q2_types.feature_data import AlignedProteinFASTAFormat
 
 
+### NEW ADDED 2 COLUMNS TO THE END of BUSCOResultsFormat
 class BUSCOResultsFormat(model.TextFileFormat):
     HEADER = [
         "mag_id",
@@ -28,30 +29,45 @@ class BUSCOResultsFormat(model.TextFileFormat):
         "percent_gaps",
         "scaffolds",
         "length",
-        "completeness",
-        "contamination",
     ]
-    HEADER_2 = HEADER[:-2]
+    OPTIONAL_UNBINNED = ["unbinned_contigs", "unbinned_contigs_count"]
+    OPTIONAL_COMPLETENESS = ["completeness", "contamination"]
 
     def _validate(self, n_records=None):
         with self.open() as fh:
             reader = csv.reader(fh, delimiter="\t")
             headers = next(reader)
 
-            if set(headers) == set(self.HEADER):
-                expected = self.HEADER
-            elif set(headers) == set(self.HEADER_2):
-                expected = self.HEADER_2
-            else:
+            if set(headers[: len(self.HEADER)]) != set(self.HEADER):
                 raise ValidationError(
-                    f"Invalid header: {headers}, expected: {self.HEADER}, "
-                    '"completness" and "contamination" columns are optional.'
+                    f"Invalid header: {headers}, expected: {self.HEADER}"
                 )
+            extra_cols = headers[len(self.HEADER) :]
+            # Define all valid header combinations (unordered)
+            valid_optional_sets = [
+                set(self.OPTIONAL_UNBINNED),
+                set(self.OPTIONAL_COMPLETENESS),
+                set(self.OPTIONAL_UNBINNED + self.OPTIONAL_COMPLETENESS),
+            ]
+            # In case of additional columns, check whether they are valid
+            # and set the header length accordingly
+            if extra_cols and set(extra_cols) in valid_optional_sets:
+                header_length = len(self.HEADER) + len(extra_cols)
+            elif extra_cols and set(extra_cols) not in valid_optional_sets:
+                raise ValidationError(
+                    f"Unexpected optional columns found: {extra_cols}\n\n"
+                    f"Only the following optional column sets are allowed:\n"
+                    f"- {self.OPTIONAL_UNBINNED}\n"
+                    f"- {self.OPTIONAL_COMPLETENESS}\n"
+                    f"- {self.OPTIONAL_COMPLETENESS + self.OPTIONAL_UNBINNED}"
+                )
+            else:
+                header_length = len(self.HEADER)
 
             for i, row in enumerate(reader, start=2):
-                if len(row) != len(expected):
+                if len(row) != header_length:
                     raise ValidationError(
-                        f"Line {i} has {len(row)} columns, " f"expected {len(expected)}"
+                        f"Line {i} has {len(row)} columns, " f"expected {header_length}"
                     )
 
                 if n_records is not None and i - 1 >= n_records:

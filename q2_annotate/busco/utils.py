@@ -9,8 +9,17 @@ import json
 import os
 import warnings
 import pandas as pd
-from typing import List
+from typing import List, Union
+import skbio.io
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
+from q2_types.feature_data_mag import MAGSequencesDirFmt
+from q2_types.per_sample_sequences import (
+    MultiMAGSequencesDirFmt,
+    ContigSequencesDirFmt,
+)
+from q2_annotate.busco.types import BuscoDatabaseDirFmt
+from pathlib import Path
+from qiime2 import Metadata
 
 arguments_with_hyphens = {
     "auto_lineage": "auto-lineage",
@@ -26,8 +35,6 @@ MARKER_COLS = [
     "fragmented",
     "missing",
     "complete",
-    "completeness",
-    "contamination",
 ]
 
 
@@ -137,7 +144,30 @@ def _partition_dataframe(df: pd.DataFrame, max_rows: int, is_sample_data: bool) 
         return [df[i : i + max_rows] for i in range(0, len(df), max_rows)]
 
 
-def _get_feature_table(busco_results: pd.DataFrame) -> str:
+def _collect_summaries(run_summaries_fp_map: dict) -> pd.DataFrame:
+    """
+    Reads-in the sample-wise summaries and concatenates them in one
+    pd.DataFrame, which is saved to file.
+
+    Args:
+        run_summaries_fp_map (dict): dict where key is sample id
+            and value is path "tmp/sample_id/batch_summary.txt"
+
+    Returns:
+        all_summaries (pd.DataFrame): DataFrame composed of the individual
+            run summaries.
+    """
+
+    all_summaries = []
+    for sample_id, path_to_summary in run_summaries_fp_map.items():
+        df = pd.read_csv(filepath_or_buffer=path_to_summary, sep="\t")
+        df["sample_id"] = sample_id
+        all_summaries.append(df)
+
+    return pd.concat(all_summaries, ignore_index=True)
+
+
+def _get_feature_table(busco_results: pd.DataFrame):
     df = busco_results.reset_index(inplace=False, drop=False)
 
     new_cols = {
@@ -164,7 +194,19 @@ def _get_feature_table(busco_results: pd.DataFrame) -> str:
     if len(busco_results["sample_id"].unique()) < 2:
         del new_cols["sample_id"]
 
-    df = df[list(new_cols.keys())].rename(columns=new_cols, inplace=False)
+    df = df[[col for col in new_cols if col in df.columns]].rename(
+        columns=new_cols, inplace=False
+    )
+
+    if "Unbinned %" in df.columns:
+        df["Unbinned %"] = df["Unbinned %"].apply(
+            lambda x: f"{x:.1f}%" if pd.notna(x) else "NA"
+        )
+
+    if "Unbinned count" in df.columns:
+        df["Unbinned count"] = df["Unbinned count"].apply(
+            lambda x: str(x) if pd.notna(x) else "NA"
+        )
     return df.to_json(orient="split")
 
 
@@ -180,9 +222,11 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
         df (pd.DataFrame): Formatted DataFrame
     """
     cols = MARKER_COLS.copy()
-    if not ("completeness" in df.columns and "contamination" in df.columns):
-        cols.remove("completeness")
-        cols.remove("contamination")
+
+    if "completeness" in df.columns and "contamination" in df.columns:
+        cols.extend(["completeness", "contamination"])
+    if "unbinned_contigs" in df.columns:
+        cols.append("unbinned_contigs")
 
     df = df.reset_index(drop=False, inplace=False)
     df = df.rename(columns={"id": "mag_id"}, inplace=False)
@@ -192,9 +236,7 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     for col in cols:
         df[col] = df[col].map(float)
     df["n_markers"] = df["n_markers"].map(int)
-
     return df
-
 
 def _cleanup_bootstrap(output_dir):
     # Remove unwanted files
@@ -206,9 +248,13 @@ def _cleanup_bootstrap(output_dir):
 
 def _calculate_summary_stats(df: pd.DataFrame) -> json:
     cols = MARKER_COLS.copy()
-    if not ("completeness" in df.columns and "contamination" in df.columns):
-        cols.remove("completeness")
-        cols.remove("contamination")
+    if "completeness" in df.columns and "contamination" in df.columns:
+        cols.extend(["completeness", "contamination"])
+    if "unbinned_contigs" in df.columns:
+        cols.append("unbinned_contigs")
+
+    # Select only columns that are actually in the DataFrame
+    cols = [col for col in cols if col in df.columns]
 
     stats = pd.DataFrame(
         {
@@ -219,6 +265,12 @@ def _calculate_summary_stats(df: pd.DataFrame) -> json:
             "count": df[cols].count(),
         }
     )
+
+    # Round numeric values to 1 decimal place, except for count
+    for col in stats.columns:
+        if col != "count":
+            stats[col] = stats[col].round(1)
+
     return stats.T.to_json(orient="table")
 
 
@@ -323,3 +375,159 @@ def _process_busco_results(results, sample_id, mag_id, file_name, additional_met
     }
 
     return results
+
+
+def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
+    lengths = {}
+    if isinstance(bins, MultiMAGSequencesDirFmt):
+        for sample, mags in bins.sample_dict().items():
+            for mag_id, mag_fp in mags.items():
+                seq = skbio.io.read(mag_fp, format="fasta")
+                lengths[mag_id] = sum([len(s) for s in seq])
+        return pd.Series(lengths, name="length")
+    else:
+        for mag_id, mag_fp in bins.feature_dict().items():
+            seq = skbio.io.read(mag_fp, format="fasta")
+            lengths[mag_id] = sum([len(s) for s in seq])
+        return pd.Series(lengths, name="length")
+
+
+# def _filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
+#     """
+#     Filters the unbinned contigs to match the sample IDs in a MAG partition.
+
+#     Args:
+#         unbinned_contigs (ContigSequencesDirFmt): The full unbinned contigs.
+#         mag_partition (MultiMAGSequencesDirFmt): One partition of MAGs.
+#         _filter_contigs (Action): QIIME 2 action to filter contigs.
+
+#     Returns:
+#         ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
+#     """
+#     sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
+#     metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
+#     id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
+#     where = f"ID IN ({id_list})"
+#     (filtered_unbinned,) = _filter_contigs(
+#         contigs=unbinned_contigs, metadata=metadata, where=where
+#     )
+#     return filtered_unbinned
+
+def _filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
+    """
+    Filters the unbinned contigs to match the sample IDs in a MAG partition.
+
+    Args:
+        unbinned_contigs (ContigSequencesDirFmt): The full unbinned contigs.
+        mag_partition (MultiMAGSequencesDirFmt): One partition of MAGs.
+        _filter_contigs (Action): QIIME 2 action to filter contigs.
+
+    Returns:
+        ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
+    """
+    # Collect sample IDs from the MAG partition
+    sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
+    # Create Metadata object with these sample IDs
+    metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
+
+    # Call the filter action (no `where` needed with new q2-assembly)
+    (filtered_unbinned,) = _filter_contigs(
+        contigs=unbinned_contigs,
+        metadata=metadata,
+    )
+    return filtered_unbinned
+
+def _get_fasta_files_from_dir(directory: Path) -> list:
+    # Only match FASTA extensions starting with '.fa' or '.fna'
+    return [f for f in directory.glob("*") if f.suffix in {".fa", ".fasta"}]
+
+
+def _count_contigs(file_paths: List[Path]) -> int:
+    """
+    Count the number of DNA sequences across a list of FASTA files.
+
+    Parameters
+    ----------
+    file_paths : list of Path
+        List of FASTA file paths (.fa, .fasta, .fna).
+
+    Returns
+    -------
+    int
+        Total number of sequences across all files.
+    """
+    total_sequences = 0
+
+    for fp in file_paths:
+        total_sequences += sum(
+            1 for _ in skbio.io.read(str(fp), format="fasta", constructor=skbio.DNA)
+        )
+
+    return total_sequences
+
+
+def _calculate_unbinned_percentage(
+    mags_per_sample: MultiMAGSequencesDirFmt, unbinned_contigs_per_sample: ContigSequencesDirFmt
+) -> tuple[float, int]:
+    """
+    Calculate the percentage and absolute count of unbinned contigs for a single sample.
+
+    Parameters
+    ----------
+    mags_per_sample : MultiMAGSequencesDirFmt
+        Binned contigs (MAGs) from one specific sample.
+
+    sample_unbinned_contigs : ContigSequencesDirFmt
+        Unbinned contigs from one specific sample.
+
+    Returns
+    -------
+    percentage_unbinned : float
+        The percentage of unbinned contigs relative to the total number of contigs
+        (binned + unbinned) for this sample.
+
+    unbinned_contigs_count : int
+        The number of unbinned contigs in this sample.
+    """
+    # Count sequences
+    binned_contigs = _count_contigs(mags_per_sample)
+    unbinned_contigs_count = _count_contigs(unbinned_contigs_per_sample)
+
+    # Calculate percentage
+    total = binned_contigs + unbinned_contigs_count
+    percentage_unbinned = (unbinned_contigs_count / total) * 100 if total > 0 else 0
+
+    return percentage_unbinned, unbinned_contigs_count
+
+def _add_unbinned_metrics(
+    busco_results: pd.DataFrame,
+    mags: MultiMAGSequencesDirFmt,
+    unbinned_contigs: ContigSequencesDirFmt
+) -> pd.DataFrame:
+    """Add unbinned contigs percentage and count columns to BUSCO results."""
+
+    mags_dict = mags.sample_dict()
+    rows = []
+
+    for unbinned_id, unbinned_path in unbinned_contigs.sample_dict().items():
+        # Get all FASTA paths for this bin
+        binned_fasta_paths = list(mags_dict[unbinned_id].values())
+
+        percentage, count = _calculate_unbinned_percentage(
+            binned_fasta_paths, [unbinned_path]
+        )
+        rows.append({
+            "sample_id": unbinned_id,
+            "unbinned_contigs": float(percentage),
+            "unbinned_contigs_count": int(count)
+        })
+
+    if rows:
+        unbinned_df = pd.DataFrame(rows)
+        # Merge so that only matching sample_id rows are updated
+        busco_results = busco_results.merge(unbinned_df, on="sample_id", how="left")
+    else:
+        busco_results["unbinned_contigs"] = pd.NA
+        busco_results["unbinned_contigs_count"] = pd.NA
+
+    return busco_results
