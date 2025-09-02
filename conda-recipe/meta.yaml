@@ -15,9 +15,9 @@ requirements:
   - altair
   - beautifulsoup4
   - bracken
-  - busco >=5.5.0
+  - busco {{ busco }}
   - diamond
-  - eggnog-mapper >=2.1.10
+  - eggnog-mapper {{ eggnog_mapper }}
   - gfatools
   - kaiju
   - kraken2
