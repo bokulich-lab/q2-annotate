@@ -35,9 +35,7 @@ from q2_annotate.busco.utils import (
     _extract_json_data,
     _validate_parameters,
     _process_busco_results,
-    _calculate_unbinned_percentage,
     _filter_unbinned_for_partition,
-    _get_fasta_files_from_dir,
     _add_unbinned_metrics,
 )
 
@@ -50,7 +48,6 @@ from q2_types.per_sample_sequences import (
     ContigSequencesDirFmt,
     MAGs,
 )
-from q2_assembly.filter import filter_contigs
 import warnings
 
 def _run_busco(input_dir: str, output_dir: str, sample_id: str, params: List[str]):
@@ -156,7 +153,7 @@ def _evaluate_busco(
     busco_results = _busco_helper(mags, common_args, additional_metrics)
 
     # If mags is MultiMAGSequencesDirFmt, add unbinned contigs info
-    if isinstance(mags, MultiMAGSequencesDirFmt):
+    if isinstance(mags, MultiMAGSequencesDirFmt) and unbinned_contigs:
         busco_results = _add_unbinned_metrics(busco_results, mags, unbinned_contigs)
 
     return busco_results
@@ -186,12 +183,10 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         tab_title = ["BUSCO plots", "BUSCO table"]
         assets_subdir = "feature_data"
         is_sample_data = False
-        tabbed_context = {}  # Init as empty bc we update it below
-        # unbinned = False
+        tabbed_context = {}
 
     dfs = _partition_dataframe(results, max_rows, is_sample_data)
 
-    # Copy BUSCO results from tmp dir to output_dir
     TEMPLATES = os.path.join(
         os.path.dirname(os.path.dirname(__file__)), "assets", "busco"
     )
@@ -290,8 +285,8 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
 def evaluate_busco(
     ctx,
     mags,
-    unbinned_contigs,
     db,
+    unbinned_contigs=None,
     mode="genome",
     lineage_dataset=None,
     augustus=False,
@@ -339,19 +334,22 @@ def evaluate_busco(
     (partitioned_mags,) = partition_mags(mags, num_partitions)
     results = []
 
-    # Check if the input is SampleData[MAGs] why 
     if mags.type <= SampleData[MAGs]:
+        # we need to match the unbinned contigs to the partitioned MAGs
         for partition_id, mag_partition in partitioned_mags.items():
-            filtered_unbinned = _filter_unbinned_for_partition(
-                unbinned_contigs, mag_partition, _filter_contigs
-            )
+            if unbinned_contigs:
+                unbinned_filtered = _filter_unbinned_for_partition(
+                    unbinned_contigs, mag_partition, _filter_contigs
+                )
+            else:
+                unbinned_filtered = None
             (busco_result,) = _evaluate_busco(
-                mag_partition, db, filtered_unbinned, **kwargs
+                mag_partition, db, unbinned_filtered, **kwargs
             )
             results.append(busco_result)
     else:
         for mag in partitioned_mags.values():  # each mag is a subset of bins
-            (busco_result,) = _evaluate_busco(mag, db, unbinned_contigs, **kwargs)
+            (busco_result,) = _evaluate_busco(mag, db, None, **kwargs)
             results.append(busco_result)
 
     (collated_results,) = collate_busco_results(results)

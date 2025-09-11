@@ -8,18 +8,20 @@
 import json
 import os
 import warnings
+from pathlib import Path
+from typing import List, Union, Callable
+
 import pandas as pd
-from typing import List, Union
+import qiime2
 import skbio.io
-from q2_annotate.busco.types import BuscoDatabaseDirFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import (
     MultiMAGSequencesDirFmt,
     ContigSequencesDirFmt,
 )
-from q2_annotate.busco.types import BuscoDatabaseDirFmt
-from pathlib import Path
 from qiime2 import Metadata
+
+from q2_annotate.busco.types import BuscoDatabaseDirFmt
 
 arguments_with_hyphens = {
     "auto_lineage": "auto-lineage",
@@ -391,56 +393,29 @@ def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
             lengths[mag_id] = sum([len(s) for s in seq])
         return pd.Series(lengths, name="length")
 
-
-# def _filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
-#     """
-#     Filters the unbinned contigs to match the sample IDs in a MAG partition.
-
-#     Args:
-#         unbinned_contigs (ContigSequencesDirFmt): The full unbinned contigs.
-#         mag_partition (MultiMAGSequencesDirFmt): One partition of MAGs.
-#         _filter_contigs (Action): QIIME 2 action to filter contigs.
-
-#     Returns:
-#         ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
-#     """
-#     sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
-#     metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
-#     id_list = ", ".join([f"'{sid}'" for sid in sample_ids])
-#     where = f"ID IN ({id_list})"
-#     (filtered_unbinned,) = _filter_contigs(
-#         contigs=unbinned_contigs, metadata=metadata, where=where
-#     )
-#     return filtered_unbinned
-
-def _filter_unbinned_for_partition(unbinned_contigs, mag_partition, _filter_contigs):
+def _filter_unbinned_for_partition(
+        unbinned_contigs: ContigSequencesDirFmt,
+        mag_partition: qiime2.Artifact,
+        _filter_contigs: Callable
+):
     """
     Filters the unbinned contigs to match the sample IDs in a MAG partition.
 
     Args:
         unbinned_contigs (ContigSequencesDirFmt): The full unbinned contigs.
         mag_partition (MultiMAGSequencesDirFmt): One partition of MAGs.
-        _filter_contigs (Action): QIIME 2 action to filter contigs.
+        _filter_contigs (Callable): QIIME 2 action to filter contigs.
 
     Returns:
         ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
     """
-    # Collect sample IDs from the MAG partition
     sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
-    # Create Metadata object with these sample IDs
     metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
-
-    # Call the filter action (no `where` needed with new q2-assembly)
     (filtered_unbinned,) = _filter_contigs(
         contigs=unbinned_contigs,
         metadata=metadata,
     )
     return filtered_unbinned
-
-def _get_fasta_files_from_dir(directory: Path) -> list:
-    # Only match FASTA extensions starting with '.fa' or '.fna'
-    return [f for f in directory.glob("*") if f.suffix in {".fa", ".fasta"}]
-
 
 def _count_contigs(file_paths: List[Path]) -> int:
     """
@@ -448,8 +423,7 @@ def _count_contigs(file_paths: List[Path]) -> int:
 
     Parameters
     ----------
-    file_paths : list of Path
-        List of FASTA file paths (.fa, .fasta, .fna).
+    file_paths (List[Path]): List of FASTA file paths (.fa, .fasta, .fna).
 
     Returns
     -------
@@ -467,27 +441,22 @@ def _count_contigs(file_paths: List[Path]) -> int:
 
 
 def _calculate_unbinned_percentage(
-    mags_per_sample: MultiMAGSequencesDirFmt, unbinned_contigs_per_sample: ContigSequencesDirFmt
+    mags_per_sample: List[Path], unbinned_contigs_per_sample: List[Path]
 ) -> tuple[float, int]:
     """
     Calculate the percentage and absolute count of unbinned contigs for a single sample.
 
     Parameters
     ----------
-    mags_per_sample : MultiMAGSequencesDirFmt
-        Binned contigs (MAGs) from one specific sample.
-
-    sample_unbinned_contigs : ContigSequencesDirFmt
-        Unbinned contigs from one specific sample.
+    mags_per_sample (List[Path]): Binned contigs (MAGs) from one specific sample.
+    sample_unbinned_contigs (List[PAth]): Unbinned contigs from one specific sample.
 
     Returns
     -------
-    percentage_unbinned : float
-        The percentage of unbinned contigs relative to the total number of contigs
-        (binned + unbinned) for this sample.
+    percentage_unbinned (float): The percentage of unbinned contigs relative to
+        the total number of contigs (binned + unbinned) for this sample.
 
-    unbinned_contigs_count : int
-        The number of unbinned contigs in this sample.
+    unbinned_contigs_count (int): The number of unbinned contigs in this sample.
     """
     # Count sequences
     binned_contigs = _count_contigs(mags_per_sample)
