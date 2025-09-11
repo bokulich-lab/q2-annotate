@@ -11,7 +11,6 @@ from qiime2.plugin import model
 from q2_types.feature_data import AlignedProteinFASTAFormat
 
 
-### NEW ADDED 2 COLUMNS TO THE END of BUSCOResultsFormat
 class BUSCOResultsFormat(model.TextFileFormat):
     HEADER = [
         "mag_id",

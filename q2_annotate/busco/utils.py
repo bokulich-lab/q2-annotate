@@ -240,6 +240,7 @@ def _parse_df_columns(df: pd.DataFrame) -> pd.DataFrame:
     df["n_markers"] = df["n_markers"].map(int)
     return df
 
+
 def _cleanup_bootstrap(output_dir):
     # Remove unwanted files
     # until Bootstrap 3 is replaced with v5, remove the v3 scripts as
@@ -393,10 +394,11 @@ def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
             lengths[mag_id] = sum([len(s) for s in seq])
         return pd.Series(lengths, name="length")
 
+
 def _filter_unbinned_for_partition(
-        unbinned_contigs: ContigSequencesDirFmt,
-        mag_partition: qiime2.Artifact,
-        _filter_contigs: Callable
+    unbinned_contigs: ContigSequencesDirFmt,
+    mag_partition: qiime2.Artifact,
+    _filter_contigs: Callable,
 ):
     """
     Filters the unbinned contigs to match the sample IDs in a MAG partition.
@@ -416,6 +418,7 @@ def _filter_unbinned_for_partition(
         metadata=metadata,
     )
     return filtered_unbinned
+
 
 def _count_contigs(file_paths: List[Path]) -> int:
     """
@@ -468,10 +471,11 @@ def _calculate_unbinned_percentage(
 
     return percentage_unbinned, unbinned_contigs_count
 
+
 def _add_unbinned_metrics(
     busco_results: pd.DataFrame,
     mags: MultiMAGSequencesDirFmt,
-    unbinned_contigs: ContigSequencesDirFmt
+    unbinned_contigs: ContigSequencesDirFmt,
 ) -> pd.DataFrame:
     """Add unbinned contigs percentage and count columns to BUSCO results."""
 
@@ -485,11 +489,13 @@ def _add_unbinned_metrics(
         percentage, count = _calculate_unbinned_percentage(
             binned_fasta_paths, [unbinned_path]
         )
-        rows.append({
-            "sample_id": unbinned_id,
-            "unbinned_contigs": float(percentage),
-            "unbinned_contigs_count": int(count)
-        })
+        rows.append(
+            {
+                "sample_id": unbinned_id,
+                "unbinned_contigs": float(percentage),
+                "unbinned_contigs_count": int(count),
+            }
+        )
 
     if rows:
         unbinned_df = pd.DataFrame(rows)

@@ -50,6 +50,7 @@ from q2_types.per_sample_sequences import (
 )
 import warnings
 
+
 def _run_busco(input_dir: str, output_dir: str, sample_id: str, params: List[str]):
     """Runs BUSCO on one (sample) directory
 
@@ -104,6 +105,8 @@ def _busco_helper(mags, common_args, additional_metrics):
                 results_all.append(results)
 
     return pd.DataFrame(results_all)
+
+
 def _evaluate_busco(
     mags: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt],
     db: BuscoDatabaseDirFmt,
@@ -157,6 +160,7 @@ def _evaluate_busco(
         busco_results = _add_unbinned_metrics(busco_results, mags, unbinned_contigs)
 
     return busco_results
+
 
 def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     results.to_csv(os.path.join(output_dir, "busco_results.csv"), index=False)
@@ -326,7 +330,8 @@ def evaluate_busco(
         partition_action = "partition_feature_data_mags"
         if unbinned_contigs is not None:
             warnings.warn(
-                "FeatureData[MAG] artifact was provided - unbinned contigs will be ignored."
+                "FeatureData[MAG] artifact was provided - "
+                "unbinned contigs will be ignored."
             )
 
     partition_mags = ctx.get_action("types", partition_action)
