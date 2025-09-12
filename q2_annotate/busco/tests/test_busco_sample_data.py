@@ -274,7 +274,10 @@ class TestBUSCOSampleData(TestPluginBase):
         fake_partition = MagicMock(
             values=MagicMock(return_value=["partition1", "partition2"])
         )
-        fake_filter_contigs = lambda *args, **kwargs: ("filtered_unbinned",)
+
+        def fake_filter_contigs(*args, **kwargs):
+            return ("filtered_unbinned",)
+
         mock_action = MagicMock(
             side_effect=[
                 lambda x, y, z, **kwargs: (0,),
@@ -318,13 +321,12 @@ class TestBUSCOSampleData(TestPluginBase):
         fake_partition = MagicMock(
             values=MagicMock(return_value=["partition1", "partition2"])
         )
-        fake_filter_contigs = lambda *args, **kwargs: ("filtered_unbinned",)
         mock_action = MagicMock(
             side_effect=[
                 lambda x, y, z, **kwargs: (0,),
                 lambda x: ("collated_result",),
                 lambda x: ("visualization",),
-                fake_filter_contigs,
+                lambda *args, **kwargs: ("filtered_unbinned",),
                 lambda x, y: (fake_partition,),
             ]
         )

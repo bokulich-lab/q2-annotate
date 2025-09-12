@@ -1147,7 +1147,11 @@ plugin.methods.register_function(
     },
     parameters=busco_params,
     outputs={"results": BUSCOResults},
-    input_descriptions={"mags": "MAGs to be analyzed.", "db": "BUSCO database."},
+    input_descriptions={
+        "mags": "MAGs to be analyzed.",
+        "db": "BUSCO database.",
+        "unbinned_contigs": "Contigs which were not assigned to any bin.",
+    },
     parameter_descriptions=busco_param_descriptions,
     output_descriptions={"results": "BUSCO result table."},
     name="Evaluate quality of the generated MAGs using BUSCO.",
@@ -1167,7 +1171,11 @@ plugin.pipelines.register_function(
     },
     parameters={**busco_params, **partition_params},
     outputs={"results": BUSCOResults, "visualization": Visualization},
-    input_descriptions={"mags": "MAGs to be analyzed.", "db": "BUSCO database."},
+    input_descriptions={
+        "mags": "MAGs to be analyzed.",
+        "db": "BUSCO database.",
+        "unbinned_contigs": "Contigs which were not assigned to any bin.",
+    },
     parameter_descriptions={**busco_param_descriptions, **partition_param_descriptions},
     output_descriptions={
         "results": "BUSCO result table.",

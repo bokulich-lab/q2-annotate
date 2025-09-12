@@ -244,14 +244,13 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     table_json = _get_feature_table(results)
     stats_json = _calculate_summary_stats(results)
 
+    scatter_json, comp_cont = None, False
     if "completeness" in results.columns and "contamination" in results.columns:
         scatter_json = json.dumps(_draw_completeness_vs_contamination(results)).replace(
             "NaN", "null"
         )
         comp_cont = True
-    else:
-        scatter_json = None
-        comp_cont = False
+
     if (
         "unbinned_contigs" in results.columns
         and "unbinned_contigs_count" in results.columns

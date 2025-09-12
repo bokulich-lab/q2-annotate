@@ -9,12 +9,11 @@ import json
 import os
 import warnings
 from pathlib import Path
-from typing import List, Union, Callable
+from typing import List, Callable
 
 import pandas as pd
 import qiime2
 import skbio.io
-from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import (
     MultiMAGSequencesDirFmt,
     ContigSequencesDirFmt,
@@ -146,29 +145,6 @@ def _partition_dataframe(df: pd.DataFrame, max_rows: int, is_sample_data: bool) 
         return [df[i : i + max_rows] for i in range(0, len(df), max_rows)]
 
 
-def _collect_summaries(run_summaries_fp_map: dict) -> pd.DataFrame:
-    """
-    Reads-in the sample-wise summaries and concatenates them in one
-    pd.DataFrame, which is saved to file.
-
-    Args:
-        run_summaries_fp_map (dict): dict where key is sample id
-            and value is path "tmp/sample_id/batch_summary.txt"
-
-    Returns:
-        all_summaries (pd.DataFrame): DataFrame composed of the individual
-            run summaries.
-    """
-
-    all_summaries = []
-    for sample_id, path_to_summary in run_summaries_fp_map.items():
-        df = pd.read_csv(filepath_or_buffer=path_to_summary, sep="\t")
-        df["sample_id"] = sample_id
-        all_summaries.append(df)
-
-    return pd.concat(all_summaries, ignore_index=True)
-
-
 def _get_feature_table(busco_results: pd.DataFrame):
     df = busco_results.reset_index(inplace=False, drop=False)
 
@@ -200,13 +176,6 @@ def _get_feature_table(busco_results: pd.DataFrame):
     ):
         new_cols.pop("unbinned_contigs")
         new_cols.pop("unbinned_contigs_count")
-    # else:
-    #     df["Unbinned %"] = df["Unbinned %"].apply(
-    #         lambda x: f"{x:.1f}%" if pd.notna(x) else "NA"
-    #     )
-    #     df["unbinned_contigs"] = df["unbinned_contigs"].apply(
-    #         lambda x: str(x) if pd.notna(x) else "NA"
-    #     )
 
     if len(busco_results["sample_id"].unique()) < 2:
         del new_cols["sample_id"]
