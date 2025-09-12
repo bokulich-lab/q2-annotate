@@ -1,8 +1,0 @@
-cc6a028afa1cdeb3539e34279cef57c7  VERSION
-b43126f9df3bdd50d8975f90da288ff0  metadata.yaml
-e4797aa5dc745cc1b70ddc983d1f8f08  data/sample1_contigs.fa
-9e0b77c089d3e2dd9c3962cd2e8bd56d  data/sample2_contigs.fa
-cc6a028afa1cdeb3539e34279cef57c7  provenance/VERSION
-bb009bb78f3b6f63b0e2046931f89dae  provenance/citations.bib
-b43126f9df3bdd50d8975f90da288ff0  provenance/metadata.yaml
-daa323bb4ec31d9f5299bbd903eb37a2  provenance/action/action.yaml
