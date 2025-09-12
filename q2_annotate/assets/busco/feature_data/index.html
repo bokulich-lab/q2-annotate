@@ -83,7 +83,7 @@
                         for all MAGs and can be used to evaluate the quality of the assembly.
                     </p>
                     <div class="col-lg-12" id="summaryHistogramsMarkers">
-                        <div id="plotMarkers" style="margin-top: 5px"></div>
+                        <div id="plotMarkers" class="chart-grid" style="margin-top: 5px"></div>
                     </div>
                 </div>
             </div>
@@ -150,33 +150,40 @@
             })
         })
 
+        // Render responsive grid of histogram specs
         const vegaSpecSummary = JSON.parse(document.getElementById('vega_summary_json').textContent);
-        vegaEmbed("#plotMarkers", vegaSpecSummary).then(
+        const grid = document.getElementById('plotMarkers');
+        const specsArray = Array.isArray(vegaSpecSummary) ? vegaSpecSummary : [vegaSpecSummary];
+        specsArray.forEach((spec) => {
+            const div = document.createElement('div');
+            grid.appendChild(div);
+            vegaEmbed(div, spec, {actions: false}).then(
+                function (result) {
+                    result.view.logLevel(vega.Warn);
+                }
+            ).catch(
+                function (error) {
+                    handleErrors([error], $(div));
+                }
+            );
+        });
+
+        const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
+        vegaEmbed("#scatterPlotDiv", scatterSpec, {actions: false}).then(
             function (result) {
                 result.view.logLevel(vega.Warn);
-                window.v = result.view;
+
+                const dropdownWrapper = document.querySelector("#scatterPlotDiv .vega-bindings");
+                const target = document.getElementById('scatterDropdownControls');
+                if (dropdownWrapper && target) {
+                    target.appendChild(dropdownWrapper);
+                }
             }
         ).catch(
             function (error) {
-                handleErrors([error], $("#plotMarkers"));
+                handleErrors([error], $("#scatterPlotDiv"));
             }
         );
-        const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
-vegaEmbed("#scatterPlotDiv", scatterSpec).then(
-    function (result) {
-        result.view.logLevel(vega.Warn);
-
-        const dropdownWrapper = document.querySelector("#scatterPlotDiv .vega-bindings");
-        const target = document.getElementById('scatterDropdownControls');
-        if (dropdownWrapper && target) {
-            target.appendChild(dropdownWrapper);
-        }
-    }
-).catch(
-    function (error) {
-        handleErrors([error], $("#scatterPlotDiv"));
-    }
-);
     });
 </script>
 

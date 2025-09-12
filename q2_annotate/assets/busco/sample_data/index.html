@@ -78,17 +78,18 @@
             <div class="card">
                 <h5 class="card-header">Distribution of BUSCO marker gene counts</h5>
                 <div class="card-body">
+                    <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 8px;">
+                        <span class="header-inline">Sample filter:</span>
+                        <select id="globalSampleSelect" class="form-select form-select-sm" style="width:auto">
+                            <option value="All" selected>All</option>
+                        </select>
+                    </div>
                     <p>
-                        The histograms in the first row below show distributions of BUSCO marker
-                        count fractions across all MAGs in all samples for all the marker categories,
-                        as represented in the table above.
-
-                        The histograms in the second row show the distributions of assembly metrics
-                        gathered for each MAG across all the samples and can be used to evaulate the
-                        assembly quality of the MAGs.
+                        The histograms below show distributions of BUSCO marker count fractions and assembly metrics.
+                        Use the sample filter to show all samples or a single sample.
                     </p>
                     <div class="col-lg-12" id="summaryHistogramsMarkers">
-                        <div id="plotMarkers" style="margin-top: 5px"></div>
+                        <div id="plotMarkers" class="chart-grid" style="margin-top: 5px"></div>
                     </div>
                 </div>
             </div>
@@ -96,74 +97,33 @@
     </div>
 
     <div class="row" style="margin-bottom: 10px">
-        <div class="col-lg-12">
-            <div class="card">
-                <h5 class="card-header">Histogram per sample</h5>
-                <div class="card-body" style="display: flex; align-items: center">
-                    <div class="col-lg-3" style="margin-right: 20px">
-                        <p>
-                            The histogram shows the distribution of the selected BUSCO marker
-                            count fractions for the selected sample. You can use the dropdown
-                            to select the metric and the search box to type the name of
-                            the sample you want to see on the plot. You can use this visualization
-                            to evaluate the quality of MAGs in a specific sample and compare
-                            it to the overall distribution shown in the plots above.
-                        </p>
-                    </div>
-                    <div class="col-lg-9" style="display: flex; align-items: center; justify-content: space-evenly">
-                        <div class="col-lg-5" id="selectableHistogramControls"></div>
-                        <div class="col-lg-4" id="selectableHistogram">
-                            <div id="plotSelectable" style="margin-top: 5px"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% if comp_cont %}
-    <div class="row" style="margin-bottom: 10px">
-        <div class="col-lg-12">
-            <div class="card">
-                <h5 class="card-header">Completeness vs Contamination</h5>
-                <div class="card-body">
+        {% if comp_cont %}
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <h5 class="card-header">Completeness vs contamination</h5>
+                <div class="card-body" style="display: block;">
                     <p>
-                        This scatterplot shows the relationship between BUSCO completeness and contamination
-                        for each MAG across your dataset. Each point is colored by sample ID.
+                        Relationship between BUSCO completeness and contamination for each MAG. Uses the same sample filter above.
                     </p>
-                    <div class="col-lg-12" id="scatterDropdownControls" style="margin-bottom: 10px;"></div>
-                    <div id="scatterPlotDiv" style="margin-top: 10px;"></div>
+                    <div id="scatterPlotDiv" style="margin-top: 5px; width: 100%;"></div>
                 </div>
             </div>
         </div>
-    </div>
-    {% endif %}
-    {% if unbinned %}
-    <div class="row" style="margin-bottom: 10px">
-        <div class="col-lg-12">
-            <div class="card">
+        {% endif %}
+        {% if unbinned %}
+        <div class="col-lg-6">
+            <div class="card h-100">
                 <h5 class="card-header">Distribution of unbinned contigs</h5>
-                <div class="card-body" style="display: flex; align-items: center">
-                    <div class="col-lg-3" style="margin-right: 20px">
-                        <p>
-                            The histogram shows the distribution of unbinned contig metrics
-                            across all samples. You can use the radio buttons to switch between
-                            displaying the absolute count or the percentage of unbinned contigs.
-                            This visualization provides insight into the overall distribution 
-                            and variability of unbinned sequences, enabling the identification of 
-                            patterns or anomalies in contig binning efficiency across samples.
-                        </p>
-                    </div>
-                    <div class="col-lg-9" style="display: flex; align-items: center; justify-content: space-evenly">
-                        <div class="col-lg-5" id="selectableHistogramUnbinnedControls"></div>
-                        <div class="col-lg-4" id="selectableUnbinnedHistogram">
-                            <div id="plotUnbinned" style="margin-top: 5px"></div>
-                        </div>
-                    </div>
+                <div class="card-body" style="display: block;">
+                    <p>
+                        The histogram shows the distribution of the unbinned contigs count across samples.
+                    </p>
+                    <div id="plotUnbinned" style="margin-top: 5px; width: 100%;"></div>
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
 <script id="vega_summary_json" type="application/json">
@@ -174,13 +134,10 @@
     }}
 </script>
 
-<script id="vega_summary_selectable_json" type="application/json">
-    {{
-        vega_summary_selectable_json
-        |
-        safe
-    }}
+<script id="sample_ids_json" type="application/json">
+    {{ sample_ids_json | safe }}
 </script>
+
 <script id="vega_selectable_unbinned_json" type="application/json">
     {{
         vega_selectable_unbinned_json
@@ -207,15 +164,12 @@
         adjustTagsToBS3()
 
         const summarySpec = JSON.parse(document.getElementById('summary_stats_json').textContent);
-        console.log(summarySpec)
 
         const rows = ['rowMinimum', 'rowMedian', 'rowMean', 'rowMaximum', 'rowTotal'];
-        const indices = ['min', 'median', 'mean', 'max', 'count'];
         const cols = ['single', 'duplicated', 'fragmented', 'missing', 'complete', 'completeness', 'contamination', 'unbinned_contigs'];
         rows.forEach((rowId, index) => {
             let rowElement = document.getElementById(rowId)
             let colVals = summarySpec.data[index]
-            console.log(colVals)
             cols.forEach((col) => {
                 let td = document.createElement('td');
                 td.textContent = colVals[col];
@@ -223,89 +177,85 @@
             })
         })
 
+        // Populate sample dropdown from server-provided list
+        const selectEl = document.getElementById('globalSampleSelect');
+        try {
+            const ids = JSON.parse(document.getElementById('sample_ids_json').textContent || '[]');
+            ids.forEach(id => {
+                const opt = document.createElement('option');
+                opt.value = id; opt.textContent = id; selectEl.appendChild(opt);
+            });
+        } catch (e) {}
+
+        // Render responsive grid of histogram specs
         const vegaSpecSummary = JSON.parse(document.getElementById('vega_summary_json').textContent);
-        vegaEmbed("#plotMarkers", vegaSpecSummary).then(
-            function (result) {
-                result.view.logLevel(vega.Warn);
-                window.v = result.view;
-            }
-        ).catch(
-            function (error) {
-                handleErrors([error], $("#plotMarkers"));
-            }
-        );
+        const grid = document.getElementById('plotMarkers');
+        const specsArray = Array.isArray(vegaSpecSummary) ? vegaSpecSummary : [vegaSpecSummary];
 
-        const vegaSpecSelectable = JSON.parse(document.getElementById('vega_summary_selectable_json').textContent);
-        vegaEmbed("#plotSelectable", vegaSpecSelectable).then(
-            function (result) {
-                result.view.logLevel(vega.Warn);
-                window.v = result.view;
-            }
-        ).catch(
-            function (error) {
-                handleErrors([error], $("#plotSelectable"));
-            }
-        ).then(
-            function(result) {
-                let plotSelectable = document.getElementById('plotSelectable')
-                let chartWrapper = plotSelectable.getElementsByClassName('chart-wrapper')
-                let vegaBindings = chartWrapper[0].getElementsByClassName('vega-bindings')
+        // Track views for coordinated filtering
+        const views = [];
 
-                let dropdown = vegaBindings[0].querySelector("select[name=select_metric_category]")
-                dropdown.classList.add("btn-sm", "btn-outline", "dropdown-toggle")
-                let dropdownLabel = vegaBindings[0].getElementsByClassName("vega-bind-name")[0]
-                dropdownLabel.innerHTML = "Select metric:"
+        specsArray.forEach((spec) => {
+            const div = document.createElement('div');
+            grid.appendChild(div);
+            vegaEmbed(div, spec, {actions: false}).then(
+                function (result) {
+                    result.view.logLevel(vega.Warn);
+                    result.view.resize();
+                    views.push(result.view);
+                }
+            ).catch(
+                function (error) {
+                    handleErrors([error], $(div));
+                }
+            );
+        });
 
-                let searchBox = vegaBindings[0][1]
-                searchBox.classList.add("form-control-sm")
-                let searchBoxLabel = vegaBindings[0].getElementsByClassName("vega-bind-name")[1]
-                searchBoxLabel.innerHTML = "Find sample:"
-
-                let plotSelectableControls = document.getElementById('selectableHistogramControls')
-                plotSelectableControls.appendChild(vegaBindings[0])
-            }
-        );
+        // Embed scatter and unbinned
         const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
-        vegaEmbed("#scatterPlotDiv", scatterSpec).then(
+        vegaEmbed("#scatterPlotDiv", scatterSpec, {actions: false}).then(
             function (result) {
                 result.view.logLevel(vega.Warn);
-
-        const dropdownWrapper = document.querySelector("#scatterPlotDiv .vega-bindings");
-        const target = document.getElementById('scatterDropdownControls');
-        if (dropdownWrapper && target) {
-            target.appendChild(dropdownWrapper);
-        }
-        }
+                result.view.resize();
+                views.push(result.view);
+            }
         ).catch(
             function (error) {
                 handleErrors([error], $("#scatterPlotDiv"));
             }
         );
-        const vegaSpecSelectableUnbinned = JSON.parse(document.getElementById('vega_selectable_unbinned_json').textContent);
-        vegaEmbed("#plotUnbinned", vegaSpecSelectableUnbinned).then(
-            function (result) {
-                result.view.logLevel(vega.Warn);
-                window.v = result.view;
-            }
-        ).catch(
-            function (error) {
-                handleErrors([error], $("#plotUnbinned"));
-            }
-        ).then(
-            function(result) {
-                let plotUnbinned = document.getElementById('plotUnbinned')
-                let chartWrapper = plotUnbinned.getElementsByClassName('chart-wrapper')
-                let vegaBindings = chartWrapper[0].getElementsByClassName('vega-bindings')
 
-                let dropdown = vegaBindings[0].querySelector("select[name=select_metric_category]")
-                dropdown.classList.add("btn-sm", "btn-outline", "dropdown-toggle")
-                let dropdownLabel = vegaBindings[0].getElementsByClassName("vega-bind-name")[0]
-                dropdownLabel.innerHTML = "Select metric:"
+        const rawUnbinned = (document.getElementById('vega_selectable_unbinned_json').textContent || '').trim();
+        let vegaSpecSelectableUnbinned = null;
+        if (rawUnbinned && rawUnbinned !== 'None' && rawUnbinned !== 'null') {
+            try { vegaSpecSelectableUnbinned = JSON.parse(rawUnbinned); } catch (e) { vegaSpecSelectableUnbinned = null; }
+        }
+        if (vegaSpecSelectableUnbinned) {
+            vegaEmbed("#plotUnbinned", vegaSpecSelectableUnbinned, {actions: false}).then(
+                function (result) {
+                    result.view.logLevel(vega.Warn);
+                    result.view.resize();
+                }
+            ).catch(
+                function (error) {
+                    handleErrors([error], $("#plotUnbinned"));
+                }
+            );
+        }
 
-                let plotUnbinnedControls  = document.getElementById('selectableHistogramUnbinnedControls')
-                plotUnbinnedControls.appendChild(vegaBindings[0])
-            }
-        );
+        function updateViewsSelectedId(value) {
+            views.forEach(v => {
+                try { v.signal('selected_id', value).run(); } catch (e) {}
+            });
+        }
+
+        selectEl.addEventListener('change', (e) => {
+            const value = e.target.value || 'All';
+            updateViewsSelectedId(value);
+        });
+
+        // Initialize with 'All'
+        updateViewsSelectedId('All');
     });
 </script>
 

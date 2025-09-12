@@ -17,6 +17,38 @@ TITLE_FONT_SIZE = 15
 PLOT_DIM = 260
 
 
+def _draw_horizontal_histogram_spec(data: pd.DataFrame, category: str) -> dict:
+    """
+    Build a single, responsive Vega-Lite spec for one metric/category histogram.
+    Includes a shared 'selected_id' param to allow external filtering by sample ID.
+    """
+    x_title = category.replace("_", " ").capitalize()
+
+    selection = alt.param(name="selected_id", value="All")
+
+    chart = (
+        alt.Chart(data[data["category"] == category])
+        .mark_bar()
+        .encode(
+            x=alt.X("metric:Q", bin=True, title=x_title),
+            y=alt.Y("count()", title="MAG count"),
+            color=alt.value("steelblue"),
+        )
+        .add_params(selection)
+        .transform_filter("(selected_id == 'All') || (datum.sample_id == selected_id)")
+        .properties(height=PLOT_DIM)
+        .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+    )
+
+    # Convert to dict and make responsive: width='container', autosize fit
+    spec = chart.to_dict()
+    spec["width"] = "container"
+    spec["autosize"] = {"type": "fit", "contains": "padding"}
+    return spec
+
+
 def _draw_horizontal_histograms(data: pd.DataFrame, columns: List[str]):
     data = pd.melt(
         data,
@@ -47,12 +79,10 @@ def _draw_horizontal_histograms(data: pd.DataFrame, columns: List[str]):
     return chart
 
 
-def _draw_marker_summary_histograms(data: pd.DataFrame) -> dict:
+def _draw_marker_summary_histograms(data: pd.DataFrame) -> list:
     """
-    Draws summary histograms for the BUSCO marker results of all samples.
-
-    Returns:
-        dict: Dictionary containing the Vega spec.
+    Build responsive, per-metric histogram specs for BUSCO markers and
+    assembly metrics. Returns a list of Vega-Lite specs (dicts).
     """
     cols = [
         ["single", "duplicated", "fragmented", "missing", "completeness"],
@@ -63,23 +93,26 @@ def _draw_marker_summary_histograms(data: pd.DataFrame) -> dict:
         cols[0].remove("completeness")
         cols[1].remove("contamination")
 
-    chart = _draw_horizontal_histograms(data, columns=cols[0])
-    chart2 = _draw_horizontal_histograms(data, columns=cols[1])
-
-    chart = (
-        alt.vconcat(chart, chart2)
-        .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
-        .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
-        .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+    melted = pd.melt(
+        data,
+        id_vars=["sample_id", "mag_id", "dataset", "n_markers"],
+        value_vars=[*cols[0], *cols[1]],
+        value_name="metric",
+        var_name="category",
     )
 
-    return chart.to_dict()
+    specs: List[dict] = []
+    for category in [*cols[0], *cols[1]]:
+        specs.append(_draw_horizontal_histogram_spec(melted, category))
+
+    return specs
 
 
 def _draw_completeness_vs_contamination(data: pd.DataFrame):
     """
-    Draws scatterplot of completeness vs. contamination. The user can choose to
-    display all MAGs or choose one with a dropdown menu.
+    Draws scatterplot of completeness vs. contamination. Filtering is controlled by
+    an external 'selected_id' param (no bound UI here) so that one dropdown can drive
+    multiple charts on the page.
 
     Returns:
         dict: Dictionary containing the Vega spec.
@@ -92,36 +125,47 @@ def _draw_completeness_vs_contamination(data: pd.DataFrame):
         for col in data.columns
     ]
 
+    # Calculate data-driven axis upper bounds (10% above max, capped at 110)
+    max_comp = 0 if "completeness" not in data.columns else pd.to_numeric(data["completeness"], errors="coerce").max(skipna=True)
+    max_cont = 0 if "contamination" not in data.columns else pd.to_numeric(data["contamination"], errors="coerce").max(skipna=True)
+    max_comp = 0 if pd.isna(max_comp) else float(max_comp)
+    max_cont = 0 if pd.isna(max_cont) else float(max_cont)
+    upper_x = min(110.0, round(max_comp * 1.1, 1))
+    upper_y = min(110.0, round(max_cont * 1.1, 1))
+    # Ensure at least [0,5] if all zeros
+    upper_x = max(5.0, upper_x)
+    upper_y = max(5.0, upper_y)
+
     chart = alt.Chart(data)
 
-    unique_ids = sorted(data[color_field].dropna().unique().tolist())
-    selection = alt.param(
-        name="selected_id",
-        bind=alt.binding_select(options=["All"] + unique_ids, name=f"{color_title}: "),
-        value="All",
-    )
+    selection = alt.param(name="selected_id", value="All")
 
     chart = chart.transform_filter(
         f"(selected_id == 'All') || (datum.{color_field} == selected_id)"
     ).add_params(selection)
 
     chart = (
-        chart.mark_circle(size=60)
+        chart.mark_circle(size=100)
         .encode(
             x=alt.X(
-                "completeness:Q", title="Completeness", scale=alt.Scale(domain=[0, 100])
+                "completeness:Q",
+                title="Completeness",
+                scale=alt.Scale(domain=[0, upper_x]),
             ),
             y=alt.Y(
                 "contamination:Q",
                 title="Contamination",
-                scale=alt.Scale(domain=[0, 100]),
+                scale=alt.Scale(domain=[0, upper_y]),
             ),
             color=alt.Color(
-                f"{color_field}:N", title=color_title, scale=alt.Scale(scheme="viridis")
+                f"{color_field}:N",
+                title=color_title,
+                scale=alt.Scale(scheme="viridis"),
+                legend=alt.Legend(orient="right"),
             ),
             tooltip=tooltip,
         )
-        .properties(width=600, height=600)
+        .properties(height=500)
         .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
         .configure_legend(
             labelFontSize=LABEL_FONT_SIZE,
@@ -132,7 +176,10 @@ def _draw_completeness_vs_contamination(data: pd.DataFrame):
         .interactive()
     )
 
-    return chart.to_dict()
+    spec = chart.to_dict()
+    spec["width"] = "container"
+    spec["autosize"] = {"type": "fit", "contains": "padding"}
+    return spec
 
 
 def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
@@ -205,59 +252,43 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
         .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
         .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
         .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
-        .properties(width=PLOT_DIM, height=PLOT_DIM)
+        .properties(height=300)
     )
 
-    return chart.to_dict()
+    spec = chart.to_dict()
+    spec["width"] = "container"
+    spec["autosize"] = {"type": "fit", "contains": "padding"}
+    return spec
 
 
 def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
     """
-    Draws summary histograms for the MAG assembly metrics where users
-    can indicate which metric and for which sample they want to see.
-
-    Returns:
-        dict: Dictionary containing the Vega spec.
+    Draws summary histograms for unbinned contigs (percentage only) across samples.
+    Returns a single responsive Vega spec with counts on the y-axis.
     """
-    metrics = ["unbinned_contigs", "unbinned_contigs_count"]
-    labels = ["Percentage of unbinned contigs", "Absolute count of unbinned contigs"]
     # Keep only one row per sample
     data = data.drop_duplicates(subset=["sample_id"])
-    data = pd.melt(
-        data,
-        id_vars=["sample_id"],
-        value_vars=metrics,
-        value_name="metric",
-        var_name="category",
-    )
 
-    selection_metrics = alt.selection_point(
-        fields=["category"],
-        bind=alt.binding_radio(
-            options=metrics,
-            labels=labels,
-            name="Select metric:",
-            element="#selectableHistogramUnbinnedControls",
-        ),
-        name="select_metric",
-        value="unbinned_contigs",
-    )
-
-    # Create the chart
     chart = (
         alt.Chart(data)
         .mark_bar()
         .encode(
-            x=alt.X("metric:Q", bin=True, title=None),
-            y=alt.Y("count()", title="Sample count"),
+            x=alt.X("unbinned_contigs_count:Q", bin=True, title=None),
+            y=alt.Y(
+                "count()",
+                title="Sample count",
+                axis=alt.Axis(format=".0f", tickMinStep=1),
+                scale=alt.Scale(zero=True),
+            ),
             color=alt.value("steelblue"),
         )
-        .add_params(selection_metrics)
-        .transform_filter("datum.category == select_metric.category")
         .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
         .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
         .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
-        .properties(width=PLOT_DIM, height=PLOT_DIM)
+        .properties(height=500)
     )
 
-    return chart.to_dict()
+    spec = chart.to_dict()
+    spec["width"] = "container"
+    spec["autosize"] = {"type": "fit", "contains": "padding"}
+    return spec

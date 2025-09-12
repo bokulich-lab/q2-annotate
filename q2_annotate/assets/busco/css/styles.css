@@ -42,6 +42,14 @@
     margin-bottom: 8px;
 }
 
+/* Responsive grid for multiple charts */
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    width: 100%;
+}
+
 /*adjustment for Bootstrap 5*/
 .table {
     border: 1px solid #dee2e6;

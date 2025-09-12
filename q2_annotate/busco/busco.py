@@ -262,6 +262,12 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     else:
         tabbed_context["vega_selectable_unbinned_json"] = None
         unbinned = False
+
+    # Provide sample IDs for coordinated filtering in templates
+    sample_ids = []
+    if is_sample_data:
+        sample_ids = sorted([sid for sid in results["sample_id"].unique() if sid])
+
     tabbed_context.update(
         {
             "tabs": [
@@ -277,6 +283,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
             "comp_cont": comp_cont,
             "unbinned": unbinned,
             "page_size": 100,
+            "sample_ids_json": json.dumps(sample_ids),
         }
     )
     q2templates.render(templates, output_dir, context=tabbed_context)
