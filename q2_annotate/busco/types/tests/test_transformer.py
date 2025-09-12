@@ -60,8 +60,8 @@ class TestBUSCOTransformers(TestPluginBase):
             "contigs_n50",
             "scaffolds",
             "length",
-            # "completeness",
-            # "contamination",
+            "completeness",
+            "contamination",
         ]:
             df[col] = pd.to_numeric(df[col])
         exp = qiime2.Metadata(df)
