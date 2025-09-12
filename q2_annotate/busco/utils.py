@@ -188,10 +188,25 @@ def _get_feature_table(busco_results: pd.DataFrame):
         "percent_gaps": "Percent gaps",
         "scaffolds": "Contigs",
         "length": "Length (bp)",
+        "unbinned_contigs_count": "Unbinned contigs",
+        "unbinned_contigs": "% unbinned contigs",
     }
     if not ("completeness" in df.columns and "contamination" in df.columns):
         new_cols.pop("completeness")
         new_cols.pop("contamination")
+
+    if not (
+        "unbinned_contigs" in df.columns and "unbinned_contigs_count" in df.columns
+    ):
+        new_cols.pop("unbinned_contigs")
+        new_cols.pop("unbinned_contigs_count")
+    # else:
+    #     df["Unbinned %"] = df["Unbinned %"].apply(
+    #         lambda x: f"{x:.1f}%" if pd.notna(x) else "NA"
+    #     )
+    #     df["unbinned_contigs"] = df["unbinned_contigs"].apply(
+    #         lambda x: str(x) if pd.notna(x) else "NA"
+    #     )
 
     if len(busco_results["sample_id"].unique()) < 2:
         del new_cols["sample_id"]
@@ -200,15 +215,6 @@ def _get_feature_table(busco_results: pd.DataFrame):
         columns=new_cols, inplace=False
     )
 
-    if "Unbinned %" in df.columns:
-        df["Unbinned %"] = df["Unbinned %"].apply(
-            lambda x: f"{x:.1f}%" if pd.notna(x) else "NA"
-        )
-
-    if "Unbinned count" in df.columns:
-        df["Unbinned count"] = df["Unbinned count"].apply(
-            lambda x: str(x) if pd.notna(x) else "NA"
-        )
     return df.to_json(orient="split")
 
 
@@ -378,21 +384,6 @@ def _process_busco_results(results, sample_id, mag_id, file_name, additional_met
     }
 
     return results
-
-
-def _get_mag_lengths(bins: Union[MultiMAGSequencesDirFmt, MAGSequencesDirFmt]):
-    lengths = {}
-    if isinstance(bins, MultiMAGSequencesDirFmt):
-        for sample, mags in bins.sample_dict().items():
-            for mag_id, mag_fp in mags.items():
-                seq = skbio.io.read(mag_fp, format="fasta")
-                lengths[mag_id] = sum([len(s) for s in seq])
-        return pd.Series(lengths, name="length")
-    else:
-        for mag_id, mag_fp in bins.feature_dict().items():
-            seq = skbio.io.read(mag_fp, format="fasta")
-            lengths[mag_id] = sum([len(s) for s in seq])
-        return pd.Series(lengths, name="length")
 
 
 def _filter_unbinned_for_partition(

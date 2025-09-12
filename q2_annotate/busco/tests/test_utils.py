@@ -83,6 +83,7 @@ class TestBUSCOUtils(TestPluginBase):
                 "length": [28, 29, 30],
                 "completeness": [31, 32, 33],
                 "contamination": [34, 35, 36],
+                "unbinned_contigs": [10, 11, 12],
             }
         )
         self.df4 = pd.DataFrame(
@@ -288,6 +289,7 @@ class TestBUSCOUtils(TestPluginBase):
                         "complete": 13,
                         "completeness": 31.0,
                         "contamination": 34.0,
+                        "unbinned_contigs": 10.0,
                     }
                 ),
                 "median": pd.Series(
@@ -299,6 +301,7 @@ class TestBUSCOUtils(TestPluginBase):
                         "complete": 14.0,
                         "completeness": 32.0,
                         "contamination": 35.0,
+                        "unbinned_contigs": 11.0,
                     }
                 ),
                 "mean": pd.Series(
@@ -310,6 +313,7 @@ class TestBUSCOUtils(TestPluginBase):
                         "complete": 14.0,
                         "completeness": 32.0,
                         "contamination": 35.0,
+                        "unbinned_contigs": 11.0,
                     }
                 ),
                 "max": pd.Series(
@@ -321,6 +325,7 @@ class TestBUSCOUtils(TestPluginBase):
                         "complete": 15,
                         "completeness": 33.0,
                         "contamination": 36.0,
+                        "unbinned_contigs": 12.0,
                     }
                 ),
                 "count": pd.Series(
@@ -332,6 +337,7 @@ class TestBUSCOUtils(TestPluginBase):
                         "complete": 3,
                         "completeness": 3.0,
                         "contamination": 3.0,
+                        "unbinned_contigs": 3.0,
                     }
                 ),
             }
@@ -340,7 +346,9 @@ class TestBUSCOUtils(TestPluginBase):
         self.assertEqual(obs, exp)
 
     def test_calculate_summary_stats_no_additional_metrics(self):
-        self.df3.drop(columns=["completeness", "contamination"], inplace=True)
+        self.df3.drop(
+            columns=["completeness", "contamination", "unbinned_contigs"], inplace=True
+        )
         obs = _calculate_summary_stats(self.df3)
         exp = pd.DataFrame(
             {
