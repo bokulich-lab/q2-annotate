@@ -15,6 +15,7 @@ from q2_annotate.busco.plots_summary import (
     _draw_marker_summary_histograms,
     _draw_selectable_summary_histograms,
     _draw_completeness_vs_contamination,
+    _draw_selectable_unbinned_histograms,
 )
 
 
@@ -181,6 +182,25 @@ class TestBUSCOPlots(TestPluginBase):
         cat = {entry["category"] for entry in obs["datasets"][obs["data"]["name"]]}
         self.assertFalse("completeness" in cat)
         self.assertFalse("contamination" in cat)
+
+    def test_draw_selectable_unbinned_histograms(self):
+        obs = _draw_selectable_unbinned_histograms(data=self.df_sample_data)
+
+        self.assertIsInstance(obs, dict)
+        self.assertIn("config", obs)
+        self.assertIn("mark", obs)
+        self.assertIn("transform", obs)
+        self.assertIn("filter", obs["transform"][0])
+        self.assertEqual(obs["mark"]["type"], "bar")
+
+        config = obs["config"]
+        for key in ["axis", "header", "legend"]:
+            self.assertEqual(config[key]["labelFontSize"], 12)
+            self.assertEqual(config[key]["titleFontSize"], 15)
+
+        cat = {entry["category"] for entry in obs["datasets"][obs["data"]["name"]]}
+        self.assertTrue("unbinned_contigs" in cat)
+        self.assertTrue("unbinned_contigs_count" in cat)
 
     def test_scatter_sample_data(self):
         obs = _draw_completeness_vs_contamination(self.df_sample_data)

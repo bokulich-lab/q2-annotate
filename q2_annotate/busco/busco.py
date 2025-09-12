@@ -341,7 +341,7 @@ def evaluate_busco(
 
     if mags.type <= SampleData[MAGs]:
         # we need to match the unbinned contigs to the partitioned MAGs
-        for partition_id, mag_partition in partitioned_mags.items():
+        for mag_partition in partitioned_mags.values():
             if unbinned_contigs:
                 unbinned_filtered = _filter_unbinned_for_partition(
                     unbinned_contigs, mag_partition, _filter_contigs

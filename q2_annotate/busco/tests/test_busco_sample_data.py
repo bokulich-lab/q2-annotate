@@ -78,11 +78,6 @@ class TestBUSCOSampleData(TestPluginBase):
         mock_process.side_effect = busco_list
 
         obs = _busco_helper(self.mags, ["--lineage_dataset", "bacteria_odb10"], True)
-        # new
-        # unbinned = ContigSequencesDirFmt(
-        #     path=self.get_data_path('unbinned'),
-        #     mode='r'
-        # )
         exp = pd.read_csv(
             self.get_data_path("busco_results/results_all/busco_results.tsv"), sep="\t"
         )
@@ -223,7 +218,7 @@ class TestBUSCOSampleData(TestPluginBase):
         _visualize_busco(
             output_dir=self.temp_dir.name,
             results=pd.read_csv(
-                self.get_data_path("summaries/all_renamed_with_lengths_unbinned.csv")
+                self.get_data_path("summaries/all_renamed_with_lengths.csv")
             ),
         )
 
@@ -260,25 +255,12 @@ class TestBUSCOSampleData(TestPluginBase):
         mock_clean.assert_called_with(self.temp_dir.name)
 
     # TODO: maybe this could be turned into an actual test
+    @patch(
+        "q2_annotate.busco.busco._filter_unbinned_for_partition",
+        return_value="filtered_unbinned",
+    )
     @patch("q2_annotate.busco.busco._validate_parameters")
-    def test_evaluate_busco_action(self, mock_validate):
-        fake_partition = MagicMock()
-        fake_partition.view.return_value.sample_dict.return_value = {
-            "sample1": {},
-            "sample2": {},
-        }
-        mock_action = MagicMock(
-            side_effect=[
-                lambda x, **kwargs: (0,),
-                lambda x: ("collated_result",),
-                lambda x: ("visualization",),
-                lambda *args, **kwargs: ("filtered_unbinned",),  # filter_contigs
-                lambda x, y: (fake_partition,),  # map id to fasta file in data dir
-                # lambda x, y: ({"mag1": {}, "mag2": {}},),
-            ]
-        )
-
-        mock_ctx = MagicMock(get_action=mock_action)
+    def test_evaluate_busco_action(self, mock_validate, mock_filter):
         mags = qiime2.Artifact.import_data(
             "SampleData[MAGs]", self.get_data_path("mags")
         )
@@ -288,6 +270,21 @@ class TestBUSCOSampleData(TestPluginBase):
         busco_db = qiime2.Artifact.import_data(
             "ReferenceDB[BUSCO]", self.get_data_path("busco_db")
         )
+
+        fake_partition = MagicMock(
+            values=MagicMock(return_value=["partition1", "partition2"])
+        )
+        fake_filter_contigs = lambda *args, **kwargs: ("filtered_unbinned",)
+        mock_action = MagicMock(
+            side_effect=[
+                lambda x, y, z, **kwargs: (0,),
+                lambda x: ("collated_result",),
+                lambda x: ("visualization",),
+                fake_filter_contigs,
+                lambda x, y: (fake_partition,),
+            ]
+        )
+        mock_ctx = MagicMock(get_action=mock_action)
         obs = evaluate_busco(
             ctx=mock_ctx,
             mags=mags,
@@ -296,4 +293,50 @@ class TestBUSCOSampleData(TestPluginBase):
             num_partitions=2,
         )
         exp = ("collated_result", "visualization")
+
         self.assertTupleEqual(obs, exp)
+        mock_filter.assert_has_calls(
+            [
+                call(unbinned, "partition1", fake_filter_contigs),
+                call(unbinned, "partition2", fake_filter_contigs),
+            ]
+        )
+
+    @patch(
+        "q2_annotate.busco.busco._filter_unbinned_for_partition",
+        return_value="filtered_unbinned",
+    )
+    @patch("q2_annotate.busco.busco._validate_parameters")
+    def test_evaluate_busco_action_no_unbinned(self, mock_validate, mock_filter):
+        mags = qiime2.Artifact.import_data(
+            "SampleData[MAGs]", self.get_data_path("mags")
+        )
+        busco_db = qiime2.Artifact.import_data(
+            "ReferenceDB[BUSCO]", self.get_data_path("busco_db")
+        )
+
+        fake_partition = MagicMock(
+            values=MagicMock(return_value=["partition1", "partition2"])
+        )
+        fake_filter_contigs = lambda *args, **kwargs: ("filtered_unbinned",)
+        mock_action = MagicMock(
+            side_effect=[
+                lambda x, y, z, **kwargs: (0,),
+                lambda x: ("collated_result",),
+                lambda x: ("visualization",),
+                fake_filter_contigs,
+                lambda x, y: (fake_partition,),
+            ]
+        )
+        mock_ctx = MagicMock(get_action=mock_action)
+        obs = evaluate_busco(
+            ctx=mock_ctx,
+            mags=mags,
+            db=busco_db,
+            unbinned_contigs=None,
+            num_partitions=2,
+        )
+        exp = ("collated_result", "visualization")
+
+        self.assertTupleEqual(obs, exp)
+        mock_filter.assert_not_called()
