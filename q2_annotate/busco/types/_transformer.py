@@ -37,8 +37,6 @@ def _2(data: pd.DataFrame) -> BUSCOResultsFormat:
 def _3(ff: BUSCOResultsFormat) -> Metadata:
     with ff.open() as fh:
         df = _read_dataframe(fh)
-        # parse numeric columns as numbers (exclude the percent_gaps column)
-        columns = [*BUSCOResultsFormat.HEADER[4:12], *BUSCOResultsFormat.HEADER[13:]]
-        for col in columns:
+        for col in BUSCOResultsFormat.NUMERIC_COLUMNS:
             df[col] = pd.to_numeric(df[col])
         return Metadata(df)

@@ -12,7 +12,7 @@ from q2_types.feature_data import AlignedProteinFASTAFormat
 
 
 class BUSCOResultsFormat(model.TextFileFormat):
-    HEADER = [
+    HEADER = {
         "mag_id",
         "sample_id",
         "input_file",
@@ -28,32 +28,42 @@ class BUSCOResultsFormat(model.TextFileFormat):
         "percent_gaps",
         "scaffolds",
         "length",
-        "completeness",
-        "contamination",
-    ]
-    HEADER_2 = HEADER[:-2]
+    }
+    OPTIONAL_UNBINNED = {"unbinned_contigs", "unbinned_contigs_count"}
+    OPTIONAL_COMPLETENESS = {"completeness", "contamination"}
+
+    ALL_OPTIONAL_COLUMNS = set.union(OPTIONAL_UNBINNED, OPTIONAL_COMPLETENESS)
+    NUMERIC_COLUMNS = set.union(HEADER, OPTIONAL_COMPLETENESS).difference(
+        {"mag_id", "sample_id", "input_file", "dataset", "percent_gaps"}
+    )
 
     def _validate(self, n_records=None):
         with self.open() as fh:
             reader = csv.reader(fh, delimiter="\t")
             headers = next(reader)
+            header_length = len(self.HEADER)
 
-            if set(headers) == set(self.HEADER):
-                expected = self.HEADER
-            elif set(headers) == set(self.HEADER_2):
-                expected = self.HEADER_2
-            else:
+            if not self.HEADER.issubset(headers):
                 raise ValidationError(
-                    f"Invalid header: {headers}, expected: {self.HEADER}, "
-                    '"completness" and "contamination" columns are optional.'
+                    f"Invalid header: {headers}, expected: {self.HEADER}"
                 )
 
-            for i, row in enumerate(reader, start=2):
-                if len(row) != len(expected):
+            extra_cols = set(headers) - self.HEADER
+            if extra_cols:
+                if extra_cols.issubset(self.ALL_OPTIONAL_COLUMNS):
+                    header_length += len(extra_cols)
+                else:
                     raise ValidationError(
-                        f"Line {i} has {len(row)} columns, " f"expected {len(expected)}"
+                        f"Unexpected optional columns found: {extra_cols}\n\n"
+                        f"Only the following optional column sets are allowed:\n"
+                        f"{self.ALL_OPTIONAL_COLUMNS}\n"
                     )
 
+            for i, row in enumerate(reader, start=2):
+                if len(row) != header_length:
+                    raise ValidationError(
+                        f"Line {i} has {len(row)} columns, " f"expected {header_length}"
+                    )
                 if n_records is not None and i - 1 >= n_records:
                     break
 
