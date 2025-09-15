@@ -103,7 +103,7 @@
                 <h5 class="card-header">Completeness vs contamination</h5>
                 <div class="card-body" style="display: block;">
                     <p>
-                        Relationship between BUSCO completeness and contamination for each MAG. Uses the same sample filter above.
+                        Relationship between BUSCO completeness and contamination for each bin.
                     </p>
                     <div id="scatterPlotDiv" style="margin-top: 5px; width: 100%;"></div>
                 </div>
@@ -195,10 +195,13 @@
         // Track views for coordinated filtering
         const views = [];
 
+        const actionsCfg = {actions: false};
+        // const actionsCfg = {actions: {export: true, source: true, editor: true}};
+
         specsArray.forEach((spec) => {
             const div = document.createElement('div');
             grid.appendChild(div);
-            vegaEmbed(div, spec, {actions: false}).then(
+            vegaEmbed(div, spec, actionsCfg).then(
                 function (result) {
                     result.view.logLevel(vega.Warn);
                     result.view.resize();
@@ -213,7 +216,7 @@
 
         // Embed scatter and unbinned
         const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
-        vegaEmbed("#scatterPlotDiv", scatterSpec, {actions: false}).then(
+        vegaEmbed("#scatterPlotDiv", scatterSpec, actionsCfg).then(
             function (result) {
                 result.view.logLevel(vega.Warn);
                 result.view.resize();
@@ -231,7 +234,7 @@
             try { vegaSpecSelectableUnbinned = JSON.parse(rawUnbinned); } catch (e) { vegaSpecSelectableUnbinned = null; }
         }
         if (vegaSpecSelectableUnbinned) {
-            vegaEmbed("#plotUnbinned", vegaSpecSelectableUnbinned, {actions: false}).then(
+            vegaEmbed("#plotUnbinned", vegaSpecSelectableUnbinned, actionsCfg).then(
                 function (result) {
                     result.view.logLevel(vega.Warn);
                     result.view.resize();

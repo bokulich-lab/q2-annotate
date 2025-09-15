@@ -273,7 +273,7 @@ def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
         alt.Chart(data)
         .mark_bar()
         .encode(
-            x=alt.X("unbinned_contigs_count:Q", bin=True, title=None),
+            x=alt.X("unbinned_contigs_count:Q", bin=True, title="Contig count"),
             y=alt.Y(
                 "count()",
                 title="Sample count",
