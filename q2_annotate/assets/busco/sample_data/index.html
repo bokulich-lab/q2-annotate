@@ -87,15 +87,17 @@
                             <select id="globalSampleSelect" class="form-select form-select-sm" style="width:auto">
                                 <option value="All" selected>All</option>
                             </select>
-                            <span class="header-inline">Visualization:</span>
+                            <span class="header-inline">View:</span>
                             <select id="visualizationToggle" class="form-select form-select-sm" style="width:auto">
-                                <option value="histograms" selected>Histograms</option>
-                                <option value="violins">Violin Plots</option>
+                                <option value="histograms">Histograms</option>
+                                <option value="violins" selected>Box Plots</option>
                             </select>
                         </div>
                         <p id="visualizationDescription">
-                            The histograms below show distributions of BUSCO marker count fractions and assembly metrics.
-                            Use the sample filter to show all samples or a single sample. Switch between histograms and violin plots using the visualization toggle.
+                            The box plots below show distributions of BUSCO marker count fractions and assembly metrics.
+                            Each box shows the median, quartiles, and outliers for each category. Individual data points
+                            are overlaid with low transparency. Use the sample filter to highlight a specific sample
+                            across all box plots.
                         </p>
                         <div class="col-lg-12" id="summaryHistogramsMarkers">
                             <div id="plotMarkers" class="square-chart-grid" style="margin-top: 5px"></div>
@@ -110,7 +112,7 @@
         {% if comp_cont %}
         <div class="col-lg-6">
             <div class="card h-100">
-                <h5 class="card-header">Completeness vs contamination</h5>
+                <h5 class="card-header">Completeness vs. contamination</h5>
                 <div class="card-body" style="display: block;">
                     <p>
                         Relationship between BUSCO completeness and contamination for each bin.
@@ -282,9 +284,9 @@
         // Function to update description
         function updateDescription(type) {
             if (type === 'histograms') {
-                descriptionEl.textContent = 'The histograms below show distributions of BUSCO marker count fractions and assembly metrics. Use the sample filter to show all samples or a single sample. Switch between histograms and violin plots using the visualization toggle.';
+                descriptionEl.textContent = 'The histograms below show distributions of BUSCO marker count fractions and assembly metrics. Use the sample filter to show all samples or a single sample. Switch between histograms and box plots using the view toggle.';
             } else {
-                descriptionEl.textContent = 'The violin plots below show distributions of BUSCO marker count fractions and assembly metrics. Each violin shows the density distribution with individual data points overlaid. Use the sample filter to highlight a specific sample across all violin plots.';
+                descriptionEl.textContent = 'The box plots below show distributions of BUSCO marker count fractions and assembly metrics. Each box shows the median, quartiles, and outliers for each category. Individual data points are overlaid with low transparency. Use the sample filter to highlight a specific sample across all box plots.';
             }
         }
 
@@ -300,8 +302,8 @@
             }
         });
 
-        // Initial render (histograms by default)
-        renderHistograms();
+        // Initial render (box plots by default)
+        renderViolinPlots();
 
         // Embed scatter and unbinned
         const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);

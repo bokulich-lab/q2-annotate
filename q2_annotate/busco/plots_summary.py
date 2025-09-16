@@ -93,8 +93,16 @@ def _draw_completeness_vs_contamination(data: pd.DataFrame):
     ]
 
     # Calculate data-driven axis upper bounds (10% above max, capped at 110)
-    max_comp = 0 if "completeness" not in data.columns else pd.to_numeric(data["completeness"], errors="coerce").max(skipna=True)
-    max_cont = 0 if "contamination" not in data.columns else pd.to_numeric(data["contamination"], errors="coerce").max(skipna=True)
+    max_comp = (
+        0
+        if "completeness" not in data.columns
+        else pd.to_numeric(data["completeness"], errors="coerce").max(skipna=True)
+    )
+    max_cont = (
+        0
+        if "contamination" not in data.columns
+        else pd.to_numeric(data["contamination"], errors="coerce").max(skipna=True)
+    )
     max_comp = 0 if pd.isna(max_comp) else float(max_comp)
     max_cont = 0 if pd.isna(max_cont) else float(max_cont)
     upper_x = min(110.0, round(max_comp * 1.1, 1))
@@ -224,13 +232,13 @@ def _draw_box_whiskers_plots(data: pd.DataFrame) -> list:
     Draws individual box-whiskers plot specs for BUSCO marker categories and assembly metrics.
     Each category gets its own responsive chart spec with individual y-axis scale and data points overlaid.
     Sample selection highlights the selected sample across all box plots.
-    
+
     Returns:
         list: List of Vega-Lite specs (dicts) for individual box plots.
     """
     metrics = [
         "single",
-        "duplicated", 
+        "duplicated",
         "fragmented",
         "missing",
         "completeness",
@@ -256,26 +264,24 @@ def _draw_box_whiskers_plots(data: pd.DataFrame) -> list:
         else:
             # Assembly metrics: use abbreviated format (K, M, etc.)
             y_format = ".2s"
-        
-        # Create base chart with violin plot for this specific metric (always show all data)
+
+        # Create base chart with box plot for this specific metric (always show all data)
         base_chart = (
             alt.Chart(data)
-            .transform_density(
-                density=f"{metric}",
-                as_=[f"{metric}", 'density']
-            )
-            .mark_area(orient='horizontal')
+            .mark_boxplot(size=40)
             .encode(
-                y=alt.Y(f"{metric}:Q", title=metric, scale=alt.Scale(zero=False), 
-                       axis=alt.Axis(format=y_format)),
-                x=alt.X('density:Q', stack='center', impute=None, title=None,
-                       scale=alt.Scale(padding=0.1),
-                       axis=alt.Axis(labels=False, values=[0], grid=False, ticks=True)),
-                color=alt.value(VIOLIN_COLOR),
-                opacity=alt.value(0.8)
+                y=alt.Y(
+                    f"{metric}:Q",
+                    title=metric,
+                    scale=alt.Scale(zero=False),
+                    axis=alt.Axis(format=y_format),
+                ),
+                color=alt.value(BASE_COLOR),
+                opacity=alt.value(0.3),
+                stroke=alt.value("black"),
+                strokeWidth=alt.value(0.75),
             )
             .add_params(selection)
-            # No filter - always show all data for violin plots
         )
 
         # Create overlay chart with individual points for this specific metric (show all points, highlight selected)
@@ -283,17 +289,21 @@ def _draw_box_whiskers_plots(data: pd.DataFrame) -> list:
             alt.Chart(data)
             .mark_circle(size=50, opacity=0.4, stroke=None)
             .encode(
-                y=alt.Y(f"{metric}:Q", title=metric, scale=alt.Scale(zero=False),
-                       axis=alt.Axis(format=y_format)),
+                y=alt.Y(
+                    f"{metric}:Q",
+                    title=metric,
+                    scale=alt.Scale(zero=False),
+                    axis=alt.Axis(format=y_format),
+                ),
                 color=alt.condition(
                     alt.datum.sample_id == alt.param("selected_id"),
                     alt.value("red"),
-                    alt.value("gray")
+                    alt.value("gray"),
                 ),
                 opacity=alt.condition(
                     alt.datum.sample_id == alt.param("selected_id"),
                     alt.value(0.9),
-                    alt.value(0.4)
+                    alt.value(0.4),
                 ),
                 tooltip=[
                     alt.Tooltip("sample_id:N", title="Sample ID"),
@@ -310,10 +320,13 @@ def _draw_box_whiskers_plots(data: pd.DataFrame) -> list:
 
         # Configure the chart
         chart = (
-            chart
-            .properties(height=300, width="container")
-            .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
-            .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+            chart.properties(height=300, width="container")
+            .configure_axis(
+                labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE, grid=False
+            )
+            .configure_header(
+                labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE
+            )
         )
         specs.append(chart.to_dict())
 
@@ -332,7 +345,9 @@ def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
         alt.Chart(data)
         .mark_bar()
         .encode(
-            x=alt.X("unbinned_contigs_count:Q", bin=True, title="Unbinned contig count"),
+            x=alt.X(
+                "unbinned_contigs_count:Q", bin=True, title="Unbinned contig count"
+            ),
             y=alt.Y(
                 "count()",
                 title="Sample count",
