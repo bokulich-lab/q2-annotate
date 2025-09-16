@@ -22,6 +22,7 @@ from q2_annotate.busco.plots_summary import (
     _draw_selectable_summary_histograms,
     _draw_completeness_vs_contamination,
     _draw_selectable_unbinned_histograms,
+    _draw_box_whiskers_plots,
 )
 
 from q2_annotate.busco.utils import (
@@ -241,6 +242,9 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     vega_json_summary = json.dumps(_draw_marker_summary_histograms(results)).replace(
         "NaN", "null"
     )
+    vega_json_box_plots = json.dumps(_draw_box_whiskers_plots(results)).replace(
+        "NaN", "null"
+    )
     table_json = _get_feature_table(results)
     stats_json = _calculate_summary_stats(results)
 
@@ -277,6 +281,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
             ],
             "vega_json": vega_json,
             "vega_summary_json": vega_json_summary,
+            "vega_box_plots_json": vega_json_box_plots,
             "table": table_json,
             "summary_stats_json": stats_json,
             "scatter_json": scatter_json,

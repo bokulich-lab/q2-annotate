@@ -37,17 +37,61 @@
 .header-inline {
     display: inline-block;
     float: left;
-    margin-right: 10px;
+    margin-right: 2px;
     margin-top: 8px;
     margin-bottom: 8px;
+}
+
+/* Dropdown menu styling */
+.form-select {
+    margin-right: 15px;
 }
 
 /* Responsive grid for multiple charts */
 .chart-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 4px;
     width: 100%;
+}
+
+/* Grid for square plots - maintains fixed square dimensions */
+.square-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 10px;
+    width: 100%;
+    /* justify-content: start; */
+}
+
+/* Responsive layout for detailed BUSCO plots */
+.detailed-plot-container {
+    display: flex;
+    width: 100%;
+    gap: 12px;
+}
+
+.detailed-plot-container .busco-plot {
+    flex: 2; /* Takes 2/3 of the space */
+    min-width: 0; /* Allows flex item to shrink below content size */
+}
+
+.detailed-plot-container .assembly-plot {
+    flex: 1; /* Takes 1/3 of the space */
+    min-width: 0; /* Allows flex item to shrink below content size */
+}
+
+/* Responsive behavior for smaller screens */
+@media (max-width: 768px) {
+    .detailed-plot-container {
+        flex-direction: column;
+    }
+    
+    .detailed-plot-container .busco-plot,
+    .detailed-plot-container .assembly-plot {
+        flex: none;
+        width: 100%;
+    }
 }
 
 /*adjustment for Bootstrap 5*/

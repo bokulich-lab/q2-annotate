@@ -14,7 +14,9 @@ alt.data_transformers.disable_max_rows()
 
 LABEL_FONT_SIZE = 12
 TITLE_FONT_SIZE = 15
-PLOT_DIM = 260
+PLOT_DIM = 225
+BASE_COLOR = "#2d718e"
+VIOLIN_COLOR = "#29af7f"
 
 
 def _draw_horizontal_histogram_spec(data: pd.DataFrame, category: str) -> dict:
@@ -32,51 +34,16 @@ def _draw_horizontal_histogram_spec(data: pd.DataFrame, category: str) -> dict:
         .encode(
             x=alt.X("metric:Q", bin=True, title=x_title),
             y=alt.Y("count()", title="MAG count"),
-            color=alt.value("steelblue"),
+            color=alt.value(BASE_COLOR),
         )
         .add_params(selection)
         .transform_filter("(selected_id == 'All') || (datum.sample_id == selected_id)")
-        .properties(height=PLOT_DIM)
+        .properties(height=PLOT_DIM, width="container")
         .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
-        .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
         .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
     )
 
-    # Convert to dict and make responsive: width='container', autosize fit
-    spec = chart.to_dict()
-    spec["width"] = "container"
-    spec["autosize"] = {"type": "fit", "contains": "padding"}
-    return spec
-
-
-def _draw_horizontal_histograms(data: pd.DataFrame, columns: List[str]):
-    data = pd.melt(
-        data,
-        id_vars=["sample_id", "mag_id", "dataset", "n_markers"],
-        value_vars=columns,
-        value_name="metric",
-        var_name="category",
-    )
-
-    charts = []
-    for i, category in enumerate(columns):
-        x_title = category.replace("_", " ").capitalize()
-        y_title = "MAG count" if i == 0 else None
-        chart = (
-            alt.Chart(data[data["category"] == category])
-            .mark_bar()
-            .encode(
-                x=alt.X("metric:Q", bin=True, title=x_title),
-                y=alt.Y("count()", title=y_title),
-                color=alt.value("steelblue"),
-            )
-            .properties(width=PLOT_DIM, height=PLOT_DIM)
-        )
-        charts.append(chart)
-
-    chart = alt.hconcat(*charts)
-
-    return chart
+    return chart.to_dict()
 
 
 def _draw_marker_summary_histograms(data: pd.DataFrame) -> list:
@@ -86,7 +53,7 @@ def _draw_marker_summary_histograms(data: pd.DataFrame) -> list:
     """
     cols = [
         ["single", "duplicated", "fragmented", "missing", "completeness"],
-        ["contamination", "scaffolds", "contigs_n50", "scaffold_n50", "length"],
+        ["contamination", "contigs_n50", "length"],
     ]
 
     if not ("completeness" in data.columns and "contamination" in data.columns):
@@ -165,7 +132,6 @@ def _draw_completeness_vs_contamination(data: pd.DataFrame):
             ),
             tooltip=tooltip,
         )
-        .properties(height=500)
         .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
         .configure_legend(
             labelFontSize=LABEL_FONT_SIZE,
@@ -173,13 +139,11 @@ def _draw_completeness_vs_contamination(data: pd.DataFrame):
             labelLimit=1000,
         )
         .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        .properties(height=400, width="container")
         .interactive()
     )
 
-    spec = chart.to_dict()
-    spec["width"] = "container"
-    spec["autosize"] = {"type": "fit", "contains": "padding"}
-    return spec
+    return chart.to_dict()
 
 
 def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
@@ -197,9 +161,7 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
         "missing",
         "completeness",
         "contamination",
-        "scaffolds",
         "contigs_n50",
-        "scaffold_n50",
         "length",
     ]
 
@@ -242,7 +204,7 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
         .encode(
             x=alt.X("metric:Q", bin=True, title=None),
             y=alt.Y("count()", title="MAG count"),
-            color=alt.value("steelblue"),
+            color=alt.value(BASE_COLOR),
         )
         .add_params(selection_metrics, selection_box)
         .transform_filter(
@@ -250,15 +212,112 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
             "& datum.category == select_metric.category"
         )
         .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
-        .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
         .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
-        .properties(height=300)
+        .properties(height=300, width="container")
     )
 
-    spec = chart.to_dict()
-    spec["width"] = "container"
-    spec["autosize"] = {"type": "fit", "contains": "padding"}
-    return spec
+    return chart.to_dict()
+
+
+def _draw_box_whiskers_plots(data: pd.DataFrame) -> list:
+    """
+    Draws individual box-whiskers plot specs for BUSCO marker categories and assembly metrics.
+    Each category gets its own responsive chart spec with individual y-axis scale and data points overlaid.
+    Sample selection highlights the selected sample across all box plots.
+    
+    Returns:
+        list: List of Vega-Lite specs (dicts) for individual box plots.
+    """
+    metrics = [
+        "single",
+        "duplicated", 
+        "fragmented",
+        "missing",
+        "completeness",
+        "contamination",
+        "contigs_n50",
+        "length",
+    ]
+
+    # Remove metrics that don't exist in the data
+    if not ("completeness" in data.columns and "contamination" in data.columns):
+        metrics.remove("completeness")
+        metrics.remove("contamination")
+
+    # Create selection parameter for sample filtering
+    selection = alt.param(name="selected_id", value="All")
+
+    specs: List[dict] = []
+    for metric in metrics:
+        # Determine the appropriate y-axis format based on metric type
+        if metric in ["single", "duplicated", "fragmented", "missing"]:
+            # BUSCO marker metrics: use integer format (no decimals, no scientific notation)
+            y_format = ".0f"
+        else:
+            # Assembly metrics: use abbreviated format (K, M, etc.)
+            y_format = ".2s"
+        
+        # Create base chart with violin plot for this specific metric (always show all data)
+        base_chart = (
+            alt.Chart(data)
+            .transform_density(
+                density=f"{metric}",
+                as_=[f"{metric}", 'density']
+            )
+            .mark_area(orient='horizontal')
+            .encode(
+                y=alt.Y(f"{metric}:Q", title=metric, scale=alt.Scale(zero=False), 
+                       axis=alt.Axis(format=y_format)),
+                x=alt.X('density:Q', stack='center', impute=None, title=None,
+                       scale=alt.Scale(padding=0.1),
+                       axis=alt.Axis(labels=False, values=[0], grid=False, ticks=True)),
+                color=alt.value(VIOLIN_COLOR),
+                opacity=alt.value(0.8)
+            )
+            .add_params(selection)
+            # No filter - always show all data for violin plots
+        )
+
+        # Create overlay chart with individual points for this specific metric (show all points, highlight selected)
+        points_chart = (
+            alt.Chart(data)
+            .mark_circle(size=50, opacity=0.4, stroke=None)
+            .encode(
+                y=alt.Y(f"{metric}:Q", title=metric, scale=alt.Scale(zero=False),
+                       axis=alt.Axis(format=y_format)),
+                color=alt.condition(
+                    alt.datum.sample_id == alt.param("selected_id"),
+                    alt.value("red"),
+                    alt.value("gray")
+                ),
+                opacity=alt.condition(
+                    alt.datum.sample_id == alt.param("selected_id"),
+                    alt.value(0.9),
+                    alt.value(0.4)
+                ),
+                tooltip=[
+                    alt.Tooltip("sample_id:N", title="Sample ID"),
+                    alt.Tooltip("mag_id:N", title="MAG ID"),
+                    alt.Tooltip(f"{metric}:Q", title="Value", format=".2f"),
+                ],
+            )
+            .add_params(selection)
+            # No filter - always show all points
+        )
+
+        # Combine box plot and points
+        chart = (base_chart + points_chart).resolve_scale(y="shared")
+
+        # Configure the chart
+        chart = (
+            chart
+            .properties(height=300, width="container")
+            .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+            .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
+        )
+        specs.append(chart.to_dict())
+
+    return specs
 
 
 def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
@@ -273,22 +332,18 @@ def _draw_selectable_unbinned_histograms(data: pd.DataFrame) -> dict:
         alt.Chart(data)
         .mark_bar()
         .encode(
-            x=alt.X("unbinned_contigs_count:Q", bin=True, title="Contig count"),
+            x=alt.X("unbinned_contigs_count:Q", bin=True, title="Unbinned contig count"),
             y=alt.Y(
                 "count()",
                 title="Sample count",
                 axis=alt.Axis(format=".0f", tickMinStep=1),
                 scale=alt.Scale(zero=True),
             ),
-            color=alt.value("steelblue"),
+            color=alt.value(BASE_COLOR),
         )
         .configure_axis(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
-        .configure_legend(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
         .configure_header(labelFontSize=LABEL_FONT_SIZE, titleFontSize=TITLE_FONT_SIZE)
-        .properties(height=500)
+        .properties(height=400, width="container")
     )
 
-    spec = chart.to_dict()
-    spec["width"] = "container"
-    spec["autosize"] = {"type": "fit", "contains": "padding"}
-    return spec
+    return chart.to_dict()

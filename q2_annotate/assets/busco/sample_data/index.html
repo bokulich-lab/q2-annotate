@@ -73,23 +73,33 @@
         </div>
     </div>
 
+
     <div class="row" style="margin-bottom: 10px">
         <div class="col-lg-12">
             <div class="card">
-                <h5 class="card-header">Distribution of BUSCO marker gene counts</h5>
-                <div class="card-body">
-                    <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 8px;">
-                        <span class="header-inline">Sample filter:</span>
-                        <select id="globalSampleSelect" class="form-select form-select-sm" style="width:auto">
-                            <option value="All" selected>All</option>
-                        </select>
-                    </div>
-                    <p>
-                        The histograms below show distributions of BUSCO marker count fractions and assembly metrics.
-                        Use the sample filter to show all samples or a single sample.
-                    </p>
-                    <div class="col-lg-12" id="summaryHistogramsMarkers">
-                        <div id="plotMarkers" class="chart-grid" style="margin-top: 5px"></div>
+                <h5 class="card-header">
+                    Distribution of BUSCO marker gene counts
+                </h5>
+                <div class="collapse show" id="histogramsCollapse">
+                    <div class="card-body">
+                        <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 8px;">
+                            <span class="header-inline">Sample filter:</span>
+                            <select id="globalSampleSelect" class="form-select form-select-sm" style="width:auto">
+                                <option value="All" selected>All</option>
+                            </select>
+                            <span class="header-inline">Visualization:</span>
+                            <select id="visualizationToggle" class="form-select form-select-sm" style="width:auto">
+                                <option value="histograms" selected>Histograms</option>
+                                <option value="violins">Violin Plots</option>
+                            </select>
+                        </div>
+                        <p id="visualizationDescription">
+                            The histograms below show distributions of BUSCO marker count fractions and assembly metrics.
+                            Use the sample filter to show all samples or a single sample. Switch between histograms and violin plots using the visualization toggle.
+                        </p>
+                        <div class="col-lg-12" id="summaryHistogramsMarkers">
+                            <div id="plotMarkers" class="square-chart-grid" style="margin-top: 5px"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -110,19 +120,23 @@
             </div>
         </div>
         {% endif %}
-        {% if unbinned %}
         <div class="col-lg-6">
             <div class="card h-100">
                 <h5 class="card-header">Distribution of unbinned contigs</h5>
                 <div class="card-body" style="display: block;">
+                    {% if unbinned %}
                     <p>
-                        The histogram shows the distribution of the unbinned contigs count across samples.
+                        The histogram shows the distribution of the unbinned contigs across samples.
                     </p>
                     <div id="plotUnbinned" style="margin-top: 5px; width: 100%;"></div>
+                    {% else %}
+                    <div style="display: flex; align-items: center; justify-content: center;">
+                        <p style="font-style: italic; margin: 0; color: #6c757d;">No data available</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
-        {% endif %}
     </div>
 </div>
 
@@ -158,6 +172,10 @@
     {{ scatter_json | safe }}
 </script>
 
+<script id="box_plots_json" type="application/json">
+    {{ vega_box_plots_json | safe }}
+</script>
+
 <script type="text/javascript">
     $(document).ready(function () {
         // temporary hack to make it look good with Bootstrap 5
@@ -184,35 +202,106 @@
             ids.forEach(id => {
                 const opt = document.createElement('option');
                 opt.value = id; opt.textContent = id; selectEl.appendChild(opt);
+                
             });
         } catch (e) {}
 
-        // Render responsive grid of histogram specs
+        // Get both visualization specs
         const vegaSpecSummary = JSON.parse(document.getElementById('vega_summary_json').textContent);
+        const boxPlotsSpec = JSON.parse(document.getElementById('box_plots_json').textContent);
         const grid = document.getElementById('plotMarkers');
-        const specsArray = Array.isArray(vegaSpecSummary) ? vegaSpecSummary : [vegaSpecSummary];
+        const visualizationToggle = document.getElementById('visualizationToggle');
+        const descriptionEl = document.getElementById('visualizationDescription');
 
         // Track views for coordinated filtering
         const views = [];
+        let currentViews = [];
 
         const actionsCfg = {actions: false};
-        // const actionsCfg = {actions: {export: true, source: true, editor: true}};
 
-        specsArray.forEach((spec) => {
-            const div = document.createElement('div');
-            grid.appendChild(div);
-            vegaEmbed(div, spec, actionsCfg).then(
-                function (result) {
-                    result.view.logLevel(vega.Warn);
-                    result.view.resize();
-                    views.push(result.view);
+        // Function to clear current plots
+        function clearPlots() {
+            grid.innerHTML = '';
+            currentViews.forEach(view => {
+                const index = views.indexOf(view);
+                if (index > -1) {
+                    views.splice(index, 1);
                 }
-            ).catch(
-                function (error) {
-                    handleErrors([error], $(div));
-                }
-            );
+            });
+            currentViews = [];
+        }
+
+        // Function to render histograms
+        function renderHistograms() {
+            clearPlots();
+            grid.className = 'square-chart-grid';
+            const specsArray = Array.isArray(vegaSpecSummary) ? vegaSpecSummary : [vegaSpecSummary];
+            
+            specsArray.forEach((spec) => {
+                const div = document.createElement('div');
+                grid.appendChild(div);
+                vegaEmbed(div, spec, actionsCfg).then(
+                    function (result) {
+                        result.view.logLevel(vega.Warn);
+                        result.view.resize();
+                        views.push(result.view);
+                        currentViews.push(result.view);
+                    }
+                ).catch(
+                    function (error) {
+                        handleErrors([error], $(div));
+                    }
+                );
+            });
+        }
+
+        // Function to render violin plots
+        function renderViolinPlots() {
+            clearPlots();
+            grid.className = 'chart-grid';
+            const boxPlotsArray = Array.isArray(boxPlotsSpec) ? boxPlotsSpec : [boxPlotsSpec];
+            
+            boxPlotsArray.forEach((spec) => {
+                const div = document.createElement('div');
+                grid.appendChild(div);
+                vegaEmbed(div, spec, actionsCfg).then(
+                    function (result) {
+                        result.view.logLevel(vega.Warn);
+                        result.view.resize();
+                        views.push(result.view);
+                        currentViews.push(result.view);
+                    }
+                ).catch(
+                    function (error) {
+                        handleErrors([error], $(div));
+                    }
+                );
+            });
+        }
+
+        // Function to update description
+        function updateDescription(type) {
+            if (type === 'histograms') {
+                descriptionEl.textContent = 'The histograms below show distributions of BUSCO marker count fractions and assembly metrics. Use the sample filter to show all samples or a single sample. Switch between histograms and violin plots using the visualization toggle.';
+            } else {
+                descriptionEl.textContent = 'The violin plots below show distributions of BUSCO marker count fractions and assembly metrics. Each violin shows the density distribution with individual data points overlaid. Use the sample filter to highlight a specific sample across all violin plots.';
+            }
+        }
+
+        // Toggle event listener
+        visualizationToggle.addEventListener('change', function() {
+            const selectedType = this.value;
+            updateDescription(selectedType);
+            
+            if (selectedType === 'histograms') {
+                renderHistograms();
+            } else {
+                renderViolinPlots();
+            }
         });
+
+        // Initial render (histograms by default)
+        renderHistograms();
 
         // Embed scatter and unbinned
         const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
@@ -257,8 +346,23 @@
             updateViewsSelectedId(value);
         });
 
+
         // Initialize with 'All'
         updateViewsSelectedId('All');
+
+        // Handle collapse chevron rotation
+        const collapseElement = document.getElementById('histogramsCollapse');
+        const chevronIcon = document.querySelector('[data-bs-target="#histogramsCollapse"] i');
+        
+        collapseElement.addEventListener('show.bs.collapse', function () {
+            chevronIcon.classList.remove('fa-chevron-right');
+            chevronIcon.classList.add('fa-chevron-down');
+        });
+        
+        collapseElement.addEventListener('hide.bs.collapse', function () {
+            chevronIcon.classList.remove('fa-chevron-down');
+            chevronIcon.classList.add('fa-chevron-right');
+        });
     });
 </script>
 
