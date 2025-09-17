@@ -6,12 +6,15 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import json
-import qiime2
-import pandas as pd
-from q2_annotate.busco.busco import _visualize_busco, evaluate_busco, _busco_helper
 from unittest.mock import patch, ANY, MagicMock, call
-from qiime2.plugin.testing import TestPluginBase
+
+import pandas as pd
+import pytest
+import qiime2
 from q2_types.feature_data_mag import MAGSequencesDirFmt
+from qiime2.plugin.testing import TestPluginBase
+
+from q2_annotate.busco.busco import _visualize_busco, evaluate_busco, _busco_helper
 
 
 class TestBUSCOFeatureData(TestPluginBase):
@@ -147,6 +150,8 @@ class TestBUSCOFeatureData(TestPluginBase):
             "summary_stats_json": "stats1",
             "scatter_json": json.dumps({"fake4": {"plot": "null"}}),
             "comp_cont": True,
+            "unbinned": False,
+            "vega_selectable_unbinned_json": None,
             "page_size": 100,
         }
         mock_render.assert_called_with(ANY, self.temp_dir.name, context=exp_context)
@@ -155,21 +160,77 @@ class TestBUSCOFeatureData(TestPluginBase):
     # TODO: maybe this could be turned into an actual test
     @patch("q2_annotate.busco.busco._validate_parameters")
     def test_evaluate_busco_action(self, mock_validate):
-        mock_action = MagicMock(
-            side_effect=[
-                lambda x, **kwargs: (0,),
-                lambda x: ("collated_result",),
-                lambda x: ("visualization",),
-                lambda x, y: ({"mag1": {}, "mag2": {}},),
-            ]
-        )
-        mock_ctx = MagicMock(get_action=mock_action)
         mags = qiime2.Artifact.import_data(
             "FeatureData[MAG]", self.get_data_path("mags/sample2")
         )
         busco_db = qiime2.Artifact.import_data(
             "ReferenceDB[BUSCO]", self.get_data_path("busco_db")
         )
-        obs = evaluate_busco(ctx=mock_ctx, mags=mags, db=busco_db, num_partitions=2)
+
+        fake_partition = MagicMock(
+            values=MagicMock(return_value=["partition1", "partition2"])
+        )
+
+        def fake_filter_contigs(*args, **kwargs):
+            return ("filtered_unbinned",)
+
+        mock_action = MagicMock(
+            side_effect=[
+                lambda x, y, z, **kwargs: (0,),  # evaluate_busco
+                lambda x: ("collated_result",),  # collate
+                lambda x: ("visualization",),  # visualize
+                fake_filter_contigs,  # filter unbinned
+                lambda x, y: (fake_partition,),  # partition
+            ]
+        )
+        mock_ctx = MagicMock(get_action=mock_action)
+        obs = evaluate_busco(
+            ctx=mock_ctx,
+            mags=mags,
+            unbinned_contigs=None,
+            db=busco_db,
+            num_partitions=2,
+        )
+        exp = ("collated_result", "visualization")
+        self.assertTupleEqual(obs, exp)
+
+    @patch("q2_annotate.busco.busco._validate_parameters")
+    def test_evaluate_busco_action_with_unbinned(self, mock_validate):
+        mags = qiime2.Artifact.import_data(
+            "FeatureData[MAG]", self.get_data_path("mags/sample2")
+        )
+        unbinned = qiime2.Artifact.import_data(
+            "SampleData[Contigs]", self.get_data_path("unbinned")
+        )
+        busco_db = qiime2.Artifact.import_data(
+            "ReferenceDB[BUSCO]", self.get_data_path("busco_db")
+        )
+
+        fake_partition = MagicMock(
+            values=MagicMock(return_value=["partition1", "partition2"])
+        )
+
+        def fake_filter_contigs(*args, **kwargs):
+            return ("filtered_unbinned",)
+
+        mock_action = MagicMock(
+            side_effect=[
+                lambda x, y, z, **kwargs: (0,),  # evaluate_busco
+                lambda x: ("collated_result",),  # collate
+                lambda x: ("visualization",),  # visualize
+                fake_filter_contigs,  # filter unbinned
+                lambda x, y: (fake_partition,),  # partition
+            ]
+        )
+        mock_ctx = MagicMock(get_action=mock_action)
+
+        with pytest.warns(match="unbinned contigs will be ignored"):
+            obs = evaluate_busco(
+                ctx=mock_ctx,
+                mags=mags,
+                unbinned_contigs=unbinned,
+                db=busco_db,
+                num_partitions=2,
+            )
         exp = ("collated_result", "visualization")
         self.assertTupleEqual(obs, exp)
