@@ -1147,6 +1147,11 @@ class TestGetFilterActions(TestPluginBase):
         )
         dir_fmt_derep_mags = MAGSequencesDirFmt(data_path_derep_mags, mode="r")
         self.derep_mags = Artifact.import_data("FeatureData[MAG]", dir_fmt_derep_mags)
+        dir_fmt_contigs_empty = ContigSequencesDirFmt(data_path_contigs, mode="r")
+        open(os.path.join(str(dir_fmt_contigs_empty), "contigs.fasta"), "w").close()
+        self.contigs_empty = Artifact.import_data(
+            "SampleData[Contigs]", dir_fmt_contigs_empty
+        )
 
         self.classify_kraken2 = self.plugin.pipelines["classify_kraken2"]
 
@@ -1209,6 +1214,10 @@ class TestGetFilterActions(TestPluginBase):
         mock_ctx = MagicMock(get_action=mock_action)
         classify_kraken2(ctx=mock_ctx, seqs=[self.derep_mags], db=self.db)
         mock_ctx.get_action.assert_any_call("annotate", "filter_derep_mags")
+
+    def test_classify_kraken2_empty_error(self):
+        with self.assertRaisesRegex(ValueError, "all files are empty"):
+            self.classify_kraken2(seqs=[self.contigs_empty], db=self.db)
 
 
 if __name__ == "__main__":
