@@ -19,6 +19,7 @@ def _draw_detailed_plots(
     label_font_size: int = None,
     title_font_size: int = None,
     spacing: int = None,
+    assembly_metric: str = "scaffold_n50",
 ) -> dict:
     """
     Draws a horizontal normalized bar plot for every sample for which BUSCO was
@@ -36,6 +37,7 @@ def _draw_detailed_plots(
     Output:
         Output plot in dictionary from casted to a string.
     """
+    # Prepare data
     busco_plot_data = pd.melt(
         df,
         id_vars=["sample_id", "mag_id", "dataset", "n_markers"],
@@ -79,22 +81,22 @@ def _draw_detailed_plots(
         title = "MAG ID"
         subtitle_size = 0
 
-    # Plot
-    domain = ["single", "duplicated", "fragmented", "missing"]
-    range_ = ["#1E90FF", "#87CEFA", "#FFA500", "#FF7F50"]
-
-    # Make BUSCO bar plots (the plots on the left)
+    # Individual sample approach - no faceting, just simple plots for one sample
+    # Create the BUSCO plot (no faceting since we're handling one sample at a time)
     busco_plot = (
         alt.Chart(busco_plot_data)
         .mark_bar()
         .encode(
             x=alt.X("sum(BUSCO_percentage)", stack="normalize", title="BUSCO fraction"),
             y=alt.Y("mag_id", axis=alt.Axis(titleFontSize=0)),
-            color=alt.Color(
-                "category",
-                scale=alt.Scale(domain=domain, range=range_),
-                legend=alt.Legend(title="BUSCO category", orient="top"),
-            ),
+                color=alt.Color(
+                    "category",
+                    scale=alt.Scale(
+                        domain=["single", "duplicated", "fragmented", "missing"],
+                        range=["#4A90A4", "#F5A623", "#D2691E", "#A0522D"],  # Soft Teal, Soft Gold, Soft Orange, Soft Brown
+                    ),
+                    legend=None,  # Remove legend - we'll create HTML legend
+                ),
             order=alt.Order("order", sort="ascending"),
             tooltip=[
                 alt.Tooltip("sample_id", title="Sample ID"),
@@ -107,55 +109,30 @@ def _draw_detailed_plots(
             ],
             opacity=alt.value(0.85),
         )
-        .properties(width=width, height={"step": height})
-        .facet(
-            row=alt.Row(
-                "sample_id",
-                title=title,
-                header=alt.Header(labelFontSize=subtitle_size),
-            ),
-            spacing=spacing,
-        )
-        .resolve_scale(y="independent")
+        .properties(width="container", height={"step": height})
     )
 
-    # Secondary plot
-    dropdown = alt.binding_select(
-        options=[
-            "scaffold_n50",
-            "contigs_n50",
-            "percent_gaps",
-            "scaffolds",
-        ],
-        name="Assembly statistics: ",
-    )
-
-    xcol_param = alt.param(value="scaffold_n50", bind=dropdown)
-
+    # Create the assembly statistics plot (no faceting) - using dynamic metric
+    metric_titles = {
+        "scaffold_n50": "Scaffold N50 (bp)",
+        "contigs_n50": "Contig N50 (bp)", 
+        "percent_gaps": "Percent Gaps (%)",
+        "scaffolds": "Number of Scaffolds"
+    }
+    
     secondary_plot = (
         alt.Chart(secondary_plot_data)
         .mark_bar()
         .encode(
-            x=alt.X("x:Q").title("Assembly statistic"),
+            x=alt.X(f"{assembly_metric}:Q").title(metric_titles.get(assembly_metric, "Assembly Metric")),
             y=alt.Y("mag_id", axis=None),
-            tooltip=[alt.Tooltip("x:Q", title="value")],
+            tooltip=[alt.Tooltip(f"{assembly_metric}:Q", title=metric_titles.get(assembly_metric, "Value"))],
             opacity=alt.value(0.85),
         )
-        .transform_calculate(x=f"datum[{xcol_param.name}]")
-        .add_params(xcol_param)
-        .properties(width=width, height={"step": height})
-        .facet(
-            row=alt.Row(
-                "sample_id",
-                title=None,
-                header=alt.Header(labelFontSize=0),
-            ),
-            spacing=spacing,
-        )
-        .resolve_scale(y="independent")
+        .properties(width="container", height={"step": height})
     )
 
-    # concatenate plots horizontally
+    # Concatenate plots horizontally - much simpler without faceting
     output_plot = (
         alt.hconcat(busco_plot, secondary_plot, spacing=3)
         .configure_axis(labelFontSize=label_font_size, titleFontSize=title_font_size)
@@ -163,4 +140,9 @@ def _draw_detailed_plots(
         .configure_header(labelFontSize=label_font_size, titleFontSize=title_font_size)
     )
 
-    return output_plot.to_dict()
+    # Convert to dict and make responsive
+    spec = output_plot.to_dict()
+    spec["width"] = "container"
+    spec["autosize"] = {"type": "fit", "contains": "padding"}
+
+    return spec

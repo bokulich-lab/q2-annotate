@@ -1,0 +1,369 @@
+{% extends "tabbed.html" %}
+
+{% block head %}
+<title>Sample Comparison - Scatter Plot Matrix</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="js/bootstrapMagic.js" type="text/javascript"></script>
+<link href="css/styles.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm//vega@5" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm//vega-lite@4.17.0" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm//vega-embed@6" type="text/javascript"></script>
+<link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha256-YvdLHPgkqJ8DVUxjjnGVlMMJtNimJ6dYkowFFvp4kKs=" rel="stylesheet"/>
+{% endblock %}
+
+{% block tabcontent %}
+<script crossorigin="anonymous" integrity="sha256-9SEPo+fwJFpMUet/KACSwO+Z/dKMReF9q4zFhU/fT9M=" src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Sample Selection Box -->
+<div class="row mb-2 mt-2">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0">Sample selection</h6>
+        <small class="text-muted">Click on samples to toggle them on/off. Selected samples will show detailed plots below.</small>
+      </div>
+      <div class="card-body">
+        <div id="sampleSelectionBox" class="sample-selection-container">
+          <!-- Sample buttons will be populated by JavaScript -->
+        </div>
+        <hr class="my-3" style="border-color: #dee2e6;">
+        <div class="control-row">
+          <button id="selectAllBtn" class="btn btn-sm btn-outline-primary">Select All</button>
+          <button id="clearAllBtn" class="btn btn-sm btn-outline-secondary">Clear All</button>
+          <div class="d-flex align-items-center">
+            <label for="metricSelector" class="form-label mb-0 me-2">Assembly metric:</label>
+            <select id="metricSelector" class="form-select form-select-sm" style="width: auto;">
+              <option value="scaffold_n50">Scaffold N50</option>
+              <option value="contigs_n50">Contig N50</option>
+              <option value="percent_gaps">Percent Gaps</option>
+              <option value="scaffolds">Number of Scaffolds</option>
+            </select>
+          </div>
+          <div class="busco-legend-controls">
+            <div class="busco-legend-item me-3">
+              <div class="busco-legend-color" style="background-color: #141D59;"></div>
+              <span>Single</span>
+            </div>
+            <div class="busco-legend-item me-3">
+              <div class="busco-legend-color" style="background-color: #454F8C;"></div>
+              <span>Duplicated</span>
+            </div>
+            <div class="busco-legend-item me-3">
+              <div class="busco-legend-color" style="background-color: #2436A6;"></div>
+              <span>Fragmented</span>
+            </div>
+            <div class="busco-legend-item me-3">
+              <div class="busco-legend-color" style="background-color: #3852FC;"></div>
+              <span>Missing</span>
+            </div>
+          </div>
+          <span id="selectionCount" class="ms-3 text-muted">0 samples selected</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dynamic Plot Cards Container -->
+<div id="plotCardsContainer" class="row">
+  <!-- Plot cards will be dynamically generated here -->
+</div>
+        
+        <!-- Sample details panel (initially hidden) -->
+        <div id="sampleDetailsPanel" class="mt-4" style="display: none;">
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">Detailed Analysis: <span id="selectedSampleName"></span></h6>
+              <button type="button" class="btn-close" aria-label="Close" onclick="hideSampleDetails()"></button>
+            </div>
+            <div class="card-body">
+              <!-- Custom legend -->
+              <div class="busco-legend mb-3">
+                <div class="busco-legend-left">
+                  <div class="busco-legend-item">
+                    <div class="busco-legend-color" style="background-color: #440154;"></div>
+                    <span>Single</span>
+                  </div>
+                  <div class="busco-legend-item">
+                    <div class="busco-legend-color" style="background-color: #31688e;"></div>
+                    <span>Duplicated</span>
+                  </div>
+                  <div class="busco-legend-item">
+                    <div class="busco-legend-color" style="background-color: #35b779;"></div>
+                    <span>Fragmented</span>
+                  </div>
+                  <div class="busco-legend-item">
+                    <div class="busco-legend-color" style="background-color: #6ece58;"></div>
+                    <span>Missing</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Detailed plots will be embedded here -->
+              <div id="detailedPlots"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script id="vega_scatter_json" type="application/json">
+  {{ vega_scatter_json | safe }}
+</script>
+
+<script id="scatter_data_json" type="application/json">
+  {{ scatter_data_json | safe }}
+</script>
+
+<script id="vega_detailed_json" type="application/json">
+  {{ vega_json | safe }}
+</script>
+
+<script type="text/javascript">
+  $(document).ready(function () {
+    // temporary hack to make it look good with Bootstrap 5
+    adjustTagsToBS3()
+
+    const scatterData = JSON.parse(document.getElementById('scatter_data_json').textContent);
+    const detailedSpecs = JSON.parse(document.getElementById('vega_detailed_json').textContent);
+    
+    // Initialize sample selection state
+    window.selectedSamples = new Set();
+    window.sampleColors = {};
+    
+    // Generate viridis colors for samples (excluding extreme colors)
+    const viridisColors = [
+      '#440154', '#482777', '#3f4a8a', '#31688e', '#26828e',
+      '#1f9e89', '#35b779', '#6ece58', '#b5de2b', '#fde725',
+      '#440154', '#482777', '#3f4a8a', '#31688e', '#26828e',
+      '#1f9e89', '#35b779', '#6ece58', '#b5de2b', '#fde725'
+    ];
+    
+    // Populate sample selection box
+    const sampleSelectionBox = document.getElementById('sampleSelectionBox');
+    scatterData.forEach((sample, index) => {
+      const color = viridisColors[index % viridisColors.length];
+      window.sampleColors[sample.sample_id] = color;
+      
+      const sampleButton = document.createElement('button');
+      const isFirstOrSecondSample = index === 0 || index === 1;
+      sampleButton.className = `btn ${isFirstOrSecondSample ? 'btn-primary' : 'btn-outline-secondary'} sample-button me-2 mb-2`;
+      sampleButton.innerHTML = `
+        <span class="sample-color-indicator" style="background-color: ${color};"></span>
+        ${sample.sample_id}
+      `;
+      sampleButton.dataset.sampleId = sample.sample_id;
+      sampleButton.onclick = () => toggleSample(sample.sample_id);
+      
+      // Select first two samples by default
+      if (isFirstOrSecondSample) {
+        window.selectedSamples.add(sample.sample_id);
+      }
+      
+      sampleSelectionBox.appendChild(sampleButton);
+    });
+    
+    // Add event listeners for select all/clear all
+    document.getElementById('selectAllBtn').onclick = selectAllSamples;
+    document.getElementById('clearAllBtn').onclick = clearAllSamples;
+    
+    // Add event listener for metric selector
+    document.getElementById('metricSelector').onchange = updateAllPlots;
+    
+    // Initialize with first sample selected
+    updateSelectionCount();
+    updatePlotCards();
+  });
+  
+  function toggleSample(sampleId) {
+    const button = document.querySelector(`[data-sample-id="${sampleId}"]`);
+    
+    if (window.selectedSamples.has(sampleId)) {
+      // Remove from selection
+      window.selectedSamples.delete(sampleId);
+      button.classList.remove('btn-primary');
+      button.classList.add('btn-outline-secondary');
+    } else {
+      // Add to selection
+      window.selectedSamples.add(sampleId);
+      button.classList.remove('btn-outline-secondary');
+      button.classList.add('btn-primary');
+    }
+    
+    updateSelectionCount();
+    updatePlotCards();
+  }
+  
+  function selectAllSamples() {
+    const buttons = document.querySelectorAll('.sample-button');
+    buttons.forEach(button => {
+      const sampleId = button.dataset.sampleId;
+      window.selectedSamples.add(sampleId);
+      button.classList.remove('btn-outline-secondary');
+      button.classList.add('btn-primary');
+    });
+    updateSelectionCount();
+    updatePlotCards();
+  }
+  
+  function clearAllSamples() {
+    const buttons = document.querySelectorAll('.sample-button');
+    buttons.forEach(button => {
+      const sampleId = button.dataset.sampleId;
+      window.selectedSamples.delete(sampleId);
+      button.classList.remove('btn-primary');
+      button.classList.add('btn-outline-secondary');
+    });
+    window.selectedSamples.clear();
+    updateSelectionCount();
+    updatePlotCards();
+  }
+  
+  function updateSelectionCount() {
+    const count = window.selectedSamples.size;
+    document.getElementById('selectionCount').textContent = `${count} sample${count !== 1 ? 's' : ''} selected`;
+  }
+  
+  function updatePlotCards() {
+    const container = document.getElementById('plotCardsContainer');
+    container.innerHTML = '';
+    
+    window.selectedSamples.forEach(sampleId => {
+      const card = createSamplePlotCard(sampleId);
+      container.appendChild(card);
+    });
+  }
+  
+  function createSamplePlotCard(sampleId) {
+    const detailedSpecs = JSON.parse(document.getElementById('vega_detailed_json').textContent);
+    const sampleSpec = detailedSpecs[`sample_${sampleId}`];
+    const color = window.sampleColors[sampleId];
+    
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'col-lg-6 mb-4';
+    cardDiv.innerHTML = `
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">
+            <span class="sample-color-indicator me-2" style="background-color: ${color};"></span>
+            ${sampleId}
+          </h6>
+          <button class="btn btn-sm btn-outline-danger" onclick="removeSample('${sampleId}')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="card-body">
+          <div id="plot-${sampleId}" class="plot-container">
+            ${sampleSpec ? 'Loading plots...' : 'No detailed plots available for this sample.'}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Embed the detailed plots if available
+    if (sampleSpec) {
+      setTimeout(() => {
+        vegaEmbed(`#plot-${sampleId}`, sampleSpec.subcontext, {actions: false}).then(
+          function (result) {
+            result.view.logLevel(vega.Warn);
+          }
+        ).catch(
+          function (error) {
+            document.getElementById(`plot-${sampleId}`).innerHTML = `
+              <div class="alert alert-warning">
+                <strong>Error loading plots:</strong> ${error.message}
+              </div>
+            `;
+          }
+        );
+      }, 100);
+    }
+    
+    return cardDiv;
+  }
+  
+  function removeSample(sampleId) {
+    const button = document.querySelector(`[data-sample-id="${sampleId}"]`);
+    window.selectedSamples.delete(sampleId);
+    button.classList.remove('btn-primary');
+    button.classList.add('btn-outline-secondary');
+    updateSelectionCount();
+    updatePlotCards();
+  }
+  
+  function updateAllPlots() {
+    // This function will be called when the metric selector changes
+    // For now, we'll just regenerate all the plot cards
+    updatePlotCards();
+  }
+  
+  function showSampleDetails(sampleId) {
+    const detailedSpecs = JSON.parse(document.getElementById('vega_detailed_json').textContent);
+    console.log('Available sample keys:', Object.keys(detailedSpecs));
+    console.log('Looking for sample:', `sample_${sampleId}`);
+    const sampleSpec = detailedSpecs[`sample_${sampleId}`];
+    console.log('Found sample spec:', sampleSpec);
+    
+    if (sampleSpec) {
+      // Update the panel title
+      document.getElementById('selectedSampleName').textContent = sampleId;
+      
+      // Clear previous plots
+      document.getElementById('detailedPlots').innerHTML = '';
+      
+      // Embed the detailed plots
+      vegaEmbed("#detailedPlots", sampleSpec.subcontext, {actions: false}).then(
+        function (result) {
+          result.view.logLevel(vega.Warn);
+        }
+      ).catch(
+        function (error) {
+          handleErrors([error], $("#detailedPlots"));
+        }
+      );
+      
+      // Show the panel
+      document.getElementById('sampleDetailsPanel').style.display = 'block';
+      
+      // Scroll to the panel
+      document.getElementById('sampleDetailsPanel').scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    } else {
+      // If no detailed plots available, show a message
+      document.getElementById('selectedSampleName').textContent = sampleId;
+      document.getElementById('detailedPlots').innerHTML = `
+        <div class="alert alert-info">
+          <h6>Sample: ${sampleId}</h6>
+          <p>Detailed plots for this sample are not available. This may be because the sample contains no MAGs or the data is incomplete.</p>
+        </div>
+      `;
+      document.getElementById('sampleDetailsPanel').style.display = 'block';
+      document.getElementById('sampleDetailsPanel').scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  }
+  
+  function hideSampleDetails() {
+    document.getElementById('sampleDetailsPanel').style.display = 'none';
+  }
+</script>
+
+{% endblock %}
+
+{% block footer %}
+<script type="text/javascript">
+  // Simple error handler function
+  function handleErrors(errors, element) {
+    console.error('Vega/Vega-Lite error:', errors);
+    if (element && element.length) {
+      element.html('<div class="alert alert-danger"><strong>Error:</strong> Failed to render plot. Check console for details.</div>');
+    }
+  }
+</script>
+{% endblock %}

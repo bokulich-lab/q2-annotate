@@ -103,7 +103,7 @@
 </script>
 
 <script type="text/javascript">
-  function createAccordionItem(sampleFrom, sampleTo, show) {
+  function createAccordionItem(sampleId, magCount, show) {
     // Create elements
     const accordionItem = document.createElement('div');
     const accordionHeader = document.createElement('h2');
@@ -114,24 +114,21 @@
     // Set attributes and content
     accordionItem.className = 'accordion-item';
     accordionHeader.className = 'accordion-header';
-    // accordionHeader.id = 'headingOne';
     accordionButton.className = 'accordion-button';
     accordionButton.type = 'button';
     accordionButton.setAttribute('data-bs-toggle', 'collapse');
-    accordionButton.setAttribute('data-bs-target', `#collapse-${sampleFrom}`);
-    // accordionButton.setAttribute('aria-expanded', 'true');
-    accordionButton.setAttribute('aria-controls', `collapse-${sampleFrom}`);
-    accordionButton.textContent = `Samples ${sampleFrom} to ${sampleTo}`;
-    accordionCollapse.id = `collapse-${sampleFrom}`;
+    accordionButton.setAttribute('data-bs-target', `#collapse-${sampleId}`);
+    accordionButton.setAttribute('aria-controls', `collapse-${sampleId}`);
+    accordionButton.textContent = `Sample: ${sampleId} (${magCount} MAGs)`;
+    accordionCollapse.id = `collapse-${sampleId}`;
     if (show) {
       accordionCollapse.className = 'accordion-collapse collapse show';
     } else {
       accordionCollapse.className = 'accordion-collapse collapse';
     }
-    // accordionCollapse.setAttribute('aria-labelledby', 'headingOne');
     accordionCollapse.setAttribute('data-bs-parent', '#accordionSamples');
     accordionBody.className = 'accordion-body';
-    accordionBody.id = `accordion-${sampleFrom}`;
+    accordionBody.id = `accordion-${sampleId}`;
 
     // Append elements
     accordionHeader.appendChild(accordionButton);
@@ -157,8 +154,8 @@
     let samples = [];
     Object.entries(spec).forEach(
             ([_, specElement]) => {
-              let sampleIds = specElement["ids"];
-              samples = [...samples, ...sampleIds];
+              let sampleId = specElement["sample_id"];
+              samples.push(sampleId);
             }
     );
     console.log("All the samples:", samples);
@@ -169,18 +166,8 @@
     document.getElementById("sampleSelector").textContent = samples[0];
   }
 
-  function findFromValue(dictionary, sampleId) {
-    for (let [key, value] of Object.entries(dictionary)) {
-        if (value.ids.includes(sampleId)) {
-            return value.counters.from;
-        }
-    }
-    return null; // return null if the sampleId is not found in any sample_ids array
-  }
-
   function handleDropdownClick(event, spec, collapsibles) {
     const sampleName = event.target.innerText; // Get value from dataset
-    const fromValue = findFromValue(spec, sampleName);
 
     // Update the dropdown button text
     document.getElementById("sampleSelector").textContent = sampleName;
@@ -190,9 +177,9 @@
       collapsible.classList.remove("show");
     });
 
-    // Show the selected collapsible (if a value is selected)
-    if (fromValue) {
-      const targetCollapsible = document.getElementById(`collapse-${fromValue}`);
+    // Show the selected collapsible
+    const targetCollapsible = document.getElementById(`collapse-${sampleName}`);
+    if (targetCollapsible) {
       targetCollapsible.classList.add('show');
     }
   }
@@ -204,27 +191,53 @@
     const spec = JSON.parse(document.getElementById('vega_json').textContent);
     let count = 0;
     Object.entries(spec).forEach(([_, specElement]) => {
-      const sampleCounter = specElement["counters"];
-      const sampleFrom = sampleCounter["from"];
-      const sampleTo = sampleCounter["to"];
+      const sampleId = specElement["sample_id"];
+      const magCount = specElement["mag_count"];
 
       if (count === 0) {
         document.getElementById("accordionSamples")
-                .appendChild(createAccordionItem(sampleFrom, sampleTo, true));
+                .appendChild(createAccordionItem(sampleId, magCount, true));
       } else {
         document.getElementById("accordionSamples")
-                .appendChild(createAccordionItem(sampleFrom, sampleTo, false));
+                .appendChild(createAccordionItem(sampleId, magCount, false));
       }
       count += 1;
 
-      vegaEmbed(`#accordion-${sampleFrom}`, specElement["subcontext"]).then(
+      // Create the custom legend above the plot
+      const plotContainer = document.getElementById(`accordion-${sampleId}`);
+      plotContainer.innerHTML = `
+        <div class="busco-legend">
+          <div class="busco-legend-left">
+            <div class="busco-legend-item">
+              <div class="busco-legend-color" style="background-color: #440154;"></div>
+              <span>Single</span>
+            </div>
+            <div class="busco-legend-item">
+              <div class="busco-legend-color" style="background-color: #31688e;"></div>
+              <span>Duplicated</span>
+            </div>
+            <div class="busco-legend-item">
+              <div class="busco-legend-color" style="background-color: #35b779;"></div>
+              <span>Fragmented</span>
+            </div>
+            <div class="busco-legend-item">
+              <div class="busco-legend-color" style="background-color: #6ece58;"></div>
+              <span>Missing</span>
+            </div>
+          </div>
+        </div>
+        <div id="plot-${sampleId}"></div>
+      `;
+      
+      // Embed the combined plot
+      vegaEmbed(`#plot-${sampleId}`, specElement["subcontext"]).then(
         function (result) {
           result.view.logLevel(vega.Warn);
           window.v = result.view;
         }
       ).catch(
         function (error) {
-          handleErrors([error], $(`#accordion-${sampleFrom}`));
+          handleErrors([error], $(`#plot-${sampleId}`));
         }
       );
     });

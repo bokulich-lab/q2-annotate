@@ -1,3 +1,4 @@
+
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025, QIIME 2 development team.
 #
@@ -17,6 +18,8 @@ import pandas as pd
 import q2templates
 
 from q2_annotate.busco.plots_detailed import _draw_detailed_plots
+from q2_annotate.busco.plots_scatter import _draw_scatter_plot_matrix, _get_sample_summary_data
+from q2_annotate.busco.plots_scatter_simple import _draw_simple_scatter_plot
 from q2_annotate.busco.plots_summary import (
     _draw_marker_summary_histograms,
     _draw_selectable_summary_histograms,
@@ -197,7 +200,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     )
     templates = [
         os.path.join(TEMPLATES, assets_subdir, file_name)
-        for file_name in ["index.html", "detailed_view.html", "table.html"]
+        for file_name in ["index.html", "detailed_view.html", "table.html", "scatter_view.html"]
     ]
     copytree(
         src=os.path.join(TEMPLATES, assets_subdir), dst=output_dir, dirs_exist_ok=True
@@ -210,32 +213,48 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
             dirs_exist_ok=True,
         )
 
-    # Partition data frames and draw detailed plots
+    # Create individual sections for each sample with all metrics
     context = {}
     counter_left = 1
+    metrics = ["scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds"]
+    
     for i, df in enumerate(dfs):
-        count = df[counter_col].nunique()
-        counter_right = counter_left + count - 1
-        counters = {"from": counter_left, "to": counter_right}
-        counter_left += count
-        subcontext = _draw_detailed_plots(
-            df,
-            is_sample_data,
-            width=600,
-            height=30,
-            title_font_size=20,
-            label_font_size=17,
-            spacing=20,
-        )
-        context.update(
-            {
-                f"partition_{i}": {
-                    "subcontext": subcontext,
-                    "counters": counters,
-                    "ids": df[counter_col].unique().tolist(),
+        # Get unique samples in this partition
+        unique_samples = df[counter_col].unique()
+        
+        for sample_id in unique_samples:
+            # Filter data for this specific sample
+            sample_df = df[df[counter_col] == sample_id]
+            
+            # Create plots for this sample with all metrics
+            sample_plots = {}
+            for metric in metrics:
+                subcontext = _draw_detailed_plots(
+                    sample_df,
+                    is_sample_data,
+                    width=600,
+                    height=30,
+                    title_font_size=20,
+                    label_font_size=17,
+                    spacing=20,
+                    assembly_metric=metric,
+                )
+                sample_plots[metric] = subcontext
+            
+            # Create individual section for this sample
+            context.update(
+                {
+                    f"sample_{sample_id}": {
+                        "plots": sample_plots,
+                        "sample_id": sample_id,
+                        "mag_count": len(sample_df),
+                    }
                 }
-            }
-        )
+            )
+
+    # Generate simple HTML table instead of Vega plot to test
+    scatter_plot_spec = None
+    scatter_summary_data = _get_sample_summary_data(results)
 
     # Render
     vega_json = json.dumps(context).replace("NaN", "null")
@@ -245,6 +264,8 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     vega_json_box_plots = json.dumps(_draw_box_whiskers_plots(results)).replace(
         "NaN", "null"
     )
+    vega_json_scatter = json.dumps(scatter_plot_spec).replace("NaN", "null")
+    scatter_data_json = json.dumps(scatter_summary_data).replace("NaN", "null")
     table_json = _get_feature_table(results)
     stats_json = _calculate_summary_stats(results)
 
@@ -276,12 +297,15 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         {
             "tabs": [
                 {"title": "QC overview", "url": "index.html"},
+                {"title": "Sample comparison", "url": "scatter_view.html"},
                 {"title": tab_title[0], "url": "detailed_view.html"},
                 {"title": tab_title[1], "url": "table.html"},
             ],
             "vega_json": vega_json,
             "vega_summary_json": vega_json_summary,
             "vega_box_plots_json": vega_json_box_plots,
+            "vega_scatter_json": vega_json_scatter,
+            "scatter_data_json": scatter_data_json,
             "table": table_json,
             "summary_stats_json": stats_json,
             "scatter_json": scatter_json,
