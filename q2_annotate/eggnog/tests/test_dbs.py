@@ -147,7 +147,7 @@ class TestBuildDiamondDB(TestPluginBase):
                 "robots=off",
                 "-O",
                 f"{path_out}",
-                "http://eggnogdb.embl.de/download/emapperdb-5.0.2/"
+                "http://eggnog5.embl.de/download/emapperdb-5.0.2/"
                 "eggnog_proteins.dmnd.gz",
             ],
             check=True,
