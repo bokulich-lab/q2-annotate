@@ -80,7 +80,7 @@ def _run_eggnog_search_pipeline(
     if sequences.type <= FeatureData[MAG]:
         plugin, action_name = "types", "partition_feature_data_mags"
     elif sequences.type <= SampleData[Contigs]:
-        plugin, action_name = "assembly", "partition_contigs"
+        plugin, action_name = "types", "partition_contigs"
     elif sequences.type <= SampleData[MAGs]:
         plugin, action_name = "types", "partition_sample_data_mags"
     else:

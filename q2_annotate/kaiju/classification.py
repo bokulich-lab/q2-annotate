@@ -331,7 +331,7 @@ def classify_kaiju(
     elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
         partition_method = ctx.get_action("demux", "partition_samples_paired")
     elif seqs.type <= SampleData[Contigs]:
-        partition_method = ctx.get_action("assembly", "partition_contigs")
+        partition_method = ctx.get_action("types", "partition_contigs")
     else:
         raise NotImplementedError()
 

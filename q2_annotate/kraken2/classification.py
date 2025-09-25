@@ -182,7 +182,7 @@ def _get_partition_action(ctx, seqs):
     elif seqs.type <= SampleData[PairedEndSequencesWithQuality]:
         return ctx.get_action("demux", "partition_samples_paired")
     elif seqs.type <= SampleData[Contigs]:
-        return ctx.get_action("assembly", "partition_contigs")
+        return ctx.get_action("types", "partition_contigs")
     elif seqs.type <= SampleData[MAGs]:
         return ctx.get_action("types", "partition_sample_data_mags")
     else:
