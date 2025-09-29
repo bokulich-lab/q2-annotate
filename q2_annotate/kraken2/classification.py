@@ -125,12 +125,14 @@ def classify_kraken2(
                 (seqs_artifact,) = filter_derep_mags(
                     mags=seqs_artifact, remove_empty=True
                 )
-        except ValueError:
-            raise (
-                ValueError(
+        except ValueError as e:
+            if "remain after filtering" in str(e):
+                raise ValueError(
                     "All input sequence files are empty. Please check your input data."
                 )
-            )
+            else:
+                raise
+
         artifact_reports, artifact_outputs = _classify_single_artifact(
             ctx, seqs_artifact, db, num_partitions, kwargs
         )
