@@ -1225,11 +1225,9 @@ class TestGetFilterActions(TestPluginBase):
         second_action = MagicMock(
             side_effect=ValueError("No samples remain after filtering")
         )
-
         mock_ctx = MagicMock(
             get_action=MagicMock(side_effect=[first_action, second_action])
         )
-
         with self.assertRaisesRegex(ValueError, "All input sequence files are empty"):
             classify_kraken2(ctx=mock_ctx, seqs=[self.contigs_empty], db=self.db)
 
@@ -1240,11 +1238,9 @@ class TestGetFilterActions(TestPluginBase):
     def test_classify_kraken2_other_error(self, mock_classify_single_artifact):
         first_action = MagicMock(return_value=("reports", "outputs"))
         second_action = MagicMock(side_effect=ValueError("Other Error"))
-
         mock_ctx = MagicMock(
             get_action=MagicMock(side_effect=[first_action, second_action])
         )
-
         with self.assertRaisesRegex(ValueError, "Other Error"):
             classify_kraken2(ctx=mock_ctx, seqs=[self.contigs_empty], db=self.db)
 
