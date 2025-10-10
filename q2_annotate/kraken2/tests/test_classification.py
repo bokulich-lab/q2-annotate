@@ -11,7 +11,7 @@ import unittest
 from subprocess import CalledProcessError
 
 import pandas as pd
-from unittest.mock import patch, ANY, call
+from unittest.mock import patch, ANY, call, MagicMock
 
 from q2_types.per_sample_sequences import (
     SingleLanePerSampleSingleEndFastqDirFmt,
@@ -30,6 +30,7 @@ from q2_annotate.kraken2.classification import (
     _construct_output_paths,
     _classify_kraken2,
     classify_kraken2_helper,
+    classify_kraken2,
 )
 
 from qiime2 import Artifact
@@ -1107,6 +1108,141 @@ class TestClassifyMultipleInputArtifacts(TestPluginBase):
             reports, outputs = self.classify_kraken2(
                 [reads_artifact, mags_artifact], self.db
             )
+
+
+class TestGetFilterActions(TestPluginBase):
+    package = "q2_annotate.kraken2.tests"
+
+    def setUp(self):
+        super().setUp()
+
+        db_fp = self.get_data_path(os.path.join("simulated-sequences", "kraken2-db"))
+        db_format = Kraken2DBDirectoryFormat(db_fp, mode="r")
+        self.db = Artifact.import_data("Kraken2DB", db_format)
+
+        data_path_reads = self.get_data_path(
+            os.path.join(
+                "simulated-sequences", "multiple-inputs", "reads", "artifact-1"
+            )
+        )
+        dir_fmt_reads = SingleLanePerSamplePairedEndFastqDirFmt(
+            data_path_reads, mode="r"
+        )
+        self.reads = Artifact.import_data(
+            "SampleData[PairedEndSequencesWithQuality]", dir_fmt_reads
+        )
+
+        data_path_contigs = self.get_data_path(
+            os.path.join("simulated-sequences", "contigs")
+        )
+        dir_fmt_contigs = ContigSequencesDirFmt(data_path_contigs, mode="r")
+        self.contigs = Artifact.import_data("SampleData[Contigs]", dir_fmt_contigs)
+
+        data_path_mags = self.get_data_path(os.path.join("simulated-sequences", "mags"))
+        dir_fmt_mags = MultiFASTADirectoryFormat(data_path_mags, mode="r")
+        self.mags = Artifact.import_data("SampleData[MAGs]", dir_fmt_mags)
+
+        data_path_derep_mags = self.get_data_path(
+            os.path.join("simulated-sequences", "mags-derep")
+        )
+        dir_fmt_derep_mags = MAGSequencesDirFmt(data_path_derep_mags, mode="r")
+        self.derep_mags = Artifact.import_data("FeatureData[MAG]", dir_fmt_derep_mags)
+
+        data_path_contigs_empty = self.get_data_path("empty_contigs")
+        dir_fmt_contigs_empty = ContigSequencesDirFmt(data_path_contigs_empty, mode="r")
+        self.contigs_empty = Artifact.import_data(
+            "SampleData[Contigs]", dir_fmt_contigs_empty
+        )
+
+        self.classify_kraken2 = self.plugin.pipelines["classify_kraken2"]
+
+    @patch(
+        "q2_annotate.kraken2.classification._classify_single_artifact",
+        return_value=("artifact_reports", "artifact_outputs"),
+    )
+    def test_classify_kraken2_reads(self, mock_classify_single_artifact):
+        mock_action = MagicMock(
+            side_effect=[
+                lambda x, y: ("reports", "outputs"),
+                lambda demux, remove_empty: ("filtered",),
+            ]
+        )
+        mock_ctx = MagicMock(get_action=mock_action)
+        classify_kraken2(ctx=mock_ctx, seqs=[self.reads], db=self.db)
+        mock_ctx.get_action.assert_any_call("demux", "filter_samples")
+
+    @patch(
+        "q2_annotate.kraken2.classification._classify_single_artifact",
+        return_value=("artifact_reports", "artifact_outputs"),
+    )
+    def test_classify_kraken2_contigs(self, mock_classify_single_artifact):
+        mock_action = MagicMock(
+            side_effect=[
+                lambda x, y: ("reports", "outputs"),
+                lambda contigs, remove_empty: ("filtered",),
+            ]
+        )
+        mock_ctx = MagicMock(get_action=mock_action)
+        classify_kraken2(ctx=mock_ctx, seqs=[self.contigs], db=self.db)
+        mock_ctx.get_action.assert_any_call("assembly", "filter_contigs")
+
+    @patch(
+        "q2_annotate.kraken2.classification._classify_single_artifact",
+        return_value=("artifact_reports", "artifact_outputs"),
+    )
+    def test_classify_kraken2_mags(self, mock_classify_single_artifact):
+        mock_action = MagicMock(
+            side_effect=[
+                lambda x, y: ("reports", "outputs"),
+                lambda mags, remove_empty: ("filtered",),
+            ]
+        )
+        mock_ctx = MagicMock(get_action=mock_action)
+        classify_kraken2(ctx=mock_ctx, seqs=[self.mags], db=self.db)
+        mock_ctx.get_action.assert_any_call("annotate", "filter_mags")
+
+    @patch(
+        "q2_annotate.kraken2.classification._classify_single_artifact",
+        return_value=("artifact_reports", "artifact_outputs"),
+    )
+    def test_classify_kraken2_derep_mags(self, mock_classify_single_artifact):
+        mock_action = MagicMock(
+            side_effect=[
+                lambda x, y: ("reports", "outputs"),
+                lambda mags, remove_empty: ("filtered",),
+            ]
+        )
+        mock_ctx = MagicMock(get_action=mock_action)
+        classify_kraken2(ctx=mock_ctx, seqs=[self.derep_mags], db=self.db)
+        mock_ctx.get_action.assert_any_call("annotate", "filter_derep_mags")
+
+    @patch(
+        "q2_annotate.kraken2.classification._classify_single_artifact",
+        return_value=("artifact_reports", "artifact_outputs"),
+    )
+    def test_classify_kraken2_empty_error(self, mock_classify_single_artifact):
+        first_action = MagicMock(return_value=("reports", "outputs"))
+        second_action = MagicMock(
+            side_effect=ValueError("No samples remain after filtering")
+        )
+        mock_ctx = MagicMock(
+            get_action=MagicMock(side_effect=[first_action, second_action])
+        )
+        with self.assertRaisesRegex(ValueError, "All input sequence files are empty"):
+            classify_kraken2(ctx=mock_ctx, seqs=[self.contigs_empty], db=self.db)
+
+    @patch(
+        "q2_annotate.kraken2.classification._classify_single_artifact",
+        return_value=("artifact_reports", "artifact_outputs"),
+    )
+    def test_classify_kraken2_other_error(self, mock_classify_single_artifact):
+        first_action = MagicMock(return_value=("reports", "outputs"))
+        second_action = MagicMock(side_effect=ValueError("Other Error"))
+        mock_ctx = MagicMock(
+            get_action=MagicMock(side_effect=[first_action, second_action])
+        )
+        with self.assertRaisesRegex(ValueError, "Other Error"):
+            classify_kraken2(ctx=mock_ctx, seqs=[self.contigs_empty], db=self.db)
 
 
 if __name__ == "__main__":

@@ -98,6 +98,41 @@ def classify_kraken2(
     reports = []
     outputs = []
     for seqs_artifact in seqs:
+        try:
+            # Filter out empty samples
+            if (
+                seqs_artifact.type <= SampleData[SequencesWithQuality]
+                or seqs_artifact.type <= SampleData[PairedEndSequencesWithQuality]
+                or seqs_artifact.type <= SampleData[JoinedSequencesWithQuality]
+            ):
+                filter_samples = ctx.get_action("demux", "filter_samples")
+                (seqs_artifact,) = filter_samples(
+                    demux=seqs_artifact, remove_empty=True
+                )
+
+            elif seqs_artifact.type <= SampleData[Contigs]:
+                filter_contigs = ctx.get_action("assembly", "filter_contigs")
+                (seqs_artifact,) = filter_contigs(
+                    contigs=seqs_artifact, remove_empty=True
+                )
+
+            elif seqs_artifact.type <= SampleData[MAGs]:
+                filter_mags = ctx.get_action("annotate", "filter_mags")
+                (seqs_artifact,) = filter_mags(mags=seqs_artifact, remove_empty=True)
+
+            elif seqs_artifact.type <= FeatureData[MAG]:
+                filter_derep_mags = ctx.get_action("annotate", "filter_derep_mags")
+                (seqs_artifact,) = filter_derep_mags(
+                    mags=seqs_artifact, remove_empty=True
+                )
+        except ValueError as e:
+            if "remain after filtering" in str(e):
+                raise ValueError(
+                    "All input sequence files are empty. Please check your input data."
+                )
+            else:
+                raise
+
         artifact_reports, artifact_outputs = _classify_single_artifact(
             ctx, seqs_artifact, db, num_partitions, kwargs
         )
