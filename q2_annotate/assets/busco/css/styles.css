@@ -94,6 +94,25 @@
     }
 }
 
+/* Plot container for scatter view cards - prevent overflow */
+.plot-container {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* Ensure Vega-Lite charts respect container bounds */
+.plot-container > div {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.plot-container svg {
+    max-width: 100%;
+    height: auto;
+}
+
 /*adjustment for Bootstrap 5*/
 .table {
     border: 1px solid #dee2e6;

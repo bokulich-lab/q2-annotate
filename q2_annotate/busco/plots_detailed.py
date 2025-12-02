@@ -83,12 +83,14 @@ def _draw_detailed_plots(
 
     # Individual sample approach - no faceting, just simple plots for one sample
     # Create the BUSCO plot (no faceting since we're handling one sample at a time)
+    # For hconcat to work properly with container width, we need to avoid "container" 
+    # on individual charts and use explicit widths that will scale proportionally
     busco_plot = (
         alt.Chart(busco_plot_data)
         .mark_bar()
         .encode(
             x=alt.X("sum(BUSCO_percentage)", stack="normalize", title="BUSCO fraction"),
-            y=alt.Y("mag_id", axis=alt.Axis(titleFontSize=0)),
+            y=alt.Y("mag_id", axis=alt.Axis(titleFontSize=0, labels=False)),
                 color=alt.Color(
                     "category",
                     scale=alt.Scale(
@@ -109,7 +111,8 @@ def _draw_detailed_plots(
             ],
             opacity=alt.value(0.85),
         )
-        .properties(width="container", height={"step": height})
+        # Don't set width here - let hconcat handle distribution
+        .properties(height={"step": height})
     )
 
     # Create the assembly statistics plot (no faceting) - using dynamic metric
@@ -129,10 +132,12 @@ def _draw_detailed_plots(
             tooltip=[alt.Tooltip(f"{assembly_metric}:Q", title=metric_titles.get(assembly_metric, "Value"))],
             opacity=alt.value(0.85),
         )
-        .properties(width="container", height={"step": height})
+        # Don't set width here - let hconcat handle distribution
+        .properties(height={"step": height})
     )
 
     # Concatenate plots horizontally - much simpler without faceting
+    # Use spacing to control gap between plots
     output_plot = (
         alt.hconcat(busco_plot, secondary_plot, spacing=3)
         .configure_axis(labelFontSize=label_font_size, titleFontSize=title_font_size)
@@ -140,9 +145,20 @@ def _draw_detailed_plots(
         .configure_header(labelFontSize=label_font_size, titleFontSize=title_font_size)
     )
 
-    # Convert to dict and make responsive
+    # Convert to dict
+    # Note: width="container" does NOT work with hconcat in Vega-Lite
+    # We'll use explicit widths and handle scaling via JavaScript resize()
     spec = output_plot.to_dict()
-    spec["width"] = "container"
+    
+    # Set explicit total width for the hconcat composition
+    # This will be scaled by JavaScript to fit the container
+    spec["width"] = 800  # Total width for both plots (600 + 200)
     spec["autosize"] = {"type": "fit", "contains": "padding"}
+    
+    # Set explicit widths on hconcat children to maintain 2:1 ratio
+    if "hconcat" in spec and len(spec["hconcat"]) == 2:
+        # 600:200 ratio maintains 2:1 proportion (total 800)
+        spec["hconcat"][0]["width"] = 600
+        spec["hconcat"][1]["width"] = 200
 
     return spec
