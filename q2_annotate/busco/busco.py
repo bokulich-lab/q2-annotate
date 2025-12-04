@@ -1,4 +1,3 @@
-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025, QIIME 2 development team.
 #
@@ -18,8 +17,6 @@ import pandas as pd
 import q2templates
 
 from q2_annotate.busco.plots_detailed import _draw_detailed_plots
-from q2_annotate.busco.plots_scatter import _draw_scatter_plot_matrix, _get_sample_summary_data
-from q2_annotate.busco.plots_scatter_simple import _draw_simple_scatter_plot
 from q2_annotate.busco.plots_summary import (
     _draw_marker_summary_histograms,
     _draw_selectable_summary_histograms,
@@ -53,6 +50,8 @@ from q2_types.per_sample_sequences import (
     MAGs,
 )
 import warnings
+
+TEMPLATES = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "busco")
 
 
 def _run_busco(input_dir: str, output_dir: str, sample_id: str, params: List[str]):
@@ -151,15 +150,12 @@ def _evaluate_busco(
             kwargs,
         )
 
-    # Filter out all kwargs that are None, False or 0.0
     common_args = _process_common_input_params(
         processing_func=_parse_busco_params, params=kwargs
     )
 
-    # Always call _busco_helper once
     busco_results = _busco_helper(mags, common_args, additional_metrics)
 
-    # If mags is MultiMAGSequencesDirFmt, add unbinned contigs info
     if isinstance(mags, MultiMAGSequencesDirFmt) and unbinned_contigs:
         busco_results = _add_unbinned_metrics(busco_results, mags, unbinned_contigs)
 
@@ -169,11 +165,9 @@ def _evaluate_busco(
 def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     results.to_csv(os.path.join(output_dir, "busco_results.csv"), index=False)
 
-    # Outputs different df for sample and feature data
     results = _parse_df_columns(results)
     max_rows = 100
 
-    # Partition data frames
     if len(results["sample_id"].unique()) >= 2:
         counter_col = "sample_id"
         assets_subdir = "sample_data"
@@ -195,12 +189,9 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
 
     dfs = _partition_dataframe(results, max_rows, is_sample_data)
 
-    TEMPLATES = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "assets", "busco"
-    )
     templates = [
         os.path.join(TEMPLATES, assets_subdir, file_name)
-        for file_name in ["index.html", "detailed_view.html", "table.html", "scatter_view.html"]
+        for file_name in ["index.html", "detailed_view.html", "table.html"]
     ]
     copytree(
         src=os.path.join(TEMPLATES, assets_subdir), dst=output_dir, dirs_exist_ok=True
@@ -214,37 +205,29 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         )
 
     # Create individual sections for each sample with all metrics
-    context = {}
-    counter_left = 1
-    metrics = ["scaffold_n50", "contigs_n50", "percent_gaps", "scaffolds"]
-    
+    vega_detailed_plots = {}
+    metrics = ["contigs_n50", "percent_gaps", "scaffolds"]
+
     for i, df in enumerate(dfs):
-        # Get unique samples in this partition
         unique_samples = df[counter_col].unique()
-        
+
         for sample_id in unique_samples:
-            # Filter data for this specific sample
             sample_df = df[df[counter_col] == sample_id]
-            
+
             # Create plots for this sample with all metrics
             sample_plots = {}
             for metric in metrics:
-                subcontext = _draw_detailed_plots(
+                sample_plots[metric] = _draw_detailed_plots(
                     sample_df,
-                    is_sample_data,
-                    width=600,
                     height=30,
                     title_font_size=20,
-                    label_font_size=17,
-                    spacing=20,
+                    label_font_size=15,
                     assembly_metric=metric,
                 )
-                sample_plots[metric] = subcontext
-            
-            # Create individual section for this sample
-            context.update(
+
+            vega_detailed_plots.update(
                 {
-                    f"sample_{sample_id}": {
+                    sample_id: {
                         "plots": sample_plots,
                         "sample_id": sample_id,
                         "mag_count": len(sample_df),
@@ -252,28 +235,21 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
                 }
             )
 
-    # Generate simple HTML table instead of Vega plot to test
-    scatter_plot_spec = None
-    scatter_summary_data = _get_sample_summary_data(results)
-
-    # Render
-    vega_json = json.dumps(context).replace("NaN", "null")
-    vega_json_summary = json.dumps(_draw_marker_summary_histograms(results)).replace(
+    vega_detailed_plots = json.dumps(vega_detailed_plots).replace("NaN", "null")
+    vega_summary = json.dumps(_draw_marker_summary_histograms(results)).replace(
         "NaN", "null"
     )
-    vega_json_box_plots = json.dumps(_draw_box_whiskers_plots(results)).replace(
+    vega_box_plots = json.dumps(_draw_box_whiskers_plots(results)).replace(
         "NaN", "null"
     )
-    vega_json_scatter = json.dumps(scatter_plot_spec).replace("NaN", "null")
-    scatter_data_json = json.dumps(scatter_summary_data).replace("NaN", "null")
     table_json = _get_feature_table(results)
-    stats_json = _calculate_summary_stats(results)
+    summary_stats_json = _calculate_summary_stats(results)
 
-    scatter_json, comp_cont = None, False
+    vega_scatter_completeness, comp_cont = None, False
     if "completeness" in results.columns and "contamination" in results.columns:
-        scatter_json = json.dumps(_draw_completeness_vs_contamination(results)).replace(
-            "NaN", "null"
-        )
+        vega_scatter_completeness = json.dumps(
+            _draw_completeness_vs_contamination(results)
+        ).replace("NaN", "null")
         comp_cont = True
 
     if (
@@ -297,18 +273,15 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         {
             "tabs": [
                 {"title": "QC overview", "url": "index.html"},
-                {"title": "Sample comparison", "url": "scatter_view.html"},
                 {"title": tab_title[0], "url": "detailed_view.html"},
                 {"title": tab_title[1], "url": "table.html"},
             ],
-            "vega_json": vega_json,
-            "vega_summary_json": vega_json_summary,
-            "vega_box_plots_json": vega_json_box_plots,
-            "vega_scatter_json": vega_json_scatter,
-            "scatter_data_json": scatter_data_json,
+            "vega_detailed_plots": vega_detailed_plots,
+            "vega_summary": vega_summary,
+            "vega_box_plots": vega_box_plots,
             "table": table_json,
-            "summary_stats_json": stats_json,
-            "scatter_json": scatter_json,
+            "summary_stats_json": summary_stats_json,
+            "vega_scatter_completeness": vega_scatter_completeness,
             "comp_cont": comp_cont,
             "unbinned": unbinned,
             "page_size": 100,

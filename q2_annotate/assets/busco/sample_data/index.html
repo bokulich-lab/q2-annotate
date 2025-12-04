@@ -128,7 +128,7 @@
                 <div class="card-body" style="display: block;">
                     {% if unbinned %}
                     <p>
-                        The histogram shows the distribution of the unbinned contigs across samples.
+                        Distribution of unbinned contigs across all samples.
                     </p>
                     <div id="plotUnbinned" style="margin-top: 5px; width: 100%;"></div>
                     {% else %}
@@ -143,11 +143,7 @@
 </div>
 
 <script id="vega_summary_json" type="application/json">
-    {{
-        vega_summary_json
-        |
-        safe
-    }}
+    {{ vega_summary | safe }}
 </script>
 
 <script id="sample_ids_json" type="application/json">
@@ -155,27 +151,19 @@
 </script>
 
 <script id="vega_selectable_unbinned_json" type="application/json">
-    {{
-        vega_selectable_unbinned_json
-        |
-        safe
-    }}
+    {{ vega_selectable_unbinned_json | safe }}
 </script>
 
 <script id="summary_stats_json" type="application/json">
-    {{
-        summary_stats_json
-        |
-        safe
-    }}
+    {{ summary_stats_json | safe }}
 </script>
 
-<script id="scatter_json" type="application/json">
-    {{ scatter_json | safe }}
+<script id="vega_scatter_completeness" type="application/json">
+    {{ vega_scatter_completeness | safe }}
 </script>
 
 <script id="box_plots_json" type="application/json">
-    {{ vega_box_plots_json | safe }}
+    {{ vega_box_plots | safe }}
 </script>
 
 <script type="text/javascript">
@@ -306,7 +294,7 @@
         renderViolinPlots();
 
         // Embed scatter and unbinned
-        const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
+        const scatterSpec = JSON.parse(document.getElementById('vega_scatter_completeness').textContent);
         vegaEmbed("#scatterPlotDiv", scatterSpec, actionsCfg).then(
             function (result) {
                 result.view.logLevel(vega.Warn);

@@ -229,9 +229,10 @@ def _draw_selectable_summary_histograms(data: pd.DataFrame) -> dict:
 
 def _draw_box_whiskers_plots(data: pd.DataFrame) -> list:
     """
-    Draws individual box-whiskers plot specs for BUSCO marker categories and assembly metrics.
-    Each category gets its own responsive chart spec with individual y-axis scale and data points overlaid.
-    Sample selection highlights the selected sample across all box plots.
+    Draws individual box-whiskers plot specs for BUSCO marker categories and
+    assembly metrics. Each category gets its own responsive chart spec with
+    individual y-axis scale and data points overlaid. Sample selection highlights
+    the selected sample across all box plots.
 
     Returns:
         list: List of Vega-Lite specs (dicts) for individual box plots.
@@ -259,13 +260,14 @@ def _draw_box_whiskers_plots(data: pd.DataFrame) -> list:
     for metric in metrics:
         # Determine the appropriate y-axis format based on metric type
         if metric in ["single", "duplicated", "fragmented", "missing"]:
-            # BUSCO marker metrics: use integer format (no decimals, no scientific notation)
+            # BUSCO marker metrics: no decimals, no scientific notation
             y_format = ".0f"
         else:
             # Assembly metrics: use abbreviated format (K, M, etc.)
             y_format = ".2s"
 
-        # Create base chart with box plot for this specific metric (always show all data)
+        # Create base chart with box plot for this specific metric
+        # (always show all data)
         base_chart = (
             alt.Chart(data)
             .mark_boxplot(size=40)
@@ -284,7 +286,8 @@ def _draw_box_whiskers_plots(data: pd.DataFrame) -> list:
             .add_params(selection)
         )
 
-        # Create overlay chart with individual points for this specific metric (show all points, highlight selected)
+        # Create overlay chart with individual points for this specific metric
+        # (show all points, highlight selected)
         points_chart = (
             alt.Chart(data)
             .mark_circle(size=50, opacity=0.4, stroke=None)

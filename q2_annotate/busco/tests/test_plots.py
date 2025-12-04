@@ -34,12 +34,9 @@ class TestBUSCOPlots(TestPluginBase):
     def test_draw_detailed_plots_sample_data(self):
         obs = _draw_detailed_plots(
             df=self.df_sample_data,
-            is_sample_data=True,
-            width=100,
             height=250,
             label_font_size=10,
             title_font_size=15,
-            spacing=5,
         )
 
         self.assertIsInstance(obs, dict)
@@ -63,12 +60,9 @@ class TestBUSCOPlots(TestPluginBase):
     def test_draw_detailed_plots_feature_data(self):
         obs = _draw_detailed_plots(
             df=self.df_feature_data,
-            is_sample_data=False,
-            width=100,
             height=250,
             label_font_size=10,
             title_font_size=15,
-            spacing=5,
         )
 
         self.assertIsInstance(obs, dict)

@@ -13,12 +13,9 @@ alt.data_transformers.disable_max_rows()
 
 def _draw_detailed_plots(
     df: pd.DataFrame,
-    is_sample_data: bool,
-    width: int = None,
     height: int = None,
     label_font_size: int = None,
     title_font_size: int = None,
-    spacing: int = None,
     assembly_metric: str = "scaffold_n50",
 ) -> dict:
     """
@@ -29,11 +26,9 @@ def _draw_detailed_plots(
 
     Args:
         df (pd.DataFrame): tabular batch summary for all samples
-        width (int): width of the plot
         height (int): height of each bar in the plot
         label_font_size (int): size of the labels in plot
         title_font_size (int): size of titles in plot
-        spacing (int): spacing between plots
     Output:
         Output plot in dictionary from casted to a string.
     """
@@ -73,17 +68,9 @@ def _draw_detailed_plots(
         + busco_plot_data["n_markers"].map(str)
     )
 
-    # Define title
-    if is_sample_data:
-        title = "Sample ID and MAG ID"
-        subtitle_size = 15
-    else:
-        title = "MAG ID"
-        subtitle_size = 0
-
     # Individual sample approach - no faceting, just simple plots for one sample
     # Create the BUSCO plot (no faceting since we're handling one sample at a time)
-    # For hconcat to work properly with container width, we need to avoid "container" 
+    # For hconcat to work properly with container width, we need to avoid "container"
     # on individual charts and use explicit widths that will scale proportionally
     busco_plot = (
         alt.Chart(busco_plot_data)
@@ -91,14 +78,19 @@ def _draw_detailed_plots(
         .encode(
             x=alt.X("sum(BUSCO_percentage)", stack="normalize", title="BUSCO fraction"),
             y=alt.Y("mag_id", axis=alt.Axis(titleFontSize=0, labels=False)),
-                color=alt.Color(
-                    "category",
-                    scale=alt.Scale(
-                        domain=["single", "duplicated", "fragmented", "missing"],
-                        range=["#4A90A4", "#F5A623", "#D2691E", "#A0522D"],  # Soft Teal, Soft Gold, Soft Orange, Soft Brown
-                    ),
-                    legend=None,  # Remove legend - we'll create HTML legend
+            color=alt.Color(
+                "category",
+                scale=alt.Scale(
+                    domain=["single", "duplicated", "fragmented", "missing"],
+                    range=[
+                        "#4A90A4",
+                        "#F5A623",
+                        "#D2691E",
+                        "#A0522D",
+                    ],  # Soft Teal, Soft Gold, Soft Orange, Soft Brown
                 ),
+                legend=None,  # We'll create HTML legend
+            ),
             order=alt.Order("order", sort="ascending"),
             tooltip=[
                 alt.Tooltip("sample_id", title="Sample ID"),
@@ -118,25 +110,32 @@ def _draw_detailed_plots(
     # Create the assembly statistics plot (no faceting) - using dynamic metric
     metric_titles = {
         "scaffold_n50": "Scaffold N50 (bp)",
-        "contigs_n50": "Contig N50 (bp)", 
+        "contigs_n50": "Contig N50 (bp)",
         "percent_gaps": "Percent Gaps (%)",
-        "scaffolds": "Number of Scaffolds"
+        "scaffolds": "Number of Scaffolds",
     }
-    
+
     secondary_plot = (
         alt.Chart(secondary_plot_data)
         .mark_bar()
         .encode(
-            x=alt.X(f"{assembly_metric}:Q").title(metric_titles.get(assembly_metric, "Assembly Metric")),
+            x=alt.X(f"{assembly_metric}:Q").title(
+                metric_titles.get(assembly_metric, "Assembly Metric")
+            ),
             y=alt.Y("mag_id", axis=None),
-            tooltip=[alt.Tooltip(f"{assembly_metric}:Q", title=metric_titles.get(assembly_metric, "Value"))],
+            tooltip=[
+                alt.Tooltip(
+                    f"{assembly_metric}:Q",
+                    title=metric_titles.get(assembly_metric, "Value"),
+                )
+            ],
             opacity=alt.value(0.85),
         )
         # Don't set width here - let hconcat handle distribution
         .properties(height={"step": height})
     )
 
-    # Concatenate plots horizontally - much simpler without faceting
+    # Concatenate plots horizontally
     # Use spacing to control gap between plots
     output_plot = (
         alt.hconcat(busco_plot, secondary_plot, spacing=3)
@@ -145,16 +144,15 @@ def _draw_detailed_plots(
         .configure_header(labelFontSize=label_font_size, titleFontSize=title_font_size)
     )
 
-    # Convert to dict
     # Note: width="container" does NOT work with hconcat in Vega-Lite
-    # We'll use explicit widths and handle scaling via JavaScript resize()
+    # Use explicit widths and handle scaling via JavaScript resize()
     spec = output_plot.to_dict()
-    
+
     # Set explicit total width for the hconcat composition
     # This will be scaled by JavaScript to fit the container
     spec["width"] = 800  # Total width for both plots (600 + 200)
     spec["autosize"] = {"type": "fit", "contains": "padding"}
-    
+
     # Set explicit widths on hconcat children to maintain 2:1 ratio
     if "hconcat" in spec and len(spec["hconcat"]) == 2:
         # 600:200 ratio maintains 2:1 proportion (total 800)
