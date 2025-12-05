@@ -17,6 +17,7 @@ def _draw_detailed_plots(
     label_font_size: int = None,
     title_font_size: int = None,
     assembly_metric: str = "scaffold_n50",
+    show_mag_labels: bool = False,
 ) -> dict:
     """
     Draws a horizontal normalized bar plot for every sample for which BUSCO was
@@ -77,7 +78,7 @@ def _draw_detailed_plots(
         .mark_bar()
         .encode(
             x=alt.X("sum(BUSCO_percentage)", stack="normalize", title="BUSCO fraction"),
-            y=alt.Y("mag_id", axis=alt.Axis(titleFontSize=0, labels=False)),
+            y=alt.Y("mag_id", axis=alt.Axis(titleFontSize=0, labels=show_mag_labels)),
             color=alt.Color(
                 "category",
                 scale=alt.Scale(
@@ -144,19 +145,18 @@ def _draw_detailed_plots(
         .configure_header(labelFontSize=label_font_size, titleFontSize=title_font_size)
     )
 
-    # Note: width="container" does NOT work with hconcat in Vega-Lite
-    # Use explicit widths and handle scaling via JavaScript resize()
     spec = output_plot.to_dict()
 
-    # Set explicit total width for the hconcat composition
-    # This will be scaled by JavaScript to fit the container
-    spec["width"] = 800  # Total width for both plots (600 + 200)
-    spec["autosize"] = {"type": "fit", "contains": "padding"}
+    # Use responsive width with autosize - Vega will handle resizing
+    # Set a base width that will scale proportionally
+    spec["width"] = "container"  # Base width for both plots (600 + 200)
+    # spec["autosize"] = {"type": "fit", "contains": "padding", "resize": True}
 
-    # Set explicit widths on hconcat children to maintain 2:1 ratio
-    if "hconcat" in spec and len(spec["hconcat"]) == 2:
-        # 600:200 ratio maintains 2:1 proportion (total 800)
-        spec["hconcat"][0]["width"] = 600
-        spec["hconcat"][1]["width"] = 200
+    # Set explicit widths on hconcat children to maintain 3:1 ratio
+    # These will scale proportionally when autosize resizes
+    # if "hconcat" in spec and len(spec["hconcat"]) == 2:
+    #     # 600:200 ratio maintains 3:1 proportion (total 800)
+    #     spec["hconcat"][0]["width"] = 600
+    #     spec["hconcat"][1]["width"] = 200
 
     return spec

@@ -208,32 +208,53 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     vega_detailed_plots = {}
     metrics = ["contigs_n50", "percent_gaps", "scaffolds"]
 
-    for i, df in enumerate(dfs):
-        unique_samples = df[counter_col].unique()
+    if is_sample_data:
+        # For sample_data, create plots per sample
+        for i, df in enumerate(dfs):
+            unique_samples = df[counter_col].unique()
 
-        for sample_id in unique_samples:
-            sample_df = df[df[counter_col] == sample_id]
+            for sample_id in unique_samples:
+                sample_df = df[df[counter_col] == sample_id]
 
-            # Create plots for this sample with all metrics
-            sample_plots = {}
-            for metric in metrics:
-                sample_plots[metric] = _draw_detailed_plots(
-                    sample_df,
-                    height=30,
-                    title_font_size=20,
-                    label_font_size=15,
-                    assembly_metric=metric,
-                )
+                # Create plots for this sample with all metrics
+                sample_plots = {}
+                for metric in metrics:
+                    sample_plots[metric] = _draw_detailed_plots(
+                        sample_df,
+                        height=30,
+                        title_font_size=20,
+                        label_font_size=15,
+                        assembly_metric=metric,
+                    )
 
-            vega_detailed_plots.update(
-                {
-                    sample_id: {
-                        "plots": sample_plots,
-                        "sample_id": sample_id,
-                        "mag_count": len(sample_df),
+                vega_detailed_plots.update(
+                    {
+                        sample_id: {
+                            "plots": sample_plots,
+                            "sample_id": sample_id,
+                            "mag_count": len(sample_df),
+                        }
                     }
-                }
+                )
+    else:
+        # For feature_data, create a single plot with all MAGs
+        all_plots = {}
+        for metric in metrics:
+            all_plots[metric] = _draw_detailed_plots(
+                results,
+                height=30,
+                title_font_size=20,
+                label_font_size=15,
+                assembly_metric=metric,
+                show_mag_labels=True,  # Show MAG ID labels for feature_data
             )
+        
+        vega_detailed_plots = {
+            "all_mags": {
+                "plots": all_plots,
+                "mag_count": len(results),
+            }
+        }
 
     vega_detailed_plots = json.dumps(vega_detailed_plots).replace("NaN", "null")
     vega_summary = json.dumps(_draw_marker_summary_histograms(results)).replace(

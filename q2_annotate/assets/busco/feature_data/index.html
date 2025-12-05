@@ -2,6 +2,7 @@
 
 {% block head %}
 <title>Embedding Vega-Lite</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="js/bootstrapMagic.js" type="text/javascript"></script>
 <link href="css/styles.css" rel="stylesheet"/>
 <script type="text/javascript">
@@ -72,18 +73,26 @@
     <div class="row" style="margin-bottom: 10px">
         <div class="col-lg-12">
             <div class="card">
-                <h5 class="card-header">Distribution of BUSCO marker gene counts</h5>
-                <div class="card-body">
-                    <p>
-                        The histograms in the first row below show distributions of BUSCO marker
-                        count fractions across all MAGs for all the marker categories,
-                        as represented in the table above.
-
-                        The histograms in the second row show the distributions of assembly metrics
-                        for all MAGs and can be used to evaluate the quality of the assembly.
-                    </p>
-                    <div class="col-lg-12" id="summaryHistogramsMarkers">
-                        <div id="plotMarkers" class="chart-grid" style="margin-top: 5px"></div>
+                <h5 class="card-header">
+                    Distribution of BUSCO marker gene counts
+                </h5>
+                <div class="collapse show" id="histogramsCollapse">
+                    <div class="card-body">
+                        <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 8px;">
+                            <span class="header-inline">View:</span>
+                            <select id="visualizationToggle" class="form-select form-select-sm" style="width:auto">
+                                <option value="histograms">Histograms</option>
+                                <option value="violins" selected>Box Plots</option>
+                            </select>
+                        </div>
+                        <p id="visualizationDescription">
+                            The box plots below show distributions of BUSCO marker count fractions and assembly metrics.
+                            Each box shows the median, quartiles, and outliers for each category. Individual data points
+                            are overlaid with low transparency.
+                        </p>
+                        <div class="col-lg-12" id="summaryHistogramsMarkers">
+                            <div id="plotMarkers" class="square-chart-grid" style="margin-top: 5px"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -110,7 +119,7 @@
 
 <script id="vega_summary_json" type="application/json">
     {{
-        vega_summary_json
+        vega_summary
         |
         safe
     }}
@@ -124,8 +133,12 @@
     }}
 </script>
 
-<script id="scatter_json" type="application/json">
-    {{ scatter_json | safe }}
+<script id="box_plots_json" type="application/json">
+    {{ vega_box_plots | safe }}
+</script>
+
+<script id="vega_scatter_completeness" type="application/json">
+    {{ vega_scatter_completeness | safe }}
 </script>
 
 <script type="text/javascript">
@@ -150,28 +163,111 @@
             })
         })
 
-        // Render responsive grid of histogram specs
+        // Get both visualization specs
         const vegaSpecSummary = JSON.parse(document.getElementById('vega_summary_json').textContent);
+        const boxPlotsSpec = JSON.parse(document.getElementById('box_plots_json').textContent);
         const grid = document.getElementById('plotMarkers');
-        const specsArray = Array.isArray(vegaSpecSummary) ? vegaSpecSummary : [vegaSpecSummary];
-        specsArray.forEach((spec) => {
-            const div = document.createElement('div');
-            grid.appendChild(div);
-            vegaEmbed(div, spec, {actions: false}).then(
-                function (result) {
-                    result.view.logLevel(vega.Warn);
+        const visualizationToggle = document.getElementById('visualizationToggle');
+        const descriptionEl = document.getElementById('visualizationDescription');
+
+        // Track views
+        const views = [];
+        let currentViews = [];
+
+        const actionsCfg = {actions: false};
+
+        // Function to clear current plots
+        function clearPlots() {
+            grid.innerHTML = '';
+            currentViews.forEach(view => {
+                const index = views.indexOf(view);
+                if (index > -1) {
+                    views.splice(index, 1);
                 }
-            ).catch(
-                function (error) {
-                    handleErrors([error], $(div));
-                }
-            );
+            });
+            currentViews = [];
+        }
+
+        // Function to render histograms
+        function renderHistograms() {
+            clearPlots();
+            grid.className = 'square-chart-grid';
+            const specsArray = Array.isArray(vegaSpecSummary) ? vegaSpecSummary : [vegaSpecSummary];
+            
+            specsArray.forEach((spec) => {
+                const div = document.createElement('div');
+                grid.appendChild(div);
+                vegaEmbed(div, spec, actionsCfg).then(
+                    function (result) {
+                        result.view.logLevel(vega.Warn);
+                        result.view.resize();
+                        views.push(result.view);
+                        currentViews.push(result.view);
+                    }
+                ).catch(
+                    function (error) {
+                        handleErrors([error], $(div));
+                    }
+                );
+            });
+        }
+
+        // Function to render box plots
+        function renderViolinPlots() {
+            clearPlots();
+            grid.className = 'chart-grid';
+            const boxPlotsArray = Array.isArray(boxPlotsSpec) ? boxPlotsSpec : [boxPlotsSpec];
+            
+            boxPlotsArray.forEach((spec) => {
+                const div = document.createElement('div');
+                grid.appendChild(div);
+                vegaEmbed(div, spec, actionsCfg).then(
+                    function (result) {
+                        result.view.logLevel(vega.Warn);
+                        result.view.resize();
+                        views.push(result.view);
+                        currentViews.push(result.view);
+                    }
+                ).catch(
+                    function (error) {
+                        handleErrors([error], $(div));
+                    }
+                );
+            });
+        }
+
+        // Function to update description
+        function updateDescription(type) {
+            if (type === 'histograms') {
+                descriptionEl.textContent = 'The histograms below show distributions of BUSCO marker count fractions and assembly metrics. Switch between histograms and box plots using the view toggle.';
+            } else {
+                descriptionEl.textContent = 'The box plots below show distributions of BUSCO marker count fractions and assembly metrics. Each box shows the median, quartiles, and outliers for each category. Individual data points are overlaid with low transparency.';
+            }
+        }
+
+        // Toggle event listener
+        visualizationToggle.addEventListener('change', function() {
+            const selectedType = this.value;
+            updateDescription(selectedType);
+            
+            if (selectedType === 'histograms') {
+                renderHistograms();
+            } else {
+                renderViolinPlots();
+            }
         });
 
-        const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
-        vegaEmbed("#scatterPlotDiv", scatterSpec, {actions: false}).then(
+        // Initial render (box plots by default)
+        renderViolinPlots();
+
+        // Embed scatter plot if available
+        {% if comp_cont %}
+        const scatterSpec = JSON.parse(document.getElementById('vega_scatter_completeness').textContent);
+        vegaEmbed("#scatterPlotDiv", scatterSpec, actionsCfg).then(
             function (result) {
                 result.view.logLevel(vega.Warn);
+                result.view.resize();
+                views.push(result.view);
 
                 const dropdownWrapper = document.querySelector("#scatterPlotDiv .vega-bindings");
                 const target = document.getElementById('scatterDropdownControls');
@@ -184,6 +280,7 @@
                 handleErrors([error], $("#scatterPlotDiv"));
             }
         );
+        {% endif %}
     });
 </script>
 

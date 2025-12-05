@@ -102,6 +102,37 @@
     box-sizing: border-box;
 }
 
+/*!* Override for feature_data detailed view plot container *!*/
+/*#plotContainer.plot-container {*/
+/*    overflow-x: auto !important;*/
+/*    overflow-y: visible !important;*/
+/*}*/
+
+/*!* Ensure parent container doesn't constrain *!*/
+/*#plot {*/
+/*    width: 100%;*/
+/*    overflow-x: auto;*/
+/*}*/
+
+/*!* Plot container for feature_data detailed view - allow horizontal scroll when needed *!*/
+/*#plotContainer {*/
+/*    width: 100%;*/
+/*    overflow-x: auto;*/
+/*    overflow-y: visible;*/
+/*    box-sizing: border-box;*/
+/*    position: relative;*/
+/*}*/
+
+/*!* Let Vega handle the plot sizing - don't force widths *!*/
+/*#plotContainer > div {*/
+/*    width: 100% !important;*/
+/*}*/
+
+/*#plotContainer svg {*/
+/*    max-width: 100%;*/
+/*    height: auto;*/
+/*}*/
+
 /* Ensure Vega-Lite charts respect container bounds */
 .plot-container > div {
     max-width: 100%;
