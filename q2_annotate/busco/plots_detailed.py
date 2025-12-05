@@ -11,6 +11,177 @@ import pandas as pd
 alt.data_transformers.disable_max_rows()
 
 
+def _draw_busco_plot(
+    df: pd.DataFrame,
+    height: int = None,
+    label_font_size: int = None,
+    title_font_size: int = None,
+    show_mag_labels: bool = False,
+) -> dict:
+    """
+    Draws a horizontal normalized bar plot showing BUSCO results for all MAGs.
+    
+    Args:
+        df (pd.DataFrame): tabular batch summary for all samples
+        height (int): height of each bar in the plot
+        label_font_size (int): size of the labels in plot
+        title_font_size (int): size of titles in plot
+        show_mag_labels (bool): whether to show MAG ID labels on y-axis
+    Output:
+        BUSCO plot spec as a dictionary.
+    """
+    # Prepare data
+    busco_plot_data = pd.melt(
+        df,
+        id_vars=["sample_id", "mag_id", "dataset", "n_markers"],
+        value_vars=["single", "duplicated", "fragmented", "missing"],
+        value_name="BUSCO_percentage",
+        var_name="category",
+    )
+
+    # Specify order
+    mapping = {"single": 1, "duplicated": 2, "fragmented": 3, "missing": 4}
+    busco_plot_data["order"] = busco_plot_data["category"].map(mapping)
+
+    # Estimate fraction of sequences in each BUSCO category
+    busco_plot_data["frac_markers"] = (
+        "~"
+        + round(
+            busco_plot_data["BUSCO_percentage"] * busco_plot_data["n_markers"] / 100
+        )
+        .map(int)
+        .map(str)
+        + "/"
+        + busco_plot_data["n_markers"].map(str)
+    )
+
+    # Get sorted list of MAG IDs to ensure consistent ordering
+    mag_ids_sorted = sorted(df["mag_id"].unique())
+    
+    # Create the BUSCO plot
+    busco_plot = (
+        alt.Chart(busco_plot_data)
+        .mark_bar()
+        .encode(
+            x=alt.X("sum(BUSCO_percentage)", stack="normalize", title="BUSCO fraction"),
+            y=alt.Y("mag_id", 
+                    axis=alt.Axis(titleFontSize=0, labels=show_mag_labels),
+                    scale=alt.Scale(domain=mag_ids_sorted)),
+            color=alt.Color(
+                "category",
+                scale=alt.Scale(
+                    domain=["single", "duplicated", "fragmented", "missing"],
+                    range=[
+                        "#4A90A4",
+                        "#F5A623",
+                        "#D2691E",
+                        "#A0522D",
+                    ],
+                ),
+                legend=None,
+            ),
+            order=alt.Order("order", sort="ascending"),
+            tooltip=[
+                alt.Tooltip("sample_id", title="Sample ID"),
+                alt.Tooltip("mag_id", title="MAG ID"),
+                alt.Tooltip("dataset", title="Lineage dataset"),
+                alt.Tooltip(
+                    "frac_markers", title="Approx. number of markers in this category"
+                ),
+                alt.Tooltip("BUSCO_percentage", title="% BUSCOs"),
+            ],
+            opacity=alt.value(0.85),
+        )
+        .properties(width="container", height={"step": height})
+    )
+
+    output_plot = (
+        busco_plot
+        .configure_axis(labelFontSize=label_font_size, titleFontSize=title_font_size)
+        .configure_legend(labelFontSize=label_font_size, titleFontSize=title_font_size)
+        .configure_header(labelFontSize=label_font_size, titleFontSize=title_font_size)
+    )
+
+    spec = output_plot.to_dict()
+    spec["autosize"] = {"type": "fit", "contains": "padding", "resize": True}
+    
+    return spec
+
+
+def _draw_assembly_plot(
+    df: pd.DataFrame,
+    height: int = None,
+    label_font_size: int = None,
+    title_font_size: int = None,
+    assembly_metric: str = "scaffold_n50",
+) -> dict:
+    """
+    Draws a horizontal bar plot showing assembly statistics for all MAGs.
+    
+    Args:
+        df (pd.DataFrame): tabular batch summary for all samples
+        height (int): height of each bar in the plot
+        label_font_size (int): size of the labels in plot
+        title_font_size (int): size of titles in plot
+        assembly_metric (str): assembly metric to display
+    Output:
+        Assembly plot spec as a dictionary.
+    """
+    secondary_plot_data = df[
+        [
+            "sample_id",
+            "mag_id",
+            "scaffold_n50",
+            "contigs_n50",
+            "percent_gaps",
+            "scaffolds",
+        ]
+    ]
+
+    metric_titles = {
+        "scaffold_n50": "Scaffold N50 (bp)",
+        "contigs_n50": "Contig N50 (bp)",
+        "percent_gaps": "Percent Gaps (%)",
+        "scaffolds": "Number of Scaffolds",
+    }
+
+    # Get sorted list of MAG IDs to ensure consistent ordering (same as BUSCO plot)
+    mag_ids_sorted = sorted(df["mag_id"].unique())
+
+    secondary_plot = (
+        alt.Chart(secondary_plot_data)
+        .mark_bar()
+        .encode(
+            x=alt.X(f"{assembly_metric}:Q").title(
+                metric_titles.get(assembly_metric, "Assembly Metric")
+            ),
+            y=alt.Y("mag_id", 
+                    axis=None,  # No y-axis labels, will align with BUSCO plot
+                    scale=alt.Scale(domain=mag_ids_sorted)),
+            tooltip=[
+                alt.Tooltip(
+                    f"{assembly_metric}:Q",
+                    title=metric_titles.get(assembly_metric, "Value"),
+                )
+            ],
+            opacity=alt.value(0.85),
+        )
+        .properties(width="container", height={"step": height})
+    )
+
+    output_plot = (
+        secondary_plot
+        .configure_axis(labelFontSize=label_font_size, titleFontSize=title_font_size)
+        .configure_legend(labelFontSize=label_font_size, titleFontSize=title_font_size)
+        .configure_header(labelFontSize=label_font_size, titleFontSize=title_font_size)
+    )
+
+    spec = output_plot.to_dict()
+    spec["autosize"] = {"type": "fit", "contains": "padding", "resize": True}
+    
+    return spec
+
+
 def _draw_detailed_plots(
     df: pd.DataFrame,
     height: int = None,

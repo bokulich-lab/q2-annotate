@@ -16,7 +16,11 @@ from typing import List, Union
 import pandas as pd
 import q2templates
 
-from q2_annotate.busco.plots_detailed import _draw_detailed_plots
+from q2_annotate.busco.plots_detailed import (
+    _draw_detailed_plots,
+    _draw_busco_plot,
+    _draw_assembly_plot,
+)
 from q2_annotate.busco.plots_summary import (
     _draw_marker_summary_histograms,
     _draw_selectable_summary_histograms,
@@ -237,21 +241,31 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
                     }
                 )
     else:
-        # For feature_data, create a single plot with all MAGs
-        all_plots = {}
+        # For feature_data, create separate BUSCO and assembly plots
+        # Create BUSCO plot (same for all metrics)
+        busco_plot = _draw_busco_plot(
+            results,
+            height=30,
+            title_font_size=20,
+            label_font_size=15,
+            show_mag_labels=True,  # Show MAG ID labels for feature_data
+        )
+        
+        # Create assembly plots for each metric
+        assembly_plots = {}
         for metric in metrics:
-            all_plots[metric] = _draw_detailed_plots(
+            assembly_plots[metric] = _draw_assembly_plot(
                 results,
                 height=30,
                 title_font_size=20,
                 label_font_size=15,
                 assembly_metric=metric,
-                show_mag_labels=True,  # Show MAG ID labels for feature_data
             )
         
         vega_detailed_plots = {
             "all_mags": {
-                "plots": all_plots,
+                "busco_plot": busco_plot,
+                "assembly_plots": assembly_plots,
                 "mag_count": len(results),
             }
         }
