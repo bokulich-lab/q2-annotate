@@ -1,7 +1,7 @@
 {% extends "tabbed.html" %}
 
 {% block head %}
-<title>Sample Comparison - Scatter Plot Matrix</title>
+<title>Sample Comparison - BUSCO Detailed View</title>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="js/bootstrapMagic.js" type="text/javascript"></script>
 <link href="css/styles.css" rel="stylesheet" />
@@ -70,48 +70,27 @@
 <div id="plotCardsContainer" class="row">
   <!-- Plot cards will be dynamically generated here -->
 </div>
-        <!-- Sample details panel (initially hidden) -->
-        <div id="sampleDetailsPanel" class="mt-4" style="display: none;">
-          <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <h6 class="mb-0">Detailed Analysis: <span id="selectedSampleName"></span></h6>
-              <button type="button" class="btn-close" aria-label="Close" onclick="hideSampleDetails()"></button>
-            </div>
-            <div class="card-body">
-              <!-- Custom legend -->
-              <div class="busco-legend mb-3">
-                <div class="busco-legend-left">
-                  <div class="busco-legend-item">
-                    <div class="busco-legend-color" style="background-color: #440154;"></div>
-                    <span>Single</span>
-                  </div>
-                  <div class="busco-legend-item">
-                    <div class="busco-legend-color" style="background-color: #31688e;"></div>
-                    <span>Duplicated</span>
-                  </div>
-                  <div class="busco-legend-item">
-                    <div class="busco-legend-color" style="background-color: #35b779;"></div>
-                    <span>Fragmented</span>
-                  </div>
-                  <div class="busco-legend-item">
-                    <div class="busco-legend-color" style="background-color: #6ece58;"></div>
-                    <span>Missing</span>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Detailed plots will be embedded here -->
-              <div id="detailedPlots"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<script id="vega_detailed_json" type="application/json">
-  {{ vega_detailed_plots | safe }}
+<!-- Combined Vega Spec -->
+<script id="vega_combined_detailed_spec" type="application/json">
+  {{ vega_combined_detailed_spec | safe }}
+</script>
+
+<!-- Data -->
+<script id="detailed_data" type="application/json">
+  {{ detailed_data | safe }}
+</script>
+
+<script id="assembly_data" type="application/json">
+  {{ assembly_data | safe }}
+</script>
+
+<script id="sample_ids_json" type="application/json">
+  {{ sample_ids_json | safe }}
+</script>
+
+<script id="assembly_metrics_json" type="application/json">
+  {{ assembly_metrics_json | safe }}
 </script>
 
 <script type="text/javascript">
@@ -119,13 +98,24 @@
     // temporary hack to make it look good with Bootstrap 5
     adjustTagsToBS3()
 
-    const samples = Object.keys(JSON.parse(document.getElementById('vega_detailed_json').textContent));
+    // Load data
+    const detailedData = JSON.parse(document.getElementById('detailed_data').textContent);
+    const assemblyData = JSON.parse(document.getElementById('assembly_data').textContent);
+    const sampleIds = JSON.parse(document.getElementById('sample_ids_json').textContent);
+    const assemblyMetrics = JSON.parse(document.getElementById('assembly_metrics_json').textContent);
+    
+    // Load combined spec
+    const combinedSpec = JSON.parse(document.getElementById('vega_combined_detailed_spec').textContent);
 
     // Initialize sample selection state
     window.selectedSamples = new Set();
     window.sampleColors = {};
+    window.detailedData = detailedData;
+    window.assemblyData = assemblyData;
+    window.combinedSpec = combinedSpec;
+    window.assemblyMetrics = assemblyMetrics;
     
-    // Generate viridis colors for samples (excluding extreme colors)
+    // Generate viridis colors for samples
     const viridisColors = [
       '#440154', '#482777', '#3f4a8a', '#31688e', '#26828e',
       '#1f9e89', '#35b779', '#6ece58', '#b5de2b', '#fde725',
@@ -135,7 +125,7 @@
     
     // Populate sample selection box
     const sampleSelectionBox = document.getElementById('sampleSelectionBox');
-    samples.forEach((sampleId, index) => {
+    sampleIds.forEach((sampleId, index) => {
       const color = viridisColors[index % viridisColors.length];
       window.sampleColors[sampleId] = color;
 
@@ -164,6 +154,18 @@
     // Add event listener for metric selector
     document.getElementById('metricSelector').onchange = updateAllPlots;
     
+    // Add resize handler to re-render plots when window is resized
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+      // Debounce to avoid too many re-renders
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(function() {
+        if (window.selectedSamples.size > 0) {
+          updatePlotCards();
+        }
+      }, 250);  // Wait 250ms after resize stops before re-rendering
+    });
+    
     // Initialize with first sample selected
     updateSelectionCount();
     updatePlotCards();
@@ -173,12 +175,10 @@
     const button = document.querySelector(`[data-sample-id="${sampleId}"]`);
     
     if (window.selectedSamples.has(sampleId)) {
-      // Remove from selection
       window.selectedSamples.delete(sampleId);
       button.classList.remove('btn-primary');
       button.classList.add('btn-outline-secondary');
     } else {
-      // Add to selection
       window.selectedSamples.add(sampleId);
       button.classList.remove('btn-outline-secondary');
       button.classList.add('btn-primary');
@@ -229,15 +229,16 @@
   }
   
   function createSamplePlotCard(sampleId) {
-    const detailedSpecs = JSON.parse(document.getElementById('vega_detailed_json').textContent);
-    console.log('Available sample keys:', Object.keys(detailedSpecs));
-    const sampleSpec = detailedSpecs[`${sampleId}`];
-    console.log('Found sample spec:', sampleSpec);
     const color = window.sampleColors[sampleId];
     
     // Get the selected metric from the dropdown
     const metricSelector = document.getElementById('metricSelector');
-    const selectedMetric = metricSelector ? metricSelector.value : 'contig_n50';
+    const selectedMetric = metricSelector ? metricSelector.value : 'contigs_n50';
+    const metricTitle = window.assemblyMetrics[selectedMetric] || selectedMetric;
+    
+    // Filter data for this sample
+    const sampleBuscoData = window.detailedData.filter(d => d.sample_id === sampleId);
+    const sampleAssemblyData = window.assemblyData.filter(d => d.sample_id === sampleId);
     
     const cardDiv = document.createElement('div');
     cardDiv.className = 'col-lg-6 mb-4';
@@ -249,96 +250,82 @@
             ${sampleId}
           </h6>
           <button class="btn btn-sm btn-outline-danger" onclick="removeSample('${sampleId}')">
-            <i class="fas fa-times"></i>
+            <i class="fas fa-times"></i> Remove
           </button>
         </div>
         <div class="card-body">
-          <div id="plot-${sampleId}" class="plot-container">
-            ${sampleSpec ? 'Loading plots...' : 'No detailed plots available for this sample.'}
-          </div>
+          <div id="combined-plot-${sampleId}" class="plot-container">Loading plots...</div>
         </div>
       </div>
     `;
     
-    // Embed the detailed plots if available
-    if (sampleSpec && sampleSpec.plots && sampleSpec.plots[selectedMetric]) {
-      // Wait for DOM and ensure container is visible
+    // Embed the combined plot
+    if (sampleBuscoData.length > 0) {
       setTimeout(() => {
-        const plotContainer = document.getElementById(`plot-${sampleId}`);
+        const plotContainer = document.getElementById(`combined-plot-${sampleId}`);
+        
         if (!plotContainer) return;
         
-        // Get the plot spec (make a copy to avoid modifying the original)
-        const plotSpec = JSON.parse(JSON.stringify(sampleSpec.plots[selectedMetric]));
+        // Create combined plot spec
+        const plotSpec = JSON.parse(JSON.stringify(window.combinedSpec));
         
-        // Calculate container width for initial scaling
-        const containerWidth = plotContainer.offsetWidth || plotContainer.clientWidth;
-        const originalWidth = plotSpec.width || 800;
+        // Calculate widths based on container
+        // Account for padding, margins, y-axis labels (~80px), and spacing
+        const containerWidth = plotContainer.offsetWidth || plotContainer.clientWidth || 500;
+        const yAxisLabelWidth = 100;  // Space for MAG ID labels
+        const spacing = plotSpec.spacing || 5;
+        const assemblyPlotWidth = 120;  // Fixed width for assembly plot
+        const availableWidth = containerWidth - yAxisLabelWidth - spacing - 40;  // 40px for padding
+        const buscoPlotWidth = Math.max(200, availableWidth - assemblyPlotWidth);
         
-        // Scale the spec width to match container if we have explicit width
-        if (containerWidth > 0 && originalWidth > 0 && containerWidth !== originalWidth) {
-          const scaleFactor = containerWidth / originalWidth;
-          // Scale the hconcat and its children
-          if (plotSpec.hconcat && Array.isArray(plotSpec.hconcat)) {
-            plotSpec.hconcat.forEach(chart => {
-              if (chart.width && typeof chart.width === 'number') {
-                chart.width = Math.round(chart.width * scaleFactor);
-              }
-            });
-          }
-          plotSpec.width = containerWidth;
+        // Set explicit widths
+        plotSpec.hconcat[0].width = buscoPlotWidth;
+        plotSpec.hconcat[1].width = assemblyPlotWidth;
+        
+        // Set parameters
+        plotSpec.params[0].value = sampleId;  // selected_sample
+        plotSpec.params[2].value = selectedMetric;  // metric_field
+        plotSpec.params[3].value = metricTitle;  // metric_title
+        
+        // Inject data into both hconcat children
+        plotSpec.hconcat[0].data = { values: sampleBuscoData };
+        plotSpec.hconcat[1].data = { values: sampleAssemblyData };
+        
+        // Set the x-axis title for assembly plot
+        if (plotSpec.hconcat[1].encoding && plotSpec.hconcat[1].encoding.x) {
+          plotSpec.hconcat[1].encoding.x.title = metricTitle;
         }
+        
+        // Get sorted MAG IDs for this sample
+        const magIds = [...new Set(sampleBuscoData.map(d => d.mag_id))].sort();
+        
+        // Set y-axis sort order for both plots
+        if (plotSpec.hconcat[0].encoding && plotSpec.hconcat[0].encoding.y) {
+          plotSpec.hconcat[0].encoding.y.sort = magIds;
+        }
+        if (plotSpec.hconcat[1].encoding && plotSpec.hconcat[1].encoding.y) {
+          plotSpec.hconcat[1].encoding.y.sort = magIds;
+        }
+        
+        // Add autosize configuration
+        plotSpec.autosize = { type: "fit", contains: "padding" };
         
         vegaEmbed(plotContainer, plotSpec, {
           actions: false,
           renderer: 'svg'
-        }).then(
-          function (result) {
-            result.view.logLevel(vega.Warn);
-            
-            // Store original widths for scaling
-            const originalSpecWidth = plotSpec.width || 800;
-            const originalHconcatWidths = plotSpec.hconcat ? 
-              plotSpec.hconcat.map(chart => chart.width).filter(w => typeof w === 'number') : [];
-            
-            // Function to resize horizontally only
-            const resizeHorizontally = () => {
-              const currentContainerWidth = plotContainer.offsetWidth || plotContainer.clientWidth;
-              if (currentContainerWidth > 0 && originalSpecWidth > 0) {
-                const scaleFactor = currentContainerWidth / originalSpecWidth;
-                // Update the view width directly - this scales horizontally only
-                result.view.width(Math.round(originalSpecWidth * scaleFactor)).run();
-              }
-            };
-            
-            // Initial resize
-            resizeHorizontally();
-            
-            // Use ResizeObserver for responsive behavior
-            const resizeObserver = new ResizeObserver(() => {
-              resizeHorizontally();
-            });
-            resizeObserver.observe(plotContainer);
-            
-            // Also handle window resize as fallback
-            window.addEventListener('resize', resizeHorizontally);
-          }
-        ).catch(
-          function (error) {
-            plotContainer.innerHTML = `
-              <div class="alert alert-warning">
-                <strong>Error loading plots:</strong> ${error.message}
-              </div>
-            `;
-          }
-        );
+        }).then(result => {
+          result.view.logLevel(vega.Warn);
+        }).catch(error => {
+          plotContainer.innerHTML = `<div class="alert alert-warning">Error: ${error.message}</div>`;
+        });
       }, 100);
-    } else if (sampleSpec) {
-      // If sample exists but no plots for this metric
-      document.getElementById(`plot-${sampleId}`).innerHTML = `
-        <div class="alert alert-info">
-          No plots available for the selected metric.
-        </div>
-      `;
+    } else {
+      setTimeout(() => {
+        const plotContainer = document.getElementById(`combined-plot-${sampleId}`);
+        if (plotContainer) {
+          plotContainer.innerHTML = '<div class="alert alert-info">No data available for this sample.</div>';
+        }
+      }, 100);
     }
     
     return cardDiv;
@@ -354,13 +341,7 @@
   }
   
   function updateAllPlots() {
-    // This function will be called when the metric selector changes
-    // For now, we'll just regenerate all the plot cards
     updatePlotCards();
-  }
-  
-  function hideSampleDetails() {
-    document.getElementById('sampleDetailsPanel').style.display = 'none';
   }
 </script>
 
@@ -368,7 +349,6 @@
 
 {% block footer %}
 <script type="text/javascript">
-  // Simple error handler function
   function handleErrors(errors, element) {
     console.error('Vega/Vega-Lite error:', errors);
     if (element && element.length) {

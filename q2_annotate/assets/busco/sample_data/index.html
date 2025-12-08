@@ -1,7 +1,7 @@
 {% extends 'tabbed.html' %}
 
 {% block head %}
-<title>Embedding Vega-Lite</title>
+<title>BUSCO QC Dashboard</title>
 <script src="js/bootstrapMagic.js" type="text/javascript"></script>
 <link href="css/styles.css" rel="stylesheet"/>
 <script type="text/javascript">
@@ -90,7 +90,7 @@
                             <span class="header-inline">View:</span>
                             <select id="visualizationToggle" class="form-select form-select-sm" style="width:auto">
                                 <option value="histograms">Histograms</option>
-                                <option value="violins" selected>Box Plots</option>
+                                <option value="boxplots" selected>Box Plots</option>
                             </select>
                         </div>
                         <p id="visualizationDescription">
@@ -142,28 +142,46 @@
     </div>
 </div>
 
-<script id="vega_summary_json" type="application/json">
-    {{ vega_summary | safe }}
+<!-- Vega Specs -->
+<script id="vega_histogram_spec" type="application/json">
+    {{ vega_histogram_spec | safe }}
+</script>
+
+<script id="vega_box_plot_spec" type="application/json">
+    {{ vega_box_plot_spec | safe }}
+</script>
+
+<script id="vega_scatter_spec" type="application/json">
+    {{ vega_scatter_spec | safe }}
+</script>
+
+<!-- Data -->
+<script id="histogram_data" type="application/json">
+    {{ histogram_data | safe }}
+</script>
+
+<script id="box_plot_data" type="application/json">
+    {{ box_plot_data | safe }}
+</script>
+
+<script id="scatter_data" type="application/json">
+    {{ scatter_data | safe }}
+</script>
+
+<script id="unbinned_data" type="application/json">
+    {{ unbinned_data | safe }}
 </script>
 
 <script id="sample_ids_json" type="application/json">
     {{ sample_ids_json | safe }}
 </script>
 
-<script id="vega_selectable_unbinned_json" type="application/json">
-    {{ vega_selectable_unbinned_json | safe }}
+<script id="metrics_json" type="application/json">
+    {{ metrics_json | safe }}
 </script>
 
 <script id="summary_stats_json" type="application/json">
     {{ summary_stats_json | safe }}
-</script>
-
-<script id="vega_scatter_completeness" type="application/json">
-    {{ vega_scatter_completeness | safe }}
-</script>
-
-<script id="box_plots_json" type="application/json">
-    {{ vega_box_plots | safe }}
 </script>
 
 <script type="text/javascript">
@@ -192,13 +210,16 @@
             ids.forEach(id => {
                 const opt = document.createElement('option');
                 opt.value = id; opt.textContent = id; selectEl.appendChild(opt);
-                
             });
         } catch (e) {}
 
-        // Get both visualization specs
-        const vegaSpecSummary = JSON.parse(document.getElementById('vega_summary_json').textContent);
-        const boxPlotsSpec = JSON.parse(document.getElementById('box_plots_json').textContent);
+        // Load specs and data
+        const histogramSpec = JSON.parse(document.getElementById('vega_histogram_spec').textContent);
+        const boxPlotSpec = JSON.parse(document.getElementById('vega_box_plot_spec').textContent);
+        const histogramData = JSON.parse(document.getElementById('histogram_data').textContent);
+        const boxPlotData = JSON.parse(document.getElementById('box_plot_data').textContent);
+        const metrics = JSON.parse(document.getElementById('metrics_json').textContent);
+
         const grid = document.getElementById('plotMarkers');
         const visualizationToggle = document.getElementById('visualizationToggle');
         const descriptionEl = document.getElementById('visualizationDescription');
@@ -208,6 +229,30 @@
         let currentViews = [];
 
         const actionsCfg = {actions: false};
+
+        // Metric titles for display
+        const metricTitles = {
+            'single': 'Single',
+            'duplicated': 'Duplicated',
+            'fragmented': 'Fragmented',
+            'missing': 'Missing',
+            'completeness': 'Completeness',
+            'contamination': 'Contamination',
+            'contigs_n50': 'Contig N50',
+            'length': 'Length'
+        };
+
+        // Y-axis formats by metric type
+        const yFormats = {
+            'single': '.0f',
+            'duplicated': '.0f',
+            'fragmented': '.0f',
+            'missing': '.0f',
+            'completeness': '.0f',
+            'contamination': '.0f',
+            'contigs_n50': '.2s',
+            'length': '.2s'
+        };
 
         // Function to clear current plots
         function clearPlots() {
@@ -225,11 +270,17 @@
         function renderHistograms() {
             clearPlots();
             grid.className = 'square-chart-grid';
-            const specsArray = Array.isArray(vegaSpecSummary) ? vegaSpecSummary : [vegaSpecSummary];
             
-            specsArray.forEach((spec) => {
+            metrics.forEach((metric) => {
                 const div = document.createElement('div');
                 grid.appendChild(div);
+                
+                // Clone spec and set metric parameter
+                const spec = JSON.parse(JSON.stringify(histogramSpec));
+                spec.data = { values: histogramData };
+                spec.params[1].value = metric;
+                spec.encoding.x.title = metricTitles[metric] || metric;
+                
                 vegaEmbed(div, spec, actionsCfg).then(
                     function (result) {
                         result.view.logLevel(vega.Warn);
@@ -245,15 +296,32 @@
             });
         }
 
-        // Function to render violin plots
-        function renderViolinPlots() {
+        // Function to render box plots
+        function renderBoxPlots() {
             clearPlots();
             grid.className = 'chart-grid';
-            const boxPlotsArray = Array.isArray(boxPlotsSpec) ? boxPlotsSpec : [boxPlotsSpec];
             
-            boxPlotsArray.forEach((spec) => {
+            metrics.forEach((metric) => {
+                if (!boxPlotData[metric]) return;
+                
                 const div = document.createElement('div');
                 grid.appendChild(div);
+                
+                // Clone spec and set data + metric
+                const spec = JSON.parse(JSON.stringify(boxPlotSpec));
+                spec.data = { values: boxPlotData[metric] };
+                spec.params[1].value = metric;
+                spec.params[2].value = yFormats[metric] || '.2f';
+                
+                // Update y-axis title in layer encodings
+                if (spec.layer) {
+                    spec.layer.forEach(layer => {
+                        if (layer.encoding && layer.encoding.y) {
+                            layer.encoding.y.title = metricTitles[metric] || metric;
+                        }
+                    });
+                }
+                
                 vegaEmbed(div, spec, actionsCfg).then(
                     function (result) {
                         result.view.logLevel(vega.Warn);
@@ -286,15 +354,21 @@
             if (selectedType === 'histograms') {
                 renderHistograms();
             } else {
-                renderViolinPlots();
+                renderBoxPlots();
             }
         });
 
         // Initial render (box plots by default)
-        renderViolinPlots();
+        renderBoxPlots();
 
-        // Embed scatter and unbinned
-        const scatterSpec = JSON.parse(document.getElementById('vega_scatter_completeness').textContent);
+        // Embed scatter plot
+        {% if comp_cont %}
+        const scatterSpec = JSON.parse(document.getElementById('vega_scatter_spec').textContent);
+        const scatterData = JSON.parse(document.getElementById('scatter_data').textContent);
+        scatterSpec.data = { values: scatterData };
+        scatterSpec.params[1].value = {{ upper_x }};
+        scatterSpec.params[2].value = {{ upper_y }};
+        
         vegaEmbed("#scatterPlotDiv", scatterSpec, actionsCfg).then(
             function (result) {
                 result.view.logLevel(vega.Warn);
@@ -306,24 +380,28 @@
                 handleErrors([error], $("#scatterPlotDiv"));
             }
         );
+        {% endif %}
 
-        const rawUnbinned = (document.getElementById('vega_selectable_unbinned_json').textContent || '').trim();
-        let vegaSpecSelectableUnbinned = null;
-        if (rawUnbinned && rawUnbinned !== 'None' && rawUnbinned !== 'null') {
-            try { vegaSpecSelectableUnbinned = JSON.parse(rawUnbinned); } catch (e) { vegaSpecSelectableUnbinned = null; }
-        }
-        if (vegaSpecSelectableUnbinned) {
-            vegaEmbed("#plotUnbinned", vegaSpecSelectableUnbinned, actionsCfg).then(
-                function (result) {
-                    result.view.logLevel(vega.Warn);
-                    result.view.resize();
-                }
-            ).catch(
-                function (error) {
-                    handleErrors([error], $("#plotUnbinned"));
-                }
-            );
-        }
+        // Embed unbinned plot
+        {% if unbinned %}
+        const unbinnedData = JSON.parse(document.getElementById('unbinned_data').textContent);
+        const unbinnedSpec = JSON.parse(JSON.stringify(histogramSpec));
+        unbinnedSpec.data = { values: unbinnedData.map(d => ({...d, metric: d.unbinned_contigs_count, category: 'unbinned_contigs_count'})) };
+        unbinnedSpec.params[1].value = 'unbinned_contigs_count';
+        unbinnedSpec.encoding.x.title = 'Unbinned contig count';
+        unbinnedSpec.encoding.y.title = 'Sample count';
+        
+        vegaEmbed("#plotUnbinned", unbinnedSpec, actionsCfg).then(
+            function (result) {
+                result.view.logLevel(vega.Warn);
+                result.view.resize();
+            }
+        ).catch(
+            function (error) {
+                handleErrors([error], $("#plotUnbinned"));
+            }
+        );
+        {% endif %}
 
         function updateViewsSelectedId(value) {
             views.forEach(v => {
@@ -336,7 +414,6 @@
             updateViewsSelectedId(value);
         });
 
-
         // Initialize with 'All'
         updateViewsSelectedId('All');
 
@@ -344,15 +421,17 @@
         const collapseElement = document.getElementById('histogramsCollapse');
         const chevronIcon = document.querySelector('[data-bs-target="#histogramsCollapse"] i');
         
-        collapseElement.addEventListener('show.bs.collapse', function () {
-            chevronIcon.classList.remove('fa-chevron-right');
-            chevronIcon.classList.add('fa-chevron-down');
-        });
-        
-        collapseElement.addEventListener('hide.bs.collapse', function () {
-            chevronIcon.classList.remove('fa-chevron-down');
-            chevronIcon.classList.add('fa-chevron-right');
-        });
+        if (collapseElement && chevronIcon) {
+            collapseElement.addEventListener('show.bs.collapse', function () {
+                chevronIcon.classList.remove('fa-chevron-right');
+                chevronIcon.classList.add('fa-chevron-down');
+            });
+            
+            collapseElement.addEventListener('hide.bs.collapse', function () {
+                chevronIcon.classList.remove('fa-chevron-down');
+                chevronIcon.classList.add('fa-chevron-right');
+            });
+        }
     });
 </script>
 

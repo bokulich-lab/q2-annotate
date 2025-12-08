@@ -1,7 +1,7 @@
 {% extends "tabbed.html" %}
 
 {% block head %}
-<title>Embedding Vega-Lite</title>
+<title>BUSCO Detailed View</title>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="js/bootstrapMagic.js" type="text/javascript"></script>
 <link href="css/styles.css" rel="stylesheet" />
@@ -31,10 +31,6 @@
         </p>
         <div id="plot-controls">
           <div class="d-flex flex-wrap align-items-center gap-3">
-            <div class="d-flex align-items-center">
-              <input type="checkbox" id="showAssemblyColumn" class="form-check-input me-2" checked>
-              <label for="showAssemblyColumn" class="form-check-label mb-0 me-2">Show assembly statistics</label>
-            </div>
             <div class="d-flex align-items-center">
               <label for="metricSelector" class="form-label mb-0 me-2">Assembly metric:</label>
               <select id="metricSelector" class="form-select form-select-sm" style="width: auto;">
@@ -72,160 +68,146 @@
 </div>
 
 <div class="row">
-  <div class="col-lg-8" id="buscoCol">
+  <div class="col-12">
     <div class="card">
-      <h5 class="card-header">BUSCO results</h5>
+      <h5 class="card-header">BUSCO Results and Assembly Statistics</h5>
       <div class="card-body">
-        <div id="buscoPlotContainer" class="plot-container"></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-4" id="assemblyCol">
-    <div class="card">
-      <h5 class="card-header">Assembly statistics</h5>
-      <div class="card-body">
-        <div id="assemblyPlotContainer" class="plot-container"></div>
+        <div id="combinedPlotContainer" class="plot-container">Loading plots...</div>
       </div>
     </div>
   </div>
 </div>
 
-<script id="vega_detailed_json" type="application/json">
-  {{ vega_detailed_plots | safe }}
+<!-- Combined Vega Spec -->
+<script id="vega_combined_detailed_spec" type="application/json">
+  {{ vega_combined_detailed_spec | safe }}
+</script>
+
+<!-- Data -->
+<script id="detailed_data" type="application/json">
+  {{ detailed_data | safe }}
+</script>
+
+<script id="assembly_data" type="application/json">
+  {{ assembly_data | safe }}
+</script>
+
+<script id="mag_ids_sorted" type="application/json">
+  {{ mag_ids_sorted | safe }}
+</script>
+
+<script id="assembly_metrics_json" type="application/json">
+  {{ assembly_metrics_json | safe }}
 </script>
 
 <script type="text/javascript">
-  // Store plot views for updates
-  window.buscoPlotView = null;
-  window.assemblyPlotView = null;
+  // Store plot view for updates
+  window.plotView = null;
 
-  function updatePlots() {
+  // Load data once
+  let detailedData, assemblyData, magIdsSorted, assemblyMetrics;
+  let combinedSpec;
+
+  function updatePlot() {
     const metricSelector = document.getElementById('metricSelector');
     const selectedMetric = metricSelector ? metricSelector.value : 'contigs_n50';
-    const buscoContainer = document.getElementById('buscoPlotContainer');
-    const assemblyContainer = document.getElementById('assemblyPlotContainer');
+    const metricTitle = assemblyMetrics[selectedMetric] || selectedMetric;
+    const plotContainer = document.getElementById('combinedPlotContainer');
     
-    if (!buscoContainer) return;
+    if (!plotContainer) return;
     
-    // Get the plot specs
-    const detailedSpecs = JSON.parse(document.getElementById('vega_detailed_json').textContent);
-    const allMagsSpec = detailedSpecs['all_mags'];
+    // Clear existing plot
+    plotContainer.innerHTML = '';
     
-    if (!allMagsSpec || !allMagsSpec.busco_plot) {
-      buscoContainer.innerHTML = '<div class="alert alert-warning">No BUSCO plot available.</div>';
-      return;
+    // Create combined plot spec
+    const plotSpec = JSON.parse(JSON.stringify(combinedSpec));
+    
+    // Calculate widths based on container
+    // Account for padding, margins, y-axis labels (~100px), and spacing
+    const containerWidth = plotContainer.offsetWidth || plotContainer.clientWidth || 800;
+    const yAxisLabelWidth = 120;  // Space for MAG ID labels (feature data shows full labels)
+    const spacing = plotSpec.spacing || 5;
+    const assemblyPlotWidth = 150;  // Fixed width for assembly plot
+    const availableWidth = containerWidth - yAxisLabelWidth - spacing - 40;  // 40px for padding
+    const buscoPlotWidth = Math.max(300, availableWidth - assemblyPlotWidth);
+    
+    // Set explicit widths
+    plotSpec.hconcat[0].width = buscoPlotWidth;
+    plotSpec.hconcat[1].width = assemblyPlotWidth;
+    
+    // Set parameters - show labels for feature data
+    plotSpec.params[1].value = true;  // show_labels = true for feature data
+    plotSpec.params[2].value = selectedMetric;  // metric_field
+    plotSpec.params[3].value = metricTitle;  // metric_title
+    
+    // Inject data into both hconcat children
+    plotSpec.hconcat[0].data = { values: detailedData };
+    plotSpec.hconcat[1].data = { values: assemblyData };
+    
+    // Set the x-axis title for assembly plot
+    if (plotSpec.hconcat[1].encoding && plotSpec.hconcat[1].encoding.x) {
+      plotSpec.hconcat[1].encoding.x.title = metricTitle;
     }
     
-    // Clear existing plots
-    buscoContainer.innerHTML = '';
-    if (assemblyContainer) {
-      assemblyContainer.innerHTML = '';
+    // Set y-axis sort order for both plots
+    if (plotSpec.hconcat[0].encoding && plotSpec.hconcat[0].encoding.y) {
+      plotSpec.hconcat[0].encoding.y.sort = magIdsSorted;
+    }
+    if (plotSpec.hconcat[1].encoding && plotSpec.hconcat[1].encoding.y) {
+      plotSpec.hconcat[1].encoding.y.sort = magIdsSorted;
     }
     
-    // Get the plot specs (make copies to avoid modifying the original)
-    const buscoSpec = JSON.parse(JSON.stringify(allMagsSpec.busco_plot));
+    // Add autosize configuration
+    plotSpec.autosize = { type: "fit", contains: "padding" };
     
-    // Embed BUSCO plot
-    vegaEmbed(buscoContainer, buscoSpec, {
+    vegaEmbed(plotContainer, plotSpec, {
       actions: false,
       renderer: 'svg'
     }).then(
       function (result) {
         result.view.logLevel(vega.Warn);
-        window.buscoPlotView = result.view;
+        window.plotView = result.view;
       }
     ).catch(
       function (error) {
-        buscoContainer.innerHTML = `
+        plotContainer.innerHTML = `
           <div class="alert alert-warning">
-            <strong>Error loading BUSCO plot:</strong> ${error.message}
+            <strong>Error loading plots:</strong> ${error.message}
           </div>
         `;
       }
     );
-    
-    // Embed assembly plot if available and column is visible
-    const showAssemblyColumn = document.getElementById('showAssemblyColumn');
-    const shouldShowAssembly = showAssemblyColumn && showAssemblyColumn.checked;
-    
-    if (shouldShowAssembly && assemblyContainer && allMagsSpec.assembly_plots && allMagsSpec.assembly_plots[selectedMetric]) {
-      const assemblySpec = JSON.parse(JSON.stringify(allMagsSpec.assembly_plots[selectedMetric]));
-      vegaEmbed(assemblyContainer, assemblySpec, {
-        actions: false,
-        renderer: 'svg'
-      }).then(
-        function (result) {
-          result.view.logLevel(vega.Warn);
-          window.assemblyPlotView = result.view;
-        }
-      ).catch(
-        function (error) {
-          assemblyContainer.innerHTML = `
-            <div class="alert alert-warning">
-              <strong>Error loading assembly plot:</strong> ${error.message}
-            </div>
-          `;
-        }
-      );
-    }
-  }
-
-  function toggleAssemblyColumn() {
-    const checkbox = document.getElementById('showAssemblyColumn');
-    const assemblyCol = document.getElementById('assemblyCol');
-    const buscoCol = document.getElementById('buscoCol');
-    const metricSelector = document.getElementById('metricSelector');
-    
-    if (checkbox && assemblyCol && buscoCol) {
-      if (checkbox.checked) {
-        // Show assembly column
-        assemblyCol.style.display = '';
-        buscoCol.className = 'col-lg-8';
-        if (metricSelector) {
-          metricSelector.disabled = false;
-        }
-        // Update plots when showing the column
-        updatePlots();
-      } else {
-        // Hide assembly column
-        assemblyCol.style.display = 'none';
-        buscoCol.className = 'col-lg-12';
-        if (metricSelector) {
-          metricSelector.disabled = true;
-        }
-        // Resize BUSCO plot to fit new container width
-        setTimeout(function() {
-          if (window.buscoPlotView) {
-            const container = document.getElementById('buscoPlotContainer');
-            if (container) {
-              window.buscoPlotView.width(container.offsetWidth).run();
-            }
-          }
-        }, 100);
-      }
-    }
   }
 
   $(document).ready(function () {
     // temporary hack to make it look good with Bootstrap 5
     adjustTagsToBS3()
 
+    // Load specs and data
+    combinedSpec = JSON.parse(document.getElementById('vega_combined_detailed_spec').textContent);
+    detailedData = JSON.parse(document.getElementById('detailed_data').textContent);
+    assemblyData = JSON.parse(document.getElementById('assembly_data').textContent);
+    magIdsSorted = JSON.parse(document.getElementById('mag_ids_sorted').textContent);
+    assemblyMetrics = JSON.parse(document.getElementById('assembly_metrics_json').textContent);
+
     // Add event listener for metric selector
     const metricSelector = document.getElementById('metricSelector');
     if (metricSelector) {
-      metricSelector.addEventListener('change', updatePlots);
+      metricSelector.addEventListener('change', updatePlot);
     }
     
-    // Add event listener for assembly column checkbox
-    const showAssemblyColumn = document.getElementById('showAssemblyColumn');
-    if (showAssemblyColumn) {
-      showAssemblyColumn.addEventListener('change', toggleAssemblyColumn);
-      // Set default to checked
-      showAssemblyColumn.checked = true;
-    }
+    // Add resize handler to re-render plot when window is resized
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+      // Debounce to avoid too many re-renders
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(function() {
+        updatePlot();
+      }, 50);  // Wait 250ms after resize stops before re-rendering
+    });
     
     // Initial plot render
-    updatePlots();
+    updatePlot();
   });
 </script>
 
