@@ -113,6 +113,10 @@
     height: auto;
 }
 
+.my-test-class {
+    padding-right: 0; !important;
+}
+
 /*adjustment for Bootstrap 5*/
 .table {
     border: 1px solid #dee2e6;

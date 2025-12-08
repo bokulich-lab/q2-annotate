@@ -18,125 +18,123 @@
 <script crossorigin="anonymous" integrity="sha256-9SEPo+fwJFpMUet/KACSwO+Z/dKMReF9q4zFhU/fT9M=" src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <br>
-<div class="row" style="justify-content: space-evenly; align-items: start;">
-    <div class="row" style="margin-bottom: 10px">
-        <div class="col-lg-12" style="margin: unset">
-            <div class="card">
-                <h5 class="card-header">BUSCO summary statistics</h5>
+<div class="row gx-2 mb-2">
+    <div class="col-lg-12">
+        <div class="card">
+            <h5 class="card-header">BUSCO summary statistics</h5>
+            <div class="card-body">
+                <p>
+                    The table below shows the summary statistics of the BUSCO marker count
+                    fractions for the categories
+                    <b>Single</b>, <b>Duplicated</b>, <b>Fragmented</b>, <b>Missing</b>
+                    {% if not comp_cont %}and {% else %}, {% endif %}<b>Complete</b>{% if comp_cont %}, <b>Completeness</b> {% if not unbinned %}and <b>Contamination</b>.{% else %}, <b>Contamination</b>
+                    and <b>Unbinned contigs</b>.{% endif %}{% endif %} The statistics are calculated for the categories across <b>all MAGs</b> in <b>all samples</b>{% if unbinned %}, including the
+                    percentage of <b>Unbinned contigs</b> per sample{% endif %}.
+                </p>
+                <table id="summaryTable" class="table table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">% single</th>
+                        <th scope="col">% duplicated</th>
+                        <th scope="col">% fragmented</th>
+                        <th scope="col">% missing</th>
+                        <th scope="col">% complete</th>
+                        {% if comp_cont %}
+                            <th scope="col">% completeness</th>
+                            <th scope="col">% contamination</th>
+                        {% endif %}
+                        {% if unbinned %}
+                            <th scope="col">% unbinned contigs</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="rowMinimum">
+                      <th scope="row">Minimum</th>
+                    </tr>
+                    <tr id="rowMedian">
+                      <th scope="row">Median</th>
+                    </tr>
+                    <tr id="rowMean">
+                      <th scope="row">Mean</th>
+                    </tr>
+                    <tr id="rowMaximum">
+                      <th scope="row">Maximum</th>
+                    </tr>
+                    <tr id="rowTotal">
+                      <th scope="row">Total count</th>
+                    </tr>
+                </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row gx-2" style="margin-bottom: 10px">
+    <div class="col-lg-12">
+        <div class="card">
+            <h5 class="card-header">
+                Distribution of BUSCO marker gene counts
+            </h5>
+            <div class="collapse show" id="histogramsCollapse">
                 <div class="card-body">
-                    <p>
-                        The table below shows the summary statistics of the BUSCO marker count
-                        fractions for the categories
-                        <b>Single</b>, <b>Duplicated</b>, <b>Fragmented</b>, <b>Missing</b> 
-                        {% if not comp_cont %}and {% else %}, {% endif %}<b>Complete</b>{% if comp_cont %}, <b>Completeness</b> {% if not unbinned %}and <b>Contamination</b>.{% else %}, <b>Contamination</b>
-                        and <b>Unbinned contigs</b>.{% endif %}{% endif %} The statistics are calculated for the categories across <b>all MAGs</b> in <b>all samples</b>{% if unbinned %}, including the
-                        percentage of <b>Unbinned contigs</b> per sample{% endif %}.
+                    <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 8px;">
+                        <span class="header-inline">Sample:</span>
+                        <select id="globalSampleSelect" class="form-select form-select-sm" style="width:auto">
+                            <option value="All" selected>All</option>
+                        </select>
+                        <span class="header-inline">View:</span>
+                        <select id="visualizationToggle" class="form-select form-select-sm" style="width:auto">
+                            <option value="histograms">Histograms</option>
+                            <option value="boxplots" selected>Box plots</option>
+                        </select>
+                    </div>
+                    <p id="visualizationDescription">
+                        The box plots below show distributions of BUSCO marker count fractions and assembly metrics.
+                        Each box shows the median, quartiles, and outliers for each category. Individual data points
+                        are overlaid with low transparency. Use the sample filter to highlight a specific sample
+                        across all box plots.
                     </p>
-                    <table id="summaryTable" class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">% single</th>
-                            <th scope="col">% duplicated</th>
-                            <th scope="col">% fragmented</th>
-                            <th scope="col">% missing</th>
-                            <th scope="col">% complete</th>
-                            {% if comp_cont %}
-                                <th scope="col">% completeness</th>
-                                <th scope="col">% contamination</th>
-                            {% endif %}
-                            {% if unbinned %}
-                                <th scope="col">% unbinned contigs</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr id="rowMinimum">
-                          <th scope="row">Minimum</th>
-                        </tr>
-                        <tr id="rowMedian">
-                          <th scope="row">Median</th>
-                        </tr>
-                        <tr id="rowMean">
-                          <th scope="row">Mean</th>
-                        </tr>
-                        <tr id="rowMaximum">
-                          <th scope="row">Maximum</th>
-                        </tr>
-                        <tr id="rowTotal">
-                          <th scope="row">Total count</th>
-                        </tr>
-                    </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="row" style="margin-bottom: 10px">
-        <div class="col-lg-12">
-            <div class="card">
-                <h5 class="card-header">
-                    Distribution of BUSCO marker gene counts
-                </h5>
-                <div class="collapse show" id="histogramsCollapse">
-                    <div class="card-body">
-                        <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 8px;">
-                            <span class="header-inline">Sample:</span>
-                            <select id="globalSampleSelect" class="form-select form-select-sm" style="width:auto">
-                                <option value="All" selected>All</option>
-                            </select>
-                            <span class="header-inline">View:</span>
-                            <select id="visualizationToggle" class="form-select form-select-sm" style="width:auto">
-                                <option value="histograms">Histograms</option>
-                                <option value="boxplots" selected>Box plots</option>
-                            </select>
-                        </div>
-                        <p id="visualizationDescription">
-                            The box plots below show distributions of BUSCO marker count fractions and assembly metrics.
-                            Each box shows the median, quartiles, and outliers for each category. Individual data points
-                            are overlaid with low transparency. Use the sample filter to highlight a specific sample
-                            across all box plots.
-                        </p>
-                        <div class="col-lg-12" id="summaryHistogramsMarkers">
-                            <div id="plotMarkers" class="square-chart-grid" style="margin-top: 5px"></div>
-                        </div>
+                    <div class="col-lg-12" id="summaryHistogramsMarkers">
+                        <div id="plotMarkers" class="square-chart-grid" style="margin-top: 5px"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="row" style="margin-bottom: 10px">
-        {% if comp_cont %}
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <h5 class="card-header">Completeness vs. contamination</h5>
-                <div class="card-body" style="display: block;">
-                    <p>
-                        Relationship between BUSCO completeness and contamination for each bin.
-                    </p>
-                    <div id="scatterPlotDiv" style="margin-top: 5px; width: 100%;"></div>
-                </div>
+<div class="row gx-2" style="margin-bottom: 10px">
+    {% if comp_cont %}
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <h5 class="card-header">Completeness vs. contamination</h5>
+            <div class="card-body" style="display: block;">
+                <p>
+                    Relationship between BUSCO completeness and contamination for each bin.
+                </p>
+                <div id="scatterPlotDiv" style="margin-top: 5px; width: 100%;"></div>
             </div>
         </div>
-        {% endif %}
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <h5 class="card-header">Distribution of unbinned contigs</h5>
-                <div class="card-body" style="display: block;">
-                    {% if unbinned %}
-                    <p>
-                        Distribution of unbinned contigs across all samples.
-                    </p>
-                    <div id="plotUnbinned" style="margin-top: 5px; width: 100%;"></div>
-                    {% else %}
-                    <div style="display: flex; align-items: center; justify-content: center;">
-                        <p style="font-style: italic; margin: 0; color: #6c757d;">No data available</p>
-                    </div>
-                    {% endif %}
+    </div>
+    {% endif %}
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <h5 class="card-header">Distribution of unbinned contigs</h5>
+            <div class="card-body" style="display: block;">
+                {% if unbinned %}
+                <p>
+                    Distribution of unbinned contigs across all samples.
+                </p>
+                <div id="plotUnbinned" style="margin-top: 5px; width: 100%;"></div>
+                {% else %}
+                <div style="display: flex; align-items: center; justify-content: center;">
+                    <p style="font-style: italic; margin: 0; color: #6c757d;">No data available</p>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
