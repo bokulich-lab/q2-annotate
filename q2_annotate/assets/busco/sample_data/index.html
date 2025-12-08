@@ -83,14 +83,14 @@
                 <div class="collapse show" id="histogramsCollapse">
                     <div class="card-body">
                         <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 8px;">
-                            <span class="header-inline">Sample filter:</span>
+                            <span class="header-inline">Sample:</span>
                             <select id="globalSampleSelect" class="form-select form-select-sm" style="width:auto">
                                 <option value="All" selected>All</option>
                             </select>
                             <span class="header-inline">View:</span>
                             <select id="visualizationToggle" class="form-select form-select-sm" style="width:auto">
                                 <option value="histograms">Histograms</option>
-                                <option value="boxplots" selected>Box Plots</option>
+                                <option value="boxplots" selected>Box plots</option>
                             </select>
                         </div>
                         <p id="visualizationDescription">
@@ -145,6 +145,10 @@
 <!-- Vega Specs -->
 <script id="vega_histogram_spec" type="application/json">
     {{ vega_histogram_spec | safe }}
+</script>
+
+<script id="vega_unbinned_spec" type="application/json">
+    {{ vega_unbinned_spec | safe }}
 </script>
 
 <script id="vega_box_plot_spec" type="application/json">
@@ -384,8 +388,10 @@
 
         // Embed unbinned plot
         {% if unbinned %}
+        let unbinnedSpec = JSON.parse(document.getElementById('vega_unbinned_spec').textContent);
+        console.log(unbinnedSpec);
         const unbinnedData = JSON.parse(document.getElementById('unbinned_data').textContent);
-        const unbinnedSpec = JSON.parse(JSON.stringify(histogramSpec));
+        unbinnedSpec = JSON.parse(JSON.stringify(unbinnedSpec));
         unbinnedSpec.data = { values: unbinnedData.map(d => ({...d, metric: d.unbinned_contigs_count, category: 'unbinned_contigs_count'})) };
         unbinnedSpec.params[1].value = 'unbinned_contigs_count';
         unbinnedSpec.encoding.x.title = 'Unbinned contig count';

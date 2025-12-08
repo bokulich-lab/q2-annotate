@@ -299,8 +299,9 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
 
     # Load Vega specs from JSON files
     vega_histogram_spec = json.dumps(_load_vega_spec("histogram"))
+    vega_unbinned_spec = json.dumps(_load_vega_spec("unbinned"))
     vega_boxplot_spec = json.dumps(_load_vega_spec("box_plot"))
-    vega_completeness_spec = json.dumps(_load_vega_spec("scatter_completeness"))
+    vega_completeness_spec = json.dumps(_load_vega_spec("completeness"))
     vega_busco_detailed_spec = json.dumps(_load_vega_spec("busco_detailed"))
     vega_assembly_detailed_spec = json.dumps(_load_vega_spec("assembly_detailed"))
     vega_combined_detailed_spec = json.dumps(_load_vega_spec("combined_detailed"))
@@ -359,6 +360,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         ],
         # Vega specs
         "vega_histogram_spec": vega_histogram_spec,
+        "vega_unbinned_spec": vega_unbinned_spec,
         "vega_box_plot_spec": vega_boxplot_spec,
         "vega_scatter_spec": vega_completeness_spec,
         "vega_busco_detailed_spec": vega_busco_detailed_spec,
