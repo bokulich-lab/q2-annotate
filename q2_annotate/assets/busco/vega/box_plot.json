@@ -1,5 +1,5 @@
 {
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
   "description": "Box-whiskers plot for BUSCO metrics",
   "params": [
     {
@@ -35,9 +35,7 @@
           "title": null,
           "scale": {"zero": false},
           "axis": {
-            "labels": true,
-            "labelExpr": "substring(datum.label, 0, 8)",
-            "format": ".1s"
+            "labels": true
           }
         },
         "color": {"value": "#2d718e"},
@@ -80,7 +78,7 @@
         "tooltip": [
           {"field": "sample_id", "type": "nominal", "title": "Sample ID"},
           {"field": "mag_id", "type": "nominal", "title": "MAG ID"},
-          {"field": "value", "type": "quantitative", "title": "Value", "format": ".2f"}
+          {"field": "value", "type": "quantitative", "title": "Value", "format": {"expr": "y_format"}}
         ]
       }
     }

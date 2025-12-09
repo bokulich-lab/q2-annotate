@@ -9,8 +9,8 @@
     // temporary hack to make it look good with Bootstrap 5
     removeBS3refs();
 </script>
-<script src="https://cdn.jsdelivr.net/npm//vega@5" type="text/javascript"></script>
-<script src="https://cdn.jsdelivr.net/npm//vega-lite@5.16.3" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm//vega@6" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm//vega-lite@6" type="text/javascript"></script>
 <script src="https://cdn.jsdelivr.net/npm//vega-embed@6" type="text/javascript"></script>
 <link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha256-YvdLHPgkqJ8DVUxjjnGVlMMJtNimJ6dYkowFFvp4kKs=" rel="stylesheet"/>
 {% endblock %}
@@ -107,7 +107,7 @@
                     This scatterplot shows the relationship between BUSCO completeness and contamination
                     for each MAG across your dataset.
                 </p>
-                <div id="scatterPlotDiv" style="margin-top: 10px;"></div>
+                <div id="scatterPlotDiv" style="margin-top: 10px; width: 100%;"></div>
             </div>
         </div>
     </div>
@@ -186,24 +186,24 @@
 
         // Metric titles for display
         const metricTitles = {
-            'single': 'Single',
-            'duplicated': 'Duplicated',
-            'fragmented': 'Fragmented',
-            'missing': 'Missing',
-            'completeness': 'Completeness',
-            'contamination': 'Contamination',
-            'contigs_n50': 'Contig N50',
-            'length': 'Length'
+            'single': '% single',
+            'duplicated': '% duplicated',
+            'fragmented': '% fragmented',
+            'missing': '% missing',
+            'completeness': '% completeness',
+            'contamination': '% contamination',
+            'contigs_n50': 'contig N50 [bp]',
+            'length': 'length [bp]'
         };
 
         // Y-axis formats by metric type
         const yFormats = {
-            'single': '.0f',
-            'duplicated': '.0f',
-            'fragmented': '.0f',
-            'missing': '.0f',
-            'completeness': '.0f',
-            'contamination': '.0f',
+            'single': '.1f',
+            'duplicated': '.1f',
+            'fragmented': '.1f',
+            'missing': '.1f',
+            'completeness': '.1f',
+            'contamination': '.1f',
             'contigs_n50': '.2s',
             'length': '.2s'
         };
@@ -264,8 +264,7 @@
                 // Clone spec and set data + metric
                 const spec = JSON.parse(JSON.stringify(boxPlotSpec));
                 spec.data = { values: boxPlotData[metric] };
-                spec.params[1].value = metric;
-                spec.params[2].value = yFormats[metric] || '.2f';
+                spec.layer[0].encoding.y.axis.format = yFormats[metric] || '.2f';
                 
                 // Update y-axis title in layer encodings
                 if (spec.layer) {
@@ -320,8 +319,8 @@
         const scatterSpec = JSON.parse(document.getElementById('vega_scatter_spec').textContent);
         const scatterData = JSON.parse(document.getElementById('scatter_data').textContent);
         scatterSpec.data = { values: scatterData };
-        scatterSpec.params[1].value = {{ upper_x }};
-        scatterSpec.params[2].value = {{ upper_y }};
+        scatterSpec.params[1].value = {{ upper_x | default(100) }};
+        scatterSpec.params[2].value = {{ upper_y | default(100) }};
         // Use mag_id as color field for feature data
         scatterSpec.encoding.color.field = 'mag_id';
         scatterSpec.encoding.color.title = 'MAG ID';

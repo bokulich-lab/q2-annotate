@@ -13,6 +13,11 @@
     {
       "name": "upper_y",
       "value": 110
+    },
+    {
+      "name": "grid",
+      "select": "interval",
+      "bind": "scales"
     }
   ],
   "data": {
@@ -56,12 +61,6 @@
       {"field": "contamination", "type": "quantitative", "title": "Contamination"},
       {"field": "dataset", "type": "nominal", "title": "Dataset"}
     ]
-  },
-  "selection": {
-    "grid": {
-      "type": "interval",
-      "bind": "scales"
-    }
   },
   "config": {
     "background": "#fff",

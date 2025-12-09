@@ -279,7 +279,7 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         tab_title = ["Sample details", "Feature details"]
         is_sample_data = True
     else:
-        tab_title = ["BUSCO plots", "BUSCO table"]
+        tab_title = ["Per-MAG metrics", "Feature details"]
         assets_subdir = "feature_data"
         is_sample_data = False
 
@@ -304,7 +304,6 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
     vega_completeness_spec = json.dumps(_load_vega_spec("completeness"))
     vega_busco_detailed_spec = json.dumps(_load_vega_spec("busco_detailed"))
     vega_assembly_detailed_spec = json.dumps(_load_vega_spec("assembly_detailed"))
-    vega_combined_detailed_spec = json.dumps(_load_vega_spec("combined_detailed"))
 
     # Prepare data for plots
     histogram_data = _prepare_histogram_data(results)
@@ -365,7 +364,6 @@ def _visualize_busco(output_dir: str, results: pd.DataFrame) -> None:
         "vega_scatter_spec": vega_completeness_spec,
         "vega_busco_detailed_spec": vega_busco_detailed_spec,
         "vega_assembly_detailed_spec": vega_assembly_detailed_spec,
-        "vega_combined_detailed_spec": vega_combined_detailed_spec,
         # Data for plots
         "histogram_data": histogram_data,
         "box_plot_data": box_plot_data,

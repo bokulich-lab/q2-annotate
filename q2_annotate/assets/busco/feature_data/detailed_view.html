@@ -9,8 +9,8 @@
   // temporary hack to make it look good with Bootstrap 5
   removeBS3refs();
 </script>
-<script src="https://cdn.jsdelivr.net/npm//vega@5" type="text/javascript"></script>
-<script src="https://cdn.jsdelivr.net/npm//vega-lite@5.16.3" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm//vega@6" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm//vega-lite@6" type="text/javascript"></script>
 <script src="https://cdn.jsdelivr.net/npm//vega-embed@6" type="text/javascript"></script>
 <link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha256-YvdLHPgkqJ8DVUxjjnGVlMMJtNimJ6dYkowFFvp4kKs=" rel="stylesheet"/>
 {% endblock %}
@@ -123,7 +123,7 @@
 
 <script type="text/javascript">
   // Load data once
-  let detailedData, assemblyData, magIdsSorted, magIdsDefault, assemblyMetrics;
+  let detailedData, assemblyData, magIdsDefault, assemblyMetrics;
   let buscoSpec, assemblySpec;
   let currentSortCategory = 'default';
   let currentSortSource = 'default';
@@ -188,7 +188,7 @@
     if (!buscoContainer || !assemblyContainer) return;
     
     // Get sorted mag IDs based on current sort category and source
-    magIdsSorted = getSortedMagIds(currentSortCategory, currentSortSource);
+    let magIdsSorted = getSortedMagIds(currentSortCategory, currentSortSource);
     
     // Create BUSCO plot spec
     const buscoPlotSpec = JSON.parse(JSON.stringify(buscoSpec));
