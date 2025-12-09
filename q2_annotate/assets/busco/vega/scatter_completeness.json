@@ -1,0 +1,89 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+  "description": "Completeness vs Contamination scatter plot",
+  "params": [
+    {
+      "name": "selected_id",
+      "value": "All"
+    },
+    {
+      "name": "upper_x",
+      "value": 110
+    },
+    {
+      "name": "upper_y",
+      "value": 110
+    }
+  ],
+  "data": {
+    "name": "source"
+  },
+  "transform": [
+    {
+      "filter": "(selected_id == 'All') || (datum.sample_id == selected_id)"
+    }
+  ],
+  "mark": {
+    "type": "circle",
+    "size": 100
+  },
+  "width": "container",
+  "height": 400,
+  "encoding": {
+    "x": {
+      "field": "completeness",
+      "type": "quantitative",
+      "title": "% completeness",
+      "scale": {"domain": [0, {"expr": "upper_x"}]}
+    },
+    "y": {
+      "field": "contamination",
+      "type": "quantitative",
+      "title": "% contamination",
+      "scale": {"domain": [0, {"expr": "upper_y"}]}
+    },
+    "color": {
+      "field": "sample_id",
+      "type": "nominal",
+      "title": "Sample ID",
+      "scale": {"scheme": "viridis"},
+      "legend": {"orient": "right"}
+    },
+    "tooltip": [
+      {"field": "sample_id", "type": "nominal", "title": "Sample ID"},
+      {"field": "mag_id", "type": "nominal", "title": "MAG ID"},
+      {"field": "completeness", "type": "quantitative", "title": "Completeness"},
+      {"field": "contamination", "type": "quantitative", "title": "Contamination"},
+      {"field": "dataset", "type": "nominal", "title": "Dataset"}
+    ]
+  },
+  "selection": {
+    "grid": {
+      "type": "interval",
+      "bind": "scales"
+    }
+  },
+  "config": {
+    "background": "#fff",
+    "font": "Open Sans, Arial, sans-serif",
+    "axis": {
+      "labelFontSize": 12,
+      "titleFontSize": 15,
+      "grid": true,
+      "gridColor": "#eaeaea"
+    },
+    "legend": {
+      "labelFontSize": 12,
+      "titleFontSize": 15,
+      "labelLimit": 1000
+    },
+    "header": {
+      "labelFontSize": 12,
+      "titleFontSize": 15
+    },
+    "view": {
+      "stroke": "#eaeaea"
+    }
+  }
+}
+

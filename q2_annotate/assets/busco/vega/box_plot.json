@@ -1,0 +1,107 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "description": "Box-whiskers plot for BUSCO metrics",
+  "params": [
+    {
+      "name": "selected_id",
+      "value": "All"
+    },
+    {
+      "name": "metric_param",
+      "value": "single"
+    },
+    {
+      "name": "y_format",
+      "value": ".0f"
+    }
+  ],
+  "data": {
+    "name": "source"
+  },
+  "width": "container",
+  "height": 300,
+  "transform": [{"calculate": "random() * (0.6 - 0.4) + 0.4", "as": "random"}],
+  "layer": [
+    {
+      "mark": {
+        "type": "boxplot",
+        "size": 30,
+        "opacity": 0.3
+      },
+      "encoding": {
+        "y": {
+          "field": "value",
+          "type": "quantitative",
+          "title": null,
+          "scale": {"zero": false},
+          "axis": {
+            "labels": true,
+            "labelExpr": "substring(datum.label, 0, 8)",
+            "format": ".1s"
+          }
+        },
+        "color": {"value": "#2d718e"},
+        "stroke": {"value": "black"},
+        "strokeWidth": {"value": 0.75}
+      }
+    },
+    {
+      "mark": {
+        "type": "circle",
+        "size": 50,
+        "stroke": null
+      },
+      "encoding": {
+        "y": {
+          "field": "value",
+          "type": "quantitative",
+          "scale": {"zero": false}
+        },
+        "x": {
+          "field": "random",
+          "type": "quantitative",
+          "scale": {"domain": [0, 1]},
+          "axis": {"labels": false, "title": null}
+        },
+        "color": {
+          "condition": {
+            "test": "datum.sample_id == selected_id",
+            "value": "red"
+          },
+          "value": "gray"
+        },
+        "opacity": {
+          "condition": {
+            "test": "datum.sample_id == selected_id",
+            "value": 0.9
+          },
+          "value": 0.4
+        },
+        "tooltip": [
+          {"field": "sample_id", "type": "nominal", "title": "Sample ID"},
+          {"field": "mag_id", "type": "nominal", "title": "MAG ID"},
+          {"field": "value", "type": "quantitative", "title": "Value", "format": ".2f"}
+        ]
+      }
+    }
+  ],
+  "config": {
+    "background": "#fff",
+    "font": "Open Sans, Arial, sans-serif",
+    "axis": {
+      "labelFontSize": 12,
+      "titleFontSize": 15,
+      "grid": false
+    },
+    "header": {
+      "labelFontSize": 12,
+      "titleFontSize": 15
+    },
+    "view": {
+      "stroke": "#eaeaea"
+    }
+  }
+}
+
+
+

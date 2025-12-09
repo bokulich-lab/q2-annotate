@@ -42,27 +42,44 @@
               <option value="scaffolds">Number of scaffolds</option>
             </select>
           </div>
-          <div class="d-flex align-items-center gap-2 ms-3">
-            <span class="text-muted small">BUSCO categories:</span>
-            <div class="d-flex align-items-center gap-2">
-              <div class="d-flex align-items-center">
-                <div class="busco-legend-color" style="background-color: #4A90A4; width: 16px; height: 16px; border-radius: 2px; margin-right: 4px;"></div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">Sort by BUSCO:</span>
+            <div class="d-flex align-items-center gap-1">
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="single" data-source="busco" title="Sort by Single (highest to lowest)">
+                <div class="busco-legend-color" style="background-color: #4A90A4; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
                 <span class="small">Single</span>
-              </div>
-              <div class="d-flex align-items-center">
-                <div class="busco-legend-color" style="background-color: #F5A623; width: 16px; height: 16px; border-radius: 2px; margin-right: 4px;"></div>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="duplicated" data-source="busco" title="Sort by Duplicated (highest to lowest)">
+                <div class="busco-legend-color" style="background-color: #F5A623; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
                 <span class="small">Duplicated</span>
-              </div>
-              <div class="d-flex align-items-center">
-                <div class="busco-legend-color" style="background-color: #D2691E; width: 16px; height: 16px; border-radius: 2px; margin-right: 4px;"></div>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="fragmented" data-source="busco" title="Sort by Fragmented (highest to lowest)">
+                <div class="busco-legend-color" style="background-color: #D2691E; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
                 <span class="small">Fragmented</span>
-              </div>
-              <div class="d-flex align-items-center">
-                <div class="busco-legend-color" style="background-color: #A0522D; width: 16px; height: 16px; border-radius: 2px; margin-right: 4px;"></div>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="missing" data-source="busco" title="Sort by Missing (highest to lowest)">
+                <div class="busco-legend-color" style="background-color: #A0522D; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
                 <span class="small">Missing</span>
-              </div>
+              </button>
             </div>
           </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">Sort by assembly:</span>
+            <div class="d-flex align-items-center gap-1">
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="contigs_n50" data-source="assembly" title="Sort by Contig N50 (highest to lowest)">
+                <span class="small">N50</span>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="percent_gaps" data-source="assembly" title="Sort by Percent Gaps (lowest to highest)">
+                <span class="small">Gaps</span>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="scaffolds" data-source="assembly" title="Sort by Scaffolds (lowest to highest)">
+                <span class="small">Scaffolds</span>
+              </button>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="default" data-source="default" title="Reset to default order">
+            <span class="small">Reset</span>
+          </button>
           <span id="selectionCount" class="ms-auto text-muted">0 samples selected</span>
         </div>
       </div>
@@ -102,6 +119,62 @@
 </script>
 
 <script type="text/javascript">
+  // Current sort category and source (shared across all sample cards)
+  window.currentSortCategory = 'default';
+  window.currentSortSource = 'default';
+  
+  function getSortedMagIds(sampleBuscoData, sampleAssemblyData, category, source) {
+    // Get unique MAG IDs for this sample
+    const magIds = [...new Set(sampleBuscoData.map(d => d.mag_id))].sort();
+    
+    if (category === 'default' || source === 'default') {
+      return magIds;
+    }
+    
+    const valueMap = {};
+    
+    if (source === 'busco') {
+      // Sort by BUSCO category
+      sampleBuscoData.forEach(d => {
+        if (d.category === category) {
+          valueMap[d.mag_id] = d.BUSCO_percentage || 0;
+        }
+      });
+      // Higher is better for BUSCO metrics
+      return magIds.sort((a, b) => {
+        const valA = valueMap[a] || 0;
+        const valB = valueMap[b] || 0;
+        return valB - valA;  // Descending order
+      });
+    } else if (source === 'assembly') {
+      // Sort by assembly metric
+      sampleAssemblyData.forEach(d => {
+        valueMap[d.mag_id] = d[category] || 0;
+      });
+      // For N50: higher is better, for gaps/scaffolds: lower is better
+      const ascending = (category === 'percent_gaps' || category === 'scaffolds');
+      return magIds.sort((a, b) => {
+        const valA = valueMap[a] || 0;
+        const valB = valueMap[b] || 0;
+        return ascending ? (valA - valB) : (valB - valA);
+      });
+    }
+    
+    return magIds;
+  }
+  
+  function updateSortButtons(activeCategory) {
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+      if (btn.dataset.sort === activeCategory) {
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-primary');
+      } else {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-secondary');
+      }
+    });
+  }
+  
   $(document).ready(function () {
     // temporary hack to make it look good with Bootstrap 5
     adjustTagsToBS3()
@@ -164,17 +237,15 @@
     // Add event listener for metric selector
     document.getElementById('metricSelector').onchange = updateAllPlots;
     
-    // Add resize handler to re-render plots when window is resized
-    // let resizeTimeout;
-    // window.addEventListener('resize', function() {
-    //   // Debounce to avoid too many re-renders
-    //   clearTimeout(resizeTimeout);
-    //   resizeTimeout = setTimeout(function() {
-    //     if (window.selectedSamples.size > 0) {
-    //       updatePlotCards();
-    //     }
-    //   }, 250);  // Wait 250ms after resize stops before re-rendering
-    // });
+    // Add event listeners for sort buttons
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        window.currentSortCategory = this.dataset.sort;
+        window.currentSortSource = this.dataset.source || 'default';
+        updateSortButtons(window.currentSortCategory);
+        updatePlotCards();
+      });
+    });
     
     // Initialize with first sample selected
     updateSelectionCount();
@@ -284,8 +355,8 @@
         
         if (!buscoContainer || !assemblyContainer) return;
         
-        // Get sorted MAG IDs for this sample
-        const magIds = [...new Set(sampleBuscoData.map(d => d.mag_id))].sort();
+        // Get sorted MAG IDs for this sample based on current sort category and source
+        const magIds = getSortedMagIds(sampleBuscoData, sampleAssemblyData, window.currentSortCategory, window.currentSortSource);
         
         // Create BUSCO plot spec
         const buscoPlotSpec = JSON.parse(JSON.stringify(window.buscoSpec));
