@@ -41,41 +41,38 @@
             </div>
           </div>
           <div class="d-flex flex-wrap align-items-center gap-3">
-            <div class="d-flex align-items-center gap-2">
-              <span class="text-muted small">Sort by BUSCO:</span>
-              <div class="d-flex align-items-center gap-1">
-                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="single" data-source="busco" title="Sort by Single (highest to lowest)">
-                  <div class="busco-legend-color" style="background-color: #4A90A4; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
-                  <span class="small">Single</span>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="duplicated" data-source="busco" title="Sort by Duplicated (highest to lowest)">
-                  <div class="busco-legend-color" style="background-color: #F5A623; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
-                  <span class="small">Duplicated</span>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="fragmented" data-source="busco" title="Sort by Fragmented (highest to lowest)">
-                  <div class="busco-legend-color" style="background-color: #D2691E; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
-                  <span class="small">Fragmented</span>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="missing" data-source="busco" title="Sort by Missing (highest to lowest)">
-                  <div class="busco-legend-color" style="background-color: #A0522D; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
-                  <span class="small">Missing</span>
-                </button>
-              </div>
+            <span class="text-muted small">Sort by:</span>
+            <div class="d-flex align-items-center gap-1">
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="single" data-source="busco" title="Sort by Single (highest to lowest)">
+                <div class="busco-legend-color" style="background-color: #4A90A4; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
+                <span class="small">Single</span>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="duplicated" data-source="busco" title="Sort by Duplicated (highest to lowest)">
+                <div class="busco-legend-color" style="background-color: #F5A623; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
+                <span class="small">Duplicated</span>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="fragmented" data-source="busco" title="Sort by Fragmented (highest to lowest)">
+                <div class="busco-legend-color" style="background-color: #D2691E; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
+                <span class="small">Fragmented</span>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="missing" data-source="busco" title="Sort by Missing (highest to lowest)">
+                <div class="busco-legend-color" style="background-color: #A0522D; width: 14px; height: 14px; border-radius: 2px; margin-right: 4px;"></div>
+                <span class="small">Missing</span>
+              </button>
             </div>
-            <div class="d-flex align-items-center gap-2">
-              <span class="text-muted small">Sort by assembly:</span>
-              <div class="d-flex align-items-center gap-1">
-                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="contigs_n50" data-source="assembly" title="Sort by Contig N50 (highest to lowest)">
-                  <span class="small">N50</span>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="percent_gaps" data-source="assembly" title="Sort by Percent Gaps (lowest to highest)">
-                  <span class="small">Gaps</span>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="scaffolds" data-source="assembly" title="Sort by Scaffolds (lowest to highest)">
-                  <span class="small">Scaffolds</span>
-                </button>
-              </div>
+            <div class="vr"></div>
+            <div class="d-flex align-items-center gap-1">
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="contigs_n50" data-source="assembly" title="Sort by Contig N50 (highest to lowest)">
+                <span class="small">N50</span>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="percent_gaps" data-source="assembly" title="Sort by Percent Gaps (lowest to highest)">
+                <span class="small">Gaps</span>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="scaffolds" data-source="assembly" title="Sort by Scaffolds (lowest to highest)">
+                <span class="small">Scaffolds</span>
+              </button>
             </div>
+            <div class="vr"></div>
             <button class="btn btn-sm btn-outline-secondary d-flex align-items-center sort-btn" data-sort="default" data-source="default" title="Reset to default order">
               <span class="small">Reset</span>
             </button>
@@ -255,6 +252,12 @@
         currentSortCategory = this.dataset.sort;
         currentSortSource = this.dataset.source || 'default';
         updateSortButtons(currentSortCategory);
+
+        // If sorting by assembly metric, update the dropdown to show that metric
+        if (currentSortSource === 'assembly' && metricSelector) {
+          metricSelector.value = currentSortCategory;
+        }
+
         updatePlots();
       });
     });

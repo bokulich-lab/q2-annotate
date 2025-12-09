@@ -35,7 +35,8 @@
           "title": null,
           "scale": {"zero": false},
           "axis": {
-            "labels": true
+            "labels": true,
+            "format": {"expr": "y_format"}
           }
         },
         "color": {"value": "#2d718e"},

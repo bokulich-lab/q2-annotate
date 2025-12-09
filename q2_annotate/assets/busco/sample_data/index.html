@@ -234,24 +234,24 @@
 
         // Metric titles for display
         const metricTitles = {
-            'single': 'Single',
-            'duplicated': 'Duplicated',
-            'fragmented': 'Fragmented',
-            'missing': 'Missing',
-            'completeness': 'Completeness',
-            'contamination': 'Contamination',
-            'contigs_n50': 'Contig N50',
-            'length': 'Length'
+            'single': '% single',
+            'duplicated': '% duplicated',
+            'fragmented': '% fragmented',
+            'missing': '% missing',
+            'completeness': '% completeness',
+            'contamination': '% contamination',
+            'contigs_n50': 'contig N50 [bp]',
+            'length': 'length [bp]'
         };
 
         // Y-axis formats by metric type
         const yFormats = {
-            'single': '.0f',
-            'duplicated': '.0f',
-            'fragmented': '.0f',
-            'missing': '.0f',
-            'completeness': '.0f',
-            'contamination': '.0f',
+            'single': '.1f',
+            'duplicated': '.1f',
+            'fragmented': '.1f',
+            'missing': '.1f',
+            'completeness': '.1f',
+            'contamination': '.1f',
             'contigs_n50': '.2s',
             'length': '.2s'
         };
@@ -312,8 +312,7 @@
                 // Clone spec and set data + metric
                 const spec = JSON.parse(JSON.stringify(boxPlotSpec));
                 spec.data = { values: boxPlotData[metric] };
-                spec.params[1].value = metric;
-                spec.params[2].value = yFormats[metric] || '.2f';
+                spec.layer[0].encoding.y.axis.format = yFormats[metric] || '.2f';
                 
                 // Update y-axis title in layer encodings
                 if (spec.layer) {
