@@ -34,15 +34,16 @@
     },
     "y": {
       "aggregate": "count",
-      "title": "MAG count"
+      "type": "quantitative",
+      "title": "MAG count",
+      "scale": {"zero": true}
     },
     "color": {
       "value": "#2d718e"
     },
     "tooltip": [
-      {"field": "sample_id", "type": "nominal", "title": "Sample ID"},
-      {"field": "mag_id", "type": "nominal", "title": "MAG ID"},
-      {"field": "metric", "type": "quantitative", "title": "Value"}
+      {"field": "metric", "type": "quantitative", "title": "Value"},
+      {"aggregate": "count", "type": "quantitative", "title": "Count"}
     ]
   },
   "config": {
@@ -63,6 +64,7 @@
     }
   }
 }
+
 
 
 

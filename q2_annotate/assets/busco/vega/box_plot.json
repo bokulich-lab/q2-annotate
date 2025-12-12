@@ -20,13 +20,13 @@
   },
   "width": "container",
   "height": 300,
-  "transform": [{"calculate": "random() * (0.6 - 0.4) + 0.4", "as": "random"}],
+  "transform": [{"calculate": "random() * (0.33 - 0.13) + 0.13", "as": "random"}],
   "layer": [
     {
       "mark": {
         "type": "boxplot",
         "size": 30,
-        "opacity": 0.3
+        "opacity": 0.8
       },
       "encoding": {
         "y": {
@@ -39,12 +39,21 @@
             "format": {"expr": "y_format"}
           }
         },
+        "x": {
+          "datum": 0.65,
+          "type": "quantitative",
+          "scale": {"domain": [0, 1], "padding": 0.1},
+          "axis": {"labels": false, "title": null, "ticks":  false}
+        },
         "color": {"value": "#2d718e"},
         "stroke": {"value": "black"},
         "strokeWidth": {"value": 0.75}
       }
     },
     {
+      "transform": [
+        {"filter": "datum.sample_id != selected_id || selected_id == 'All'"}
+      ],
       "mark": {
         "type": "circle",
         "size": 50,
@@ -59,22 +68,48 @@
         "x": {
           "field": "random",
           "type": "quantitative",
-          "scale": {"domain": [0, 1]},
-          "axis": {"labels": false, "title": null}
+          "scale": {"domain": [0, 1], "padding": 0.15},
+          "axis": {"labels": false, "title": null, "ticks":  false}
         },
         "color": {
-          "condition": {
-            "test": "datum.sample_id == selected_id",
-            "value": "red"
-          },
           "value": "gray"
         },
         "opacity": {
-          "condition": {
-            "test": "datum.sample_id == selected_id",
-            "value": 0.9
-          },
-          "value": 0.4
+          "value": 0.3
+        },
+        "tooltip": [
+          {"field": "sample_id", "type": "nominal", "title": "Sample ID"},
+          {"field": "mag_id", "type": "nominal", "title": "MAG ID"},
+          {"field": "value", "type": "quantitative", "title": "Value", "format": {"expr": "y_format"}}
+        ]
+      }
+    },
+    {
+      "transform": [
+        {"filter": "datum.sample_id == selected_id && selected_id != 'All'"}
+      ],
+      "mark": {
+        "type": "circle",
+        "size": 50,
+        "stroke": null
+      },
+      "encoding": {
+        "y": {
+          "field": "value",
+          "type": "quantitative",
+          "scale": {"zero": false}
+        },
+        "x": {
+          "field": "random",
+          "type": "quantitative",
+          "scale": {"domain": [0, 1], "padding": 0.15},
+          "axis": {"labels": false, "title": null}
+        },
+        "color": {
+          "value": "red"
+        },
+        "opacity": {
+          "value": 0.9
         },
         "tooltip": [
           {"field": "sample_id", "type": "nominal", "title": "Sample ID"},
@@ -101,6 +136,7 @@
     }
   }
 }
+
 
 
 
