@@ -43,7 +43,7 @@
       "field": "mag_id",
       "type": "nominal",
       "axis": null,
-      "sort": null
+      "sort": {"field": "sort_order", "order": "ascending"}
     },
     "tooltip": [
       {"field": "sample_id", "type": "nominal", "title": "Sample ID"},

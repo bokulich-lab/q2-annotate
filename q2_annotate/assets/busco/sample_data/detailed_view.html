@@ -122,44 +122,58 @@
   window.currentSortCategory = 'default';
   window.currentSortSource = 'default';
   
-  function getSortedMagIds(sampleBuscoData, sampleAssemblyData, category, source) {
+  // Store Vega views for each sample to enable updates without re-rendering
+  window.sampleViews = {};
+  
+  function getSortOrderMap(sampleBuscoData, sampleAssemblyData, category, source) {
     // Get unique MAG IDs for this sample
     const magIds = [...new Set(sampleBuscoData.map(d => d.mag_id))].sort();
     
+    let sortedMagIds;
     if (category === 'default' || source === 'default') {
-      return magIds;
-    }
-    
-    const valueMap = {};
-    
-    if (source === 'busco') {
-      // Sort by BUSCO category
+      sortedMagIds = magIds;
+    } else if (source === 'busco') {
+      const valueMap = {};
       sampleBuscoData.forEach(d => {
         if (d.category === category) {
           valueMap[d.mag_id] = d.BUSCO_percentage || 0;
         }
       });
       // Higher is better for BUSCO metrics
-      return magIds.sort((a, b) => {
+      sortedMagIds = [...magIds].sort((a, b) => {
         const valA = valueMap[a] || 0;
         const valB = valueMap[b] || 0;
         return valB - valA;  // Descending order
       });
     } else if (source === 'assembly') {
-      // Sort by assembly metric
+      const valueMap = {};
       sampleAssemblyData.forEach(d => {
         valueMap[d.mag_id] = d[category] || 0;
       });
       // For N50: higher is better, for gaps/scaffolds: lower is better
       const ascending = (category === 'percent_gaps' || category === 'scaffolds');
-      return magIds.sort((a, b) => {
+      sortedMagIds = [...magIds].sort((a, b) => {
         const valA = valueMap[a] || 0;
         const valB = valueMap[b] || 0;
         return ascending ? (valA - valB) : (valB - valA);
       });
+    } else {
+      sortedMagIds = magIds;
     }
     
-    return magIds;
+    // Create a map of mag_id -> sort_order
+    const orderMap = {};
+    sortedMagIds.forEach((magId, index) => {
+      orderMap[magId] = index;
+    });
+    return orderMap;
+  }
+  
+  function addSortOrder(data, orderMap) {
+    return data.map(d => ({
+      ...d,
+      sort_order: orderMap[d.mag_id] !== undefined ? orderMap[d.mag_id] : 9999
+    }));
   }
   
   function updateSortButtons(activeCategory) {
@@ -247,7 +261,8 @@
           metricSelector.value = window.currentSortCategory;
         }
 
-        updatePlotCards();
+        // Update existing views instead of recreating
+        updateSortOrder();
       });
     });
     
@@ -307,6 +322,9 @@
     const container = document.getElementById('plotCardsContainer');
     container.innerHTML = '';
     
+    // Clean up old views
+    window.sampleViews = {};
+    
     window.selectedSamples.forEach(sampleId => {
       const card = createSamplePlotCard(sampleId);
       container.appendChild(card);
@@ -327,6 +345,7 @@
     
     const cardDiv = document.createElement('div');
     cardDiv.className = 'col-lg-6 mb-2';
+    cardDiv.id = `card-${sampleId}`;
     cardDiv.innerHTML = `
       <div class="card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -351,57 +370,68 @@
       </div>
     `;
     
+    // Initialize view storage for this sample
+    if (!window.sampleViews[sampleId]) {
+      window.sampleViews[sampleId] = { busco: null, assembly: null };
+    }
+    
     // Embed the plots separately for independent resizing
     if (sampleBuscoData.length > 0) {
-      setTimeout(() => {
+      setTimeout(async () => {
         const buscoContainer = document.getElementById(`busco-plot-${sampleId}`);
         const assemblyContainer = document.getElementById(`assembly-plot-${sampleId}`);
         
         if (!buscoContainer || !assemblyContainer) return;
         
-        // Get sorted MAG IDs for this sample based on current sort category and source
-        const magIds = getSortedMagIds(sampleBuscoData, sampleAssemblyData, window.currentSortCategory, window.currentSortSource);
+        // Get sort order map for this sample
+        const orderMap = getSortOrderMap(sampleBuscoData, sampleAssemblyData, window.currentSortCategory, window.currentSortSource);
         
-        // Create BUSCO plot spec
+        // Add sort_order to data
+        const buscoDataWithSort = addSortOrder(sampleBuscoData, orderMap);
+        const assemblyDataWithSort = addSortOrder(sampleAssemblyData, orderMap);
+        
+        // Create BUSCO plot spec with inline data (for initial render)
         const buscoPlotSpec = JSON.parse(JSON.stringify(window.buscoSpec));
         buscoPlotSpec.params[0].value = sampleId;  // selected_sample
-        buscoPlotSpec.data = { values: sampleBuscoData };
-        if (buscoPlotSpec.encoding && buscoPlotSpec.encoding.y) {
-          buscoPlotSpec.encoding.y.sort = magIds;
-        }
+        buscoPlotSpec.data = { name: 'source', values: buscoDataWithSort };
         
-        // Create Assembly plot spec
+        // Create Assembly plot spec with inline data
         const assemblyPlotSpec = JSON.parse(JSON.stringify(window.assemblySpec));
         assemblyPlotSpec.params[0].value = sampleId;  // selected_sample
         assemblyPlotSpec.params[1].value = selectedMetric;  // metric_field
         assemblyPlotSpec.params[2].value = metricTitle;  // metric_title
-        assemblyPlotSpec.data = { values: sampleAssemblyData };
+        assemblyPlotSpec.data = { name: 'source', values: assemblyDataWithSort };
         if (assemblyPlotSpec.encoding && assemblyPlotSpec.encoding.x) {
           assemblyPlotSpec.encoding.x.title = metricTitle;
         }
-        if (assemblyPlotSpec.encoding && assemblyPlotSpec.encoding.y) {
-          assemblyPlotSpec.encoding.y.sort = magIds;
+        
+        // Embed BUSCO plot and store view reference
+        try {
+          const buscoResult = await vegaEmbed(buscoContainer, buscoPlotSpec, {
+            actions: false,
+            renderer: 'svg'
+          });
+          buscoResult.view.logLevel(vega.Warn);
+          window.sampleViews[sampleId].busco = buscoResult.view;
+          // Store the sample's raw data for later sorting
+          window.sampleViews[sampleId].buscoData = sampleBuscoData;
+        } catch (error) {
+          buscoContainer.innerHTML = `<div class="alert alert-warning">Error: ${error.message}</div>`;
         }
         
-        // Embed BUSCO plot
-        vegaEmbed(buscoContainer, buscoPlotSpec, {
-          actions: false,
-          renderer: 'svg'
-        }).then(result => {
-          result.view.logLevel(vega.Warn);
-        }).catch(error => {
-          buscoContainer.innerHTML = `<div class="alert alert-warning">Error: ${error.message}</div>`;
-        });
-        
-        // Embed Assembly plot
-        vegaEmbed(assemblyContainer, assemblyPlotSpec, {
-          actions: false,
-          renderer: 'svg'
-        }).then(result => {
-          result.view.logLevel(vega.Warn);
-        }).catch(error => {
+        // Embed Assembly plot and store view reference
+        try {
+          const assemblyResult = await vegaEmbed(assemblyContainer, assemblyPlotSpec, {
+            actions: false,
+            renderer: 'svg'
+          });
+          assemblyResult.view.logLevel(vega.Warn);
+          window.sampleViews[sampleId].assembly = assemblyResult.view;
+          // Store the sample's raw data for later sorting
+          window.sampleViews[sampleId].assemblyData = sampleAssemblyData;
+        } catch (error) {
           assemblyContainer.innerHTML = `<div class="alert alert-warning">Error: ${error.message}</div>`;
-        });
+        }
       }, 100);
     } else {
       setTimeout(() => {
@@ -419,13 +449,63 @@
     return cardDiv;
   }
   
+  function updateSortOrder() {
+    // Update sort order for all selected samples without recreating charts
+    window.selectedSamples.forEach(sampleId => {
+      const views = window.sampleViews[sampleId];
+      if (!views) return;
+      
+      // Use stored raw data for this sample
+      const sampleBuscoData = views.buscoData || [];
+      const sampleAssemblyData = views.assemblyData || [];
+      
+      if (sampleBuscoData.length === 0) return;
+      
+      // Calculate new sort order
+      const orderMap = getSortOrderMap(sampleBuscoData, sampleAssemblyData, window.currentSortCategory, window.currentSortSource);
+      
+      // Update BUSCO view
+      if (views.busco) {
+        try {
+          const buscoDataWithSort = addSortOrder(sampleBuscoData, orderMap);
+          const cs = vega.changeset().remove(() => true).insert(buscoDataWithSort);
+          views.busco.change('source', cs).run();
+        } catch (e) {
+          console.error('Error updating BUSCO view for', sampleId, ':', e);
+        }
+      }
+      
+      // Update Assembly view
+      if (views.assembly) {
+        try {
+          const assemblyDataWithSort = addSortOrder(sampleAssemblyData, orderMap);
+          const cs = vega.changeset().remove(() => true).insert(assemblyDataWithSort);
+          views.assembly.change('source', cs).run();
+        } catch (e) {
+          console.error('Error updating Assembly view for', sampleId, ':', e);
+        }
+      }
+    });
+  }
+  
   function removeSample(sampleId) {
     const button = document.querySelector(`[data-sample-id="${sampleId}"]`);
     window.selectedSamples.delete(sampleId);
     button.classList.remove('btn-primary');
     button.classList.add('btn-outline-secondary');
+    
+    // Clean up views for this sample
+    if (window.sampleViews[sampleId]) {
+      delete window.sampleViews[sampleId];
+    }
+    
+    // Remove the card directly instead of rebuilding all
+    const card = document.getElementById(`card-${sampleId}`);
+    if (card) {
+      card.remove();
+    }
+    
     updateSelectionCount();
-    updatePlotCards();
   }
   
   function updateAllPlots() {

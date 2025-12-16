@@ -45,7 +45,7 @@
         "labels": true,
         "labelExpr": "substring(datum.label, 0, 8)"
       },
-      "sort": null
+      "sort": {"field": "sort_order", "order": "ascending"}
     },
     "color": {
       "field": "category",
