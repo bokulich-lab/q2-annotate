@@ -83,6 +83,10 @@
                             <option value="histograms">Histograms</option>
                             <option value="boxplots" selected>Box Plots</option>
                         </select>
+                        <div id="hidePointsContainer" class="form-check" style="display: flex; align-items: center; margin-left: 8px;">
+                            <input class="form-check-input" type="checkbox" id="hidePointsCheckbox" style="margin-top: 0;">
+                            <label class="form-check-label" for="hidePointsCheckbox" style="margin-left: 4px; white-space: nowrap;">Hide points</label>
+                        </div>
                     </div>
                     <p id="visualizationDescription">
                         The box plots below show distributions of BUSCO marker count fractions and assembly metrics.
@@ -177,6 +181,8 @@
         const grid = document.getElementById('plotMarkers');
         const visualizationToggle = document.getElementById('visualizationToggle');
         const descriptionEl = document.getElementById('visualizationDescription');
+        const hidePointsContainer = document.getElementById('hidePointsContainer');
+        const hidePointsCheckbox = document.getElementById('hidePointsCheckbox');
 
         // Track views
         const views = [];
@@ -255,6 +261,8 @@
             clearPlots();
             grid.className = 'chart-grid';
             
+            const hidePoints = hidePointsCheckbox.checked;
+            
             metrics.forEach((metric) => {
                 if (!boxPlotData[metric]) return;
                 
@@ -265,6 +273,13 @@
                 const spec = JSON.parse(JSON.stringify(boxPlotSpec));
                 spec.data = { values: boxPlotData[metric] };
                 spec.layer[0].encoding.y.axis.format = yFormats[metric] || '.2f';
+                
+                // Set hide_points param
+                spec.params.forEach(param => {
+                    if (param.name === 'hide_points') {
+                        param.value = hidePoints;
+                    }
+                });
                 
                 // Update y-axis title in layer encodings
                 if (spec.layer) {
@@ -304,9 +319,19 @@
             const selectedType = this.value;
             updateDescription(selectedType);
             
+            // Show/hide the hide points checkbox
+            hidePointsContainer.style.display = (selectedType === 'boxplots') ? 'flex' : 'none';
+            
             if (selectedType === 'histograms') {
                 renderHistograms();
             } else {
+                renderBoxPlots();
+            }
+        });
+
+        // Hide points checkbox listener
+        hidePointsCheckbox.addEventListener('change', function() {
+            if (visualizationToggle.value === 'boxplots') {
                 renderBoxPlots();
             }
         });
