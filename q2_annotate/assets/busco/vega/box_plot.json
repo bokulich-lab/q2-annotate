@@ -20,7 +20,7 @@
   },
   "width": "container",
   "height": 300,
-  "transform": [{"calculate": "random() * (0.33 - 0.13) + 0.13", "as": "random"}],
+  "transform": [{"calculate": "random() * (0.6 - 0.4) + 0.4", "as": "random"}],
   "layer": [
     {
       "mark": {
@@ -40,14 +40,14 @@
           }
         },
         "x": {
-          "datum": 0.65,
+          "datum": 0.5,
           "type": "quantitative",
           "scale": {"domain": [0, 1], "padding": 0.1},
           "axis": {"labels": false, "title": null, "ticks":  false}
         },
-        "color": {"value": "#2d718e"},
+        "color": {"value": null},
         "stroke": {"value": "black"},
-        "strokeWidth": {"value": 0.75}
+        "strokeWidth": {"value": 1.2}
       }
     },
     {
@@ -72,7 +72,7 @@
           "axis": {"labels": false, "title": null, "ticks":  false}
         },
         "color": {
-          "value": "gray"
+          "value": "#2d718e"
         },
         "opacity": {
           "value": 0.3
