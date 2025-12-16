@@ -479,9 +479,11 @@ function initSampleDataView() {
 
       if (window.currentSortSource === 'assembly' && metricSelector) {
         metricSelector.value = window.currentSortCategory;
+        // Need to regenerate plots to update axis labels
+        updateAllPlots();
+      } else {
+        updateSortOrder();
       }
-
-      updateSortOrder();
     });
   });
 
