@@ -476,14 +476,7 @@ function initSampleDataView() {
       window.currentSortCategory = this.dataset.sort;
       window.currentSortSource = this.dataset.source || 'default';
       updateSortButtons(window.currentSortCategory);
-
-      if (window.currentSortSource === 'assembly' && metricSelector) {
-        metricSelector.value = window.currentSortCategory;
-        // Need to regenerate plots to update axis labels
-        updateAllPlots();
-      } else {
-        updateSortOrder();
-      }
+      updateSortOrder();
     });
   });
 
