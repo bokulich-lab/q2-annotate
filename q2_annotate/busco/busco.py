@@ -241,7 +241,7 @@ def _evaluate_busco(
     kwargs = {
         k: v
         for k, v in locals().items()
-        if k not in ["mags", "db", "additional_metrics"]
+        if k not in ["mags", "db", "additional_metrics", "unbinned_contigs"]
     }
     kwargs["offline"] = True
     kwargs["download_path"] = str(db)

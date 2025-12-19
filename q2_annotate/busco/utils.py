@@ -356,31 +356,6 @@ def _process_busco_results(results, sample_id, mag_id, file_name, additional_met
     return results
 
 
-def _filter_unbinned_for_partition(
-    unbinned_contigs: ContigSequencesDirFmt,
-    mag_partition: qiime2.Artifact,
-    _filter_contigs: Callable,
-):
-    """
-    Filters the unbinned contigs to match the sample IDs in a MAG partition.
-
-    Args:
-        unbinned_contigs (ContigSequencesDirFmt): The full unbinned contigs.
-        mag_partition (MultiMAGSequencesDirFmt): One partition of MAGs.
-        _filter_contigs (Callable): QIIME 2 action to filter contigs.
-
-    Returns:
-        ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
-    """
-    sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
-    metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
-    (filtered_unbinned,) = _filter_contigs(
-        contigs=unbinned_contigs,
-        metadata=metadata,
-    )
-    return filtered_unbinned
-
-
 def _count_contigs(file_paths: List[Path]) -> int:
     """
     Count the number of DNA sequences across a list of FASTA files.

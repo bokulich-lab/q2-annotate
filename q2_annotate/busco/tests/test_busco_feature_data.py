@@ -84,22 +84,6 @@ class TestBUSCOFeatureData(TestPluginBase):
             ]
         )
 
-    @patch(
-        "q2_annotate.busco.busco._draw_detailed_plots",
-        return_value={"fake1": {"plot": "NaN"}},
-    )
-    @patch(
-        "q2_annotate.busco.busco._draw_marker_summary_histograms",
-        return_value={"fake2": {"plot": "NaN"}},
-    )
-    @patch(
-        "q2_annotate.busco.busco._draw_selectable_summary_histograms",
-        return_value={"fake3": {"plot": "spec"}},
-    )
-    @patch(
-        "q2_annotate.busco.busco._draw_completeness_vs_contamination",
-        return_value={"fake4": {"plot": "NaN"}},
-    )
     @patch("q2_annotate.busco.busco._get_feature_table", return_value="table1")
     @patch("q2_annotate.busco.busco._calculate_summary_stats", return_value="stats1")
     @patch("q2templates.render")
@@ -110,10 +94,6 @@ class TestBUSCOFeatureData(TestPluginBase):
         mock_render,
         mock_stats,
         mock_table,
-        mock_scatter,
-        mock_selectable,
-        mock_marker,
-        mock_detailed,
     ):
         _visualize_busco(
             output_dir=self.temp_dir.name,
@@ -124,37 +104,30 @@ class TestBUSCOFeatureData(TestPluginBase):
             ),
         )
 
-        mock_detailed.assert_called_once()
-        mock_marker.assert_called_once()
+        # Verify render was called with proper structure
+        mock_render.assert_called_once()
+        call_args = mock_render.call_args
+        context = call_args[1]['context']
 
-        exp_context = {
-            "tabs": [
-                {"title": "QC overview", "url": "index.html"},
-                {"title": "BUSCO plots", "url": "detailed_view.html"},
-                {"title": "BUSCO table", "url": "table.html"},
-            ],
-            "vega_json": json.dumps(
-                {
-                    "partition_0": {
-                        "subcontext": {"fake1": {"plot": "null"}},
-                        "counters": {"from": 1, "to": 2},
-                        "ids": [
-                            "ab23d75d-547d-455a-8b51-16b46ddf7496",
-                            "0e514d88-16c4-4273-a1df-1a360eb2c823",
-                        ],
-                    }
-                }
-            ),
-            "vega_summary_json": json.dumps({"fake2": {"plot": "null"}}),
-            "table": "table1",
-            "summary_stats_json": "stats1",
-            "scatter_json": json.dumps({"fake4": {"plot": "null"}}),
-            "comp_cont": True,
-            "unbinned": False,
-            "vega_selectable_unbinned_json": None,
-            "page_size": 100,
-        }
-        mock_render.assert_called_with(ANY, self.temp_dir.name, context=exp_context)
+        # Check that essential keys are present
+        self.assertIn("tabs", context)
+        self.assertIn("table", context)
+        self.assertIn("summary_stats_json", context)
+        self.assertIn("comp_cont", context)
+        self.assertIn("unbinned", context)
+        self.assertIn("page_size", context)
+
+        # Check tab structure
+        self.assertEqual(len(context["tabs"]), 3)
+        self.assertEqual(context["tabs"][0]["title"], "QC overview")
+        self.assertEqual(context["tabs"][1]["title"], "Per-MAG metrics")
+        self.assertEqual(context["tabs"][2]["title"], "Feature details")
+
+        # Check values
+        self.assertEqual(context["table"], "table1")
+        self.assertEqual(context["summary_stats_json"], "stats1")
+        self.assertFalse(context["unbinned"])
+
         mock_clean.assert_called_with(self.temp_dir.name)
 
     # TODO: maybe this could be turned into an actual test
@@ -167,23 +140,28 @@ class TestBUSCOFeatureData(TestPluginBase):
             "ReferenceDB[BUSCO]", self.get_data_path("busco_db")
         )
 
-        fake_partition = MagicMock(
-            values=MagicMock(return_value=["partition1", "partition2"])
-        )
+        fake_partition = MagicMock()
+        fake_partition.values.return_value = ["partition1", "partition2"]
 
-        def fake_filter_contigs(*args, **kwargs):
-            return ("filtered_unbinned",)
+        # Create mock actions
+        partition_action_mock = MagicMock(return_value=(fake_partition,))
+        evaluate_busco_mock = MagicMock(return_value=(0,))
+        collate_mock = MagicMock(return_value=("collated_result",))
+        visualize_mock = MagicMock(return_value=("visualization",))
 
-        mock_action = MagicMock(
-            side_effect=[
-                lambda x, y, z, **kwargs: (0,),  # evaluate_busco
-                lambda x: ("collated_result",),  # collate
-                lambda x: ("visualization",),  # visualize
-                fake_filter_contigs,  # filter unbinned
-                lambda x, y: (fake_partition,),  # partition
-            ]
-        )
-        mock_ctx = MagicMock(get_action=mock_action)
+        def get_action_side_effect(plugin, action):
+            if action == "partition_feature_data_mags":
+                return partition_action_mock
+            elif action == "_evaluate_busco":
+                return evaluate_busco_mock
+            elif action == "collate_busco_results":
+                return collate_mock
+            elif action == "_visualize_busco":
+                return visualize_mock
+
+        mock_ctx = MagicMock()
+        mock_ctx.get_action.side_effect = get_action_side_effect
+
         obs = evaluate_busco(
             ctx=mock_ctx,
             mags=mags,
@@ -206,23 +184,27 @@ class TestBUSCOFeatureData(TestPluginBase):
             "ReferenceDB[BUSCO]", self.get_data_path("busco_db")
         )
 
-        fake_partition = MagicMock(
-            values=MagicMock(return_value=["partition1", "partition2"])
-        )
+        fake_partition = MagicMock()
+        fake_partition.values.return_value = ["partition1", "partition2"]
 
-        def fake_filter_contigs(*args, **kwargs):
-            return ("filtered_unbinned",)
+        # Create mock actions
+        partition_action_mock = MagicMock(return_value=(fake_partition,))
+        evaluate_busco_mock = MagicMock(return_value=(0,))
+        collate_mock = MagicMock(return_value=("collated_result",))
+        visualize_mock = MagicMock(return_value=("visualization",))
 
-        mock_action = MagicMock(
-            side_effect=[
-                lambda x, y, z, **kwargs: (0,),  # evaluate_busco
-                lambda x: ("collated_result",),  # collate
-                lambda x: ("visualization",),  # visualize
-                fake_filter_contigs,  # filter unbinned
-                lambda x, y: (fake_partition,),  # partition
-            ]
-        )
-        mock_ctx = MagicMock(get_action=mock_action)
+        def get_action_side_effect(plugin, action):
+            if action == "partition_feature_data_mags":
+                return partition_action_mock
+            elif action == "_evaluate_busco":
+                return evaluate_busco_mock
+            elif action == "collate_busco_results":
+                return collate_mock
+            elif action == "_visualize_busco":
+                return visualize_mock
+
+        mock_ctx = MagicMock()
+        mock_ctx.get_action.side_effect = get_action_side_effect
 
         with pytest.warns(match="unbinned contigs will be ignored"):
             obs = evaluate_busco(

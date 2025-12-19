@@ -34,7 +34,6 @@ from q2_annotate.busco.utils import (
     _process_busco_results,
     _calculate_unbinned_percentage,
     _count_contigs,
-    _filter_unbinned_for_partition,
     _add_unbinned_metrics,
 )
 
@@ -625,74 +624,36 @@ class TestBUSCOUtils(TestPluginBase):
         self.assertEqual(count, expected_count)
         self.assertEqual(percentage, 100)
 
-    def test_filtered_unbinned_matches_partition_1_sample(self):
-        mag_fmt = MultiMAGSequencesDirFmt(
-            path=self.get_data_path("partition_1_sample"), mode="r"
-        )
-        partitioned_mags = Artifact.import_data("SampleData[MAGs]", mag_fmt)
+    @patch("q2_annotate.busco.utils._count_contigs")
+    def test_add_unbinned_metrics(self, mock_count_contigs):
+        # Set up test data with scaffolds column
+        df = pd.DataFrame({
+            "sample_id": ["sample1", "sample1"],
+            "mag_id": ["mag1", "mag2"],
+            "scaffolds": [10, 20],  # 30 total binned contigs for sample1
+            "busco_score": [95.0, 90.0]
+        })
 
-        unbinned = ContigSequencesDirFmt(path=self.get_data_path("unbinned"), mode="r")
-
-        expected_metadata = Metadata(
-            pd.DataFrame(index=pd.Index(["sample1"], name="ID"))
-        )
-
-        # Mock _filter_contigs
-        mock_filter_contigs = MagicMock(return_value=("filtered_result",))
-
-        # Call function under test
-        _filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
-
-        # Check arguments passed to the mock action (no `where` now)
-        mock_filter_contigs.assert_called_once_with(
-            contigs=unbinned,
-            metadata=expected_metadata,
-        )
-
-    def test_filtered_unbinned_matches_partition_2_samples(self):
-        mag_fmt = MultiMAGSequencesDirFmt(
-            path=self.get_data_path("partition_2_samples"), mode="r"
-        )
-        partitioned_mags = Artifact.import_data("SampleData[MAGs]", mag_fmt)
-
-        unbinned = ContigSequencesDirFmt(path=self.get_data_path("unbinned"), mode="r")
-        expected_metadata = Metadata(
-            pd.DataFrame(index=pd.Index(["sample1", "sample2"], name="ID"))
-        )
-
-        mock_filter_contigs = MagicMock(return_value=("filtered_result",))
-
-        # Call function under test
-        _filter_unbinned_for_partition(unbinned, partitioned_mags, mock_filter_contigs)
-
-        # Check arguments passed to the mock action (no `where` now)
-        mock_filter_contigs.assert_called_once_with(
-            contigs=unbinned,
-            metadata=expected_metadata,
-        )
-
-    @patch(
-        "q2_annotate.busco.utils._calculate_unbinned_percentage", return_value=(10.0, 5)
-    )
-    def test_add_unbinned_metrics(self, mock_calculate):
-        df = pd.DataFrame({"sample_id": ["sample1"], "busco_score": [95.0]})
-
-        # Mock mags and unbinned_contigs
-        mags_mock = MagicMock()
-        mags_mock.sample_dict.return_value = {"sample1": {"bin1": "fake_bin1.fasta"}}
-
+        # Mock unbinned_contigs
         unbinned_mock = MagicMock()
         unbinned_mock.sample_dict.return_value = {"sample1": "fake_unbinned.fasta"}
 
-        # Call through the module (NOT the directly imported function)
-        result = _add_unbinned_metrics(df, mags_mock, unbinned_mock)
+        # Mock _count_contigs to return 5 unbinned contigs
+        mock_count_contigs.return_value = 5
 
-        mags_mock.sample_dict.assert_called_once()
-        unbinned_mock.sample_dict.assert_called_once()
+        # Call the function
+        result = _add_unbinned_metrics(df, unbinned_mock)
 
+        # Verify unbinned_contigs.sample_dict was called
+        unbinned_mock.sample_dict.assert_called()
+
+        # Check that the columns were added
         self.assertIn("unbinned_contigs", result.columns)
         self.assertIn("unbinned_contigs_count", result.columns)
 
-        row = result[result["sample_id"] == "sample1"].iloc[0]
-        self.assertEqual(row["unbinned_contigs"], 10.0)
-        self.assertEqual(row["unbinned_contigs_count"], 5)
+        # Check the values - should be same for all MAGs in sample1
+        # 5 unbinned / (30 binned + 5 unbinned) * 100 = ~14.29%
+        expected_percentage = (5 / (30 + 5)) * 100
+        for _, row in result.iterrows():
+            self.assertAlmostEqual(row["unbinned_contigs"], expected_percentage, places=2)
+            self.assertEqual(row["unbinned_contigs_count"], 5)
