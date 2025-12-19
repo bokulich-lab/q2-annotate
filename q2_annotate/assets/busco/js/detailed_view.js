@@ -129,12 +129,10 @@ function toggleSample(sampleId) {
 
   if (window.selectedSamples.has(sampleId)) {
     window.selectedSamples.delete(sampleId);
-    button.classList.remove('btn-primary');
-    button.classList.add('btn-outline-secondary');
+    button.classList.remove('selected');
   } else {
     window.selectedSamples.add(sampleId);
-    button.classList.remove('btn-outline-secondary');
-    button.classList.add('btn-primary');
+    button.classList.add('selected');
   }
 
   updateSelectionCount();
@@ -145,12 +143,11 @@ function toggleSample(sampleId) {
  * Select all samples (sample_data view)
  */
 function selectAllSamples() {
-  const buttons = document.querySelectorAll('.sample-button');
+  const buttons = document.querySelectorAll('.sample-selection-item');
   buttons.forEach(button => {
     const sampleId = button.dataset.sampleId;
     window.selectedSamples.add(sampleId);
-    button.classList.remove('btn-outline-secondary');
-    button.classList.add('btn-primary');
+    button.classList.add('selected');
   });
   updateSelectionCount();
   updatePlotCards();
@@ -160,12 +157,11 @@ function selectAllSamples() {
  * Clear all sample selections (sample_data view)
  */
 function clearAllSamples() {
-  const buttons = document.querySelectorAll('.sample-button');
+  const buttons = document.querySelectorAll('.sample-selection-item');
   buttons.forEach(button => {
     const sampleId = button.dataset.sampleId;
     window.selectedSamples.delete(sampleId);
-    button.classList.remove('btn-primary');
-    button.classList.add('btn-outline-secondary');
+    button.classList.remove('selected');
   });
   window.selectedSamples.clear();
   updateSelectionCount();
@@ -490,13 +486,10 @@ function initSampleDataView() {
     const color = viridisColors[index % viridisColors.length];
     window.sampleColors[sampleId] = color;
 
-    const sampleButton = document.createElement('button');
+    const sampleButton = document.createElement('div');
     const isFirstOrSecondSample = index === 0 || index === 1;
-    sampleButton.className = `btn ${isFirstOrSecondSample ? 'btn-primary' : 'btn-outline-secondary'} sample-button me-2 mb-2`;
-    sampleButton.innerHTML = `
-      <span class="sample-color-indicator" style="background-color: ${color};"></span>
-      ${sampleId}
-    `;
+    sampleButton.className = `sample-selection-item ${isFirstOrSecondSample ? 'selected' : ''}`;
+    sampleButton.innerHTML = `<span>${sampleId}</span>`;
     sampleButton.dataset.sampleId = sampleId;
     sampleButton.onclick = () => toggleSample(sampleId);
 

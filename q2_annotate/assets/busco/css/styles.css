@@ -1,3 +1,8 @@
+/* Card styling */
+.card {
+    border-radius: 0.5rem;
+}
+
 #plot {
     margin-top: 50px;
 }
@@ -121,6 +126,36 @@
 .table {
     border: 1px solid #dee2e6;
     margin-top: 10px
+}
+
+/* Sample selection container */
+.sample-selection-container {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  min-height: 40px;
+}
+
+/* Individual sample selection items */
+.sample-selection-item {
+  display: inline-flex;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 5px;
+  align-items: center;
+  margin-right: 15px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+/* Highlight selected items */
+.sample-selection-item.selected {
+  border: 1px solid #007bff;
+  opacity: 1;
+  font-weight: bold;
 }
 
 .pagination {
