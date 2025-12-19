@@ -308,6 +308,50 @@ function createSamplePlotCard(sampleId) {
 }
 
 /**
+ * Update assembly metric for all views (sample_data view)
+ */
+async function updateAssemblyMetric(newMetric) {
+  const metricTitle = window.assemblyMetrics[newMetric] || newMetric;
+
+  for (const sampleId of window.selectedSamples) {
+    const views = window.sampleViews[sampleId];
+    if (!views) continue;
+
+    const sampleAssemblyData = views.assemblyData || [];
+    if (sampleAssemblyData.length === 0) continue;
+
+    const assemblyContainer = document.getElementById(`assembly-plot-${sampleId}`);
+    if (!assemblyContainer) continue;
+
+    // Calculate current sort order
+    const sampleBuscoData = views.buscoData || [];
+    const orderMap = getSortOrderMap(sampleBuscoData, sampleAssemblyData, window.currentSortCategory, window.currentSortSource, window.currentSortOrder);
+    const assemblyDataWithSort = addSortOrder(sampleAssemblyData, orderMap);
+
+    // Create new spec with updated metric
+    const assemblyPlotSpec = JSON.parse(JSON.stringify(window.assemblySpec));
+    assemblyPlotSpec.params[0].value = sampleId;
+    assemblyPlotSpec.params[1].value = newMetric;
+    assemblyPlotSpec.params[2].value = metricTitle;
+    assemblyPlotSpec.data = { name: 'source', values: assemblyDataWithSort };
+    if (assemblyPlotSpec.encoding && assemblyPlotSpec.encoding.x) {
+      assemblyPlotSpec.encoding.x.title = metricTitle;
+    }
+
+    try {
+      const assemblyResult = await vegaEmbed(assemblyContainer, assemblyPlotSpec, {
+        actions: false,
+        renderer: 'svg'
+      });
+      assemblyResult.view.logLevel(vega.Warn);
+      views.assembly = assemblyResult.view;
+    } catch (error) {
+      console.error('Error updating assembly plot for', sampleId, ':', error);
+    }
+  }
+}
+
+/**
  * Update sort order for all views (sample_data view)
  */
 function updateSortOrder() {
@@ -468,7 +512,9 @@ function initSampleDataView() {
 
   const metricSelector = document.getElementById('metricSelector');
   if (metricSelector) {
-    metricSelector.onchange = updateAllPlots;
+    metricSelector.onchange = function() {
+      updateAssemblyMetric(this.value);
+    };
   }
 
   document.querySelectorAll('.sort-btn').forEach(btn => {
@@ -476,6 +522,13 @@ function initSampleDataView() {
       window.currentSortCategory = this.dataset.sort;
       window.currentSortSource = this.dataset.source || 'default';
       updateSortButtons(window.currentSortCategory);
+
+      // If sorting by assembly metric, update the metric selector and displayed metric
+      if (window.currentSortSource === 'assembly' && metricSelector) {
+        metricSelector.value = window.currentSortCategory;
+        updateAssemblyMetric(window.currentSortCategory);
+      }
+
       updateSortOrder();
     });
   });
