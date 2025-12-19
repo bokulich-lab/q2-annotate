@@ -34,13 +34,14 @@
     },
     "y": {
       "aggregate": "count",
-      "title": "MAG count"
+      "type": "quantitative",
+      "title": "MAG count",
+      "scale": {"zero": true}
     },
     "color": {
       "value": "#2d718e"
     },
     "tooltip": [
-      {"field": "metric", "type": "quantitative", "title": "Value"},
       {"aggregate": "count", "type": "quantitative", "title": "Count"}
     ]
   },

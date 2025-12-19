@@ -52,7 +52,7 @@
       "type": "nominal",
       "scale": {
         "domain": ["single", "duplicated", "fragmented", "missing"],
-        "range": ["#482777", "#31688e", "#1f9e89", "#6ece58"]
+        "range": ["#2d718e", "#5499b5", "#f2b134", "#d32f2f"]
       },
       "legend": null
     },

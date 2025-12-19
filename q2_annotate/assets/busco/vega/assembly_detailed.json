@@ -45,6 +45,9 @@
       "axis": null,
       "sort": {"field": "sort_order", "order": "ascending"}
     },
+    "color": {
+      "value": "#2d718e"
+    },
     "tooltip": [
       {"field": "sample_id", "type": "nominal", "title": "Sample ID"},
       {"field": "mag_id", "type": "nominal", "title": "MAG ID"},
