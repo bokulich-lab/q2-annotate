@@ -657,3 +657,86 @@ class TestBUSCOUtils(TestPluginBase):
         for _, row in result.iterrows():
             self.assertAlmostEqual(row["unbinned_contigs"], expected_percentage, places=2)
             self.assertEqual(row["unbinned_contigs_count"], 5)
+
+    @patch("q2_annotate.busco.utils._count_contigs")
+    def test_add_unbinned_metrics_missing_sample_warning(self, mock_count_contigs):
+        # BUSCO results with sample1 and sample2
+        df = pd.DataFrame({
+            "sample_id": ["sample1", "sample1", "sample2"],
+            "mag_id": ["mag1", "mag2", "mag3"],
+            "scaffolds": [10, 20, 15],
+        })
+
+        # Unbinned contigs only for sample2 (sample1 is missing)
+        unbinned_mock = MagicMock()
+        unbinned_mock.sample_dict.return_value = {"sample2": "fake_unbinned.fasta"}
+        mock_count_contigs.return_value = 5
+
+        # Should warn about missing sample1
+        with self.assertWarns(Warning):
+            result = _add_unbinned_metrics(df, unbinned_mock)
+
+        # sample1 should have NaN for unbinned metrics
+        sample1_rows = result[result["sample_id"] == "sample1"]
+        for _, row in sample1_rows.iterrows():
+            self.assertTrue(pd.isna(row["unbinned_contigs"]))
+            self.assertTrue(pd.isna(row["unbinned_contigs_count"]))
+
+        # sample2 should have proper values
+        sample2_rows = result[result["sample_id"] == "sample2"]
+        expected_percentage = (5 / (15 + 5)) * 100
+        for _, row in sample2_rows.iterrows():
+            self.assertAlmostEqual(row["unbinned_contigs"], expected_percentage, places=2)
+            self.assertEqual(row["unbinned_contigs_count"], 5)
+
+    @patch("q2_annotate.busco.utils._count_contigs")
+    def test_add_unbinned_metrics_multiple_samples(self, mock_count_contigs):
+        # Multiple samples
+        df = pd.DataFrame({
+            "sample_id": ["sample1", "sample1", "sample2", "sample2"],
+            "mag_id": ["mag1", "mag2", "mag3", "mag4"],
+            "scaffolds": [10, 20, 15, 25],  # sample1: 30, sample2: 40
+        })
+
+        unbinned_mock = MagicMock()
+        unbinned_mock.sample_dict.return_value = {
+            "sample1": "fake_unbinned_1.fasta",
+            "sample2": "fake_unbinned_2.fasta"
+        }
+
+        # Return different counts for different samples
+        mock_count_contigs.side_effect = [5, 10]  # 5 for sample1, 10 for sample2
+
+        result = _add_unbinned_metrics(df, unbinned_mock)
+
+        # Check sample1 - 5 unbinned / (30 + 5) * 100
+        sample1_expected = (5 / 35) * 100
+        sample1_rows = result[result["sample_id"] == "sample1"]
+        for _, row in sample1_rows.iterrows():
+            self.assertAlmostEqual(row["unbinned_contigs"], sample1_expected, places=2)
+            self.assertEqual(row["unbinned_contigs_count"], 5)
+
+        # Check sample2 - 10 unbinned / (40 + 10) * 100
+        sample2_expected = (10 / 50) * 100
+        sample2_rows = result[result["sample_id"] == "sample2"]
+        for _, row in sample2_rows.iterrows():
+            self.assertAlmostEqual(row["unbinned_contigs"], sample2_expected, places=2)
+            self.assertEqual(row["unbinned_contigs_count"], 10)
+
+    @patch("q2_annotate.busco.utils._count_contigs")
+    def test_add_unbinned_metrics_zero_unbinned(self, mock_count_contigs):
+        df = pd.DataFrame({
+            "sample_id": ["sample1"],
+            "mag_id": ["mag1"],
+            "scaffolds": [30],
+        })
+
+        unbinned_mock = MagicMock()
+        unbinned_mock.sample_dict.return_value = {"sample1": "fake_unbinned.fasta"}
+        mock_count_contigs.return_value = 0  # No unbinned contigs
+
+        result = _add_unbinned_metrics(df, unbinned_mock)
+
+        # Should have 0% unbinned
+        self.assertEqual(result["unbinned_contigs"].iloc[0], 0.0)
+        self.assertEqual(result["unbinned_contigs_count"].iloc[0], 0)
