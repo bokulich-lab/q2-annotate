@@ -145,6 +145,64 @@ def _add_unclassified_mags(
     return taxonomy
 
 
+def kraken2_to_contig_taxonomy(
+    ctx,
+    reports,
+    outputs,
+    coverage_threshold = 0.1,
+):
+    """
+    Map contig IDs to taxonomy strings based on Kraken2 classifications.
+
+    Args:
+        reports (Kraken2ReportDirectoryFormat): Directory containing Kraken2
+            report files for contigs.
+        outputs (Kraken2OutputDirectoryFormat): Directory containing Kraken2
+            output files with contig classifications.
+        coverage_threshold (float): Minimum percent coverage required to produce
+            a feature. Default is 0.1.
+
+    Returns:
+        pd.Series: A Series mapping contig IDs (index) to taxonomy strings (values).
+            Unclassified contigs (taxon ID = "0") are assigned "d__Unclassified".
+    """
+    # Get taxonomy mapping from reports (taxon ID -> taxonomy string)
+    _to_features = ctx.get_action("annotate", "kraken2_to_features")
+    _, taxonomy_df = _to_features(reports, coverage_threshold)
+
+    taxonomy_df = taxonomy_df.view(pd.DataFrame)
+    outputs = outputs.view(Kraken2OutputDirectoryFormat)
+    
+    # Create a dictionary mapping taxon IDs to taxonomy strings
+    # taxonomy_df has "Feature ID" (taxon ID) as index and "Taxon" as column
+    taxon_to_taxonomy = taxonomy_df["Taxon"].to_dict()
+    
+    # Dictionary to store contig ID -> taxonomy mapping
+    contig_taxonomy = {}
+    
+    # Iterate over all output files
+    for relpath, output_df in outputs.outputs.iter_views(pd.DataFrame):
+        # Skip empty files
+        if output_df.empty:
+            continue
+        
+        # Map each contig to its taxonomy
+        contig_ids = output_df.iloc[:, 1].astype(str)
+        taxon_ids = output_df.iloc[:, 2].astype(str)
+
+        # Map with fallback for unclassified/missing taxons
+        taxonomy = taxon_ids.where(taxon_ids != "0").map(taxon_to_taxonomy).fillna("d__Unclassified")
+
+        # Update dictionary (last occurrence wins)
+        contig_taxonomy.update(dict(zip(contig_ids, taxonomy)))
+
+    # Convert to pandas Series
+    taxonomy_series = pd.Series(contig_taxonomy, name="Taxon")
+    taxonomy_series.index.name = "Feature ID"
+    
+    return ctx.make_artifact("FeatureData[Taxonomy]", taxonomy_series)
+
+
 def kraken2_to_mag_features(
     reports: Kraken2ReportDirectoryFormat,
     outputs: Kraken2OutputDirectoryFormat,
