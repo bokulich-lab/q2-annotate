@@ -652,14 +652,22 @@ plugin.pipelines.register_function(
     inputs={
         "reports": SampleData[Kraken2Reports % Properties("contigs")],
         "outputs": SampleData[Kraken2Outputs % Properties("contigs")],
+        "table": FeatureTable[Frequency],
     },
     parameters={
         "coverage_threshold": Float % Range(0, 100, inclusive_end=True),
     },
-    outputs=[("taxonomy", FeatureData[Taxonomy])],
+    outputs=[
+        ("taxonomy", FeatureData[Taxonomy]),
+        ("collapsed_table", FeatureTable[Frequency]),
+    ],
     input_descriptions={
         "reports": "Per-sample Kraken 2 reports for contigs.",
         "outputs": "Per-sample Kraken 2 output files for contigs.",
+        "table": (
+            "Table of contig abundances per sample. Feature IDs will be "
+            "replaced with taxonomy strings from the Kraken2 classifications."
+        ),
     },
     parameter_descriptions={
         "coverage_threshold": (
@@ -672,13 +680,20 @@ plugin.pipelines.register_function(
             "its full taxonomy string based on Kraken2 classifications. "
             "Unclassified contigs are assigned 'd__Unclassified'."
         ),
+        "collapsed_table": (
+            "Contig abundance table with feature IDs replaced by their "
+            "taxonomy strings. Contigs with the same taxonomy assignment "
+            "will have their abundances summed."
+        ),
     },
     name="Map contig IDs to taxonomy strings from Kraken 2.",
     description=(
         "Maps contig IDs to their full taxonomy strings based on Kraken2 "
         "classifications. This action processes Kraken2 reports and outputs "
         "produced from contig sequences to create a taxonomy mapping where "
-        "each contig ID is associated with its assigned taxonomy."
+        "each contig ID is associated with its assigned taxonomy. "
+        "Additionally, converts a contig abundance table to a taxonomy "
+        "abundance table by replacing contig IDs with their taxonomy strings."
     ),
 )
 
