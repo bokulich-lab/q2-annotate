@@ -9,7 +9,11 @@
 from .bracken import estimate_bracken
 from .database import build_kraken_db
 from .classification import classify_kraken2, _classify_kraken2
-from .select import kraken2_to_features, kraken2_to_mag_features, kraken2_to_contig_taxonomy
+from .select import (
+    kraken2_to_features,
+    kraken2_to_mag_features,
+    kraken2_to_contig_taxonomy,
+)
 from .merge import _merge_kraken2_results
 from .filter import (
     _filter_kraken2_results_by_metadata,
