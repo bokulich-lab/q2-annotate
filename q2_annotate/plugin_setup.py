@@ -49,7 +49,7 @@ from q2_types.per_sample_sequences import (
     Contigs,
 )
 from q2_types.sample_data import SampleData
-from q2_types.feature_map import FeatureMap, MAGtoContigs
+from q2_types.feature_map import FeatureMap, MAGtoContigs, TaxonomyToContigs
 from qiime2.core.type import (
     Bool,
     Range,
@@ -645,6 +645,47 @@ plugin.methods.register_function(
     },
     name="Select downstream MAG features from Kraken 2.",
     description=select_features_description,
+)
+
+plugin.pipelines.register_function(
+    function=q2_annotate.kraken2.map_taxonomy_to_contigs,
+    inputs={
+        "reports": SampleData[Kraken2Reports % Properties("contigs")],
+        "outputs": SampleData[Kraken2Outputs % Properties("contigs")],
+    },
+    parameters={
+        "coverage_threshold": Float % Range(0, 100, inclusive_end=True),
+    },
+    outputs=[
+        ("feature_map", FeatureMap[TaxonomyToContigs]),
+        ("taxonomy", FeatureData[Taxonomy]),
+    ],
+    input_descriptions={
+        "reports": "Per-sample Kraken 2 reports for contigs.",
+        "outputs": "Per-sample Kraken 2 output files for contigs.",
+    },
+    parameter_descriptions={
+        "coverage_threshold": (
+            "The minimum percent coverage required to produce a feature."
+        ),
+    },
+    output_descriptions={
+        "feature_map": (
+            "Taxonomy assignments for contigs. Each contig ID is mapped to "
+            "its full taxonomy string based on Kraken2 classifications. "
+            "Unclassified contigs are assigned 'd__Unclassified'."
+        ),
+        "taxonomy": select_features_taxonomy_description,
+    },
+    name="Map contig IDs to taxonomy strings from Kraken 2.",
+    description=(
+        "Maps contig IDs to their full taxonomy strings based on Kraken2 "
+        "classifications. This action processes Kraken2 reports and outputs "
+        "produced from contig sequences to create a taxonomy mapping where "
+        "each contig ID is associated with its assigned taxonomy. "
+        "Additionally, converts a contig abundance table to a taxonomy "
+        "abundance table by replacing contig IDs with their taxonomy strings."
+    ),
 )
 
 plugin.pipelines.register_function(

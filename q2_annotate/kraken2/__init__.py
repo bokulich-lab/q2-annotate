@@ -12,7 +12,6 @@ from .classification import classify_kraken2, _classify_kraken2
 from .select import (
     kraken2_to_features,
     kraken2_to_mag_features,
-    kraken2_to_contig_taxonomy,
 )
 from .merge import _merge_kraken2_results
 from .filter import (
@@ -20,6 +19,9 @@ from .filter import (
     _filter_kraken2_reports_by_abundance,
     _align_outputs_with_reports,
     filter_kraken2_results,
+)
+from .collapse import (
+    kraken2_to_contig_taxonomy, map_taxonomy_to_contigs
 )
 
 __all__ = [
@@ -30,6 +32,7 @@ __all__ = [
     "kraken2_to_features",
     "kraken2_to_mag_features",
     "kraken2_to_contig_taxonomy",
+    "map_taxonomy_to_contigs",
     "_filter_kraken2_reports_by_abundance",
     "_filter_kraken2_results_by_metadata",
     "_align_outputs_with_reports",

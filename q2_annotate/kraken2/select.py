@@ -11,8 +11,6 @@ import os
 from collections import deque
 from typing import List
 
-import numpy as np
-
 from q2_annotate.kraken2.utils import _find_lca, _taxon_to_list, _join_ranks
 from q2_types.kraken2 import Kraken2ReportDirectoryFormat, Kraken2OutputDirectoryFormat
 
@@ -146,96 +144,6 @@ def _add_unclassified_mags(
         taxonomy.loc[mag, "Taxon"] = "d__Unclassified"
 
     return taxonomy
-
-
-def kraken2_to_contig_taxonomy(
-    ctx,
-    reports,
-    outputs,
-    table,
-    coverage_threshold=0.1,
-):
-    """
-    Map contig IDs to taxonomy strings based on Kraken2 classifications.
-
-    Args:
-        reports (Kraken2ReportDirectoryFormat): Directory containing Kraken2
-            report files for contigs.
-        outputs (Kraken2OutputDirectoryFormat): Directory containing Kraken2
-            output files with contig classifications.
-        table: Feature table of contig abundances per sample.
-        coverage_threshold (float): Minimum percent coverage required to produce
-            a feature. Default is 0.1.
-
-    Returns:
-        tuple: A tuple containing:
-            - Taxonomy artifact: Series mapping contig IDs (index) to taxonomy
-              strings (values). Unclassified contigs are assigned "d__Unclassified".
-            - Taxonomy abundance table: Feature table with contig IDs replaced by
-              taxonomy strings. Contigs with the same taxonomy are summed.
-    """
-    _to_features = ctx.get_action("annotate", "kraken2_to_features")
-    _, taxonomy_df = _to_features(reports, coverage_threshold)
-
-    taxonomy_df = taxonomy_df.view(pd.DataFrame)
-    outputs = outputs.view(Kraken2OutputDirectoryFormat)
-
-    id_to_taxonomy = taxonomy_df["Taxon"].to_dict()
-
-    contig_taxonomy = {}
-    for relpath, output_df in outputs.outputs.iter_views(pd.DataFrame):
-        # Skip empty files
-        if output_df.empty:
-            continue
-
-        contig_ids = output_df.iloc[:, 1].astype(str)
-        taxon_ids = output_df.iloc[:, 2].astype(str)
-
-        taxonomy = (
-            taxon_ids.where(taxon_ids != "0")
-            .map(id_to_taxonomy)
-            .fillna("d__Unclassified")
-        )
-
-        contig_taxonomy.update(dict(zip(contig_ids, taxonomy)))
-
-    taxonomy_series = pd.Series(contig_taxonomy, name="Taxon")
-    taxonomy_series.index.name = "Feature ID"
-
-    taxonomy_max_level = taxonomy_series.str.split(";").map(len).max()
-
-    def _collapse(id_, md):
-        try:
-            tax = taxonomy_series.loc[id_]
-        except KeyError:
-            tax = "d__Unclassified"
-        tax = [x.strip() for x in tax.split(";")]
-        if len(tax) < taxonomy_max_level:
-            padding = ["__"] * (taxonomy_max_level - len(tax))
-            tax.extend(padding)
-        return ";".join(tax)
-
-    contig_ft = table.view(biom.Table)
-    contig_ft_collapsed = contig_ft.collapse(
-        f=_collapse, axis="observation", norm=False
-    )
-
-    counts = {}
-    for obs_id in contig_ft_collapsed.ids(axis="observation"):
-        metadata = contig_ft_collapsed.metadata(id=obs_id, axis="observation")
-        counts[obs_id] = len(metadata["collapsed_ids"])
-
-    def divide_by_count(data, id_, metadata):
-        return data / counts[id_]
-
-    contig_ft_collapsed = contig_ft_collapsed.transform(
-        divide_by_count, axis="observation"
-    )
-
-    taxonomy_artifact = ctx.make_artifact("FeatureData[Taxonomy]", taxonomy_series)
-    ft_artifact = ctx.make_artifact("FeatureTable[Frequency]", contig_ft_collapsed)
-
-    return taxonomy_artifact, ft_artifact
 
 
 def kraken2_to_mag_features(
