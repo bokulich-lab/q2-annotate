@@ -20,9 +20,7 @@ from .filter import (
     _align_outputs_with_reports,
     filter_kraken2_results,
 )
-from .collapse import (
-    kraken2_to_contig_taxonomy, map_taxonomy_to_contigs
-)
+from .collapse import collapse_contigs, map_taxonomy_to_contigs
 
 __all__ = [
     "build_kraken_db",
@@ -31,7 +29,7 @@ __all__ = [
     "estimate_bracken",
     "kraken2_to_features",
     "kraken2_to_mag_features",
-    "kraken2_to_contig_taxonomy",
+    "collapse_contigs",
     "map_taxonomy_to_contigs",
     "_filter_kraken2_reports_by_abundance",
     "_filter_kraken2_results_by_metadata",

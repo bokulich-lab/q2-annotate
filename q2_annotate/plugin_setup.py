@@ -689,7 +689,7 @@ plugin.pipelines.register_function(
 )
 
 plugin.pipelines.register_function(
-    function=q2_annotate.kraken2.kraken2_to_contig_taxonomy,
+    function=q2_annotate.kraken2.collapse_contigs,
     inputs={
         "reports": SampleData[Kraken2Reports % Properties("contigs")],
         "outputs": SampleData[Kraken2Outputs % Properties("contigs")],
@@ -699,8 +699,9 @@ plugin.pipelines.register_function(
         "coverage_threshold": Float % Range(0, 100, inclusive_end=True),
     },
     outputs=[
-        ("taxonomy", FeatureData[Taxonomy]),
         ("collapsed_table", FeatureTable[Frequency]),
+        ("taxonomy", FeatureData[Taxonomy]),
+        ("contig_map", FeatureMap[TaxonomyToContigs]),
     ],
     input_descriptions={
         "reports": "Per-sample Kraken 2 reports for contigs.",
@@ -716,15 +717,21 @@ plugin.pipelines.register_function(
         ),
     },
     output_descriptions={
+        "collapsed_table": (
+            "Contig abundance table with feature IDs replaced by their "
+            "taxonomy strings. Contigs with the same taxonomy assignment "
+            "will have their abundances summed."
+        ),
         "taxonomy": (
             "Taxonomy assignments for contigs. Each contig ID is mapped to "
             "its full taxonomy string based on Kraken2 classifications. "
             "Unclassified contigs are assigned 'd__Unclassified'."
         ),
-        "collapsed_table": (
-            "Contig abundance table with feature IDs replaced by their "
-            "taxonomy strings. Contigs with the same taxonomy assignment "
-            "will have their abundances summed."
+        "contig_map": (
+            "Mapping between contig IDs and taxonomy strings. Each contig "
+            "ID is mapped to its full taxonomy string based on Kraken2 "
+            "classifications. Unclassified contigs are assigned "
+            "'d__Unclassified'."
         ),
     },
     name="Map contig IDs to taxonomy strings from Kraken 2.",
