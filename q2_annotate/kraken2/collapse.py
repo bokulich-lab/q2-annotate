@@ -65,46 +65,33 @@ def _average_by_count(table: biom.Table, contig_map: dict) -> biom.Table:
 
 def collapse_contigs(
     ctx,
-    reports,
-    outputs,
+    contig_map,
     table,
-    coverage_threshold=0.1,
 ):
     """
     Map contig IDs to taxonomy strings based on Kraken2 classifications.
 
     Args:
-        reports (Kraken2ReportDirectoryFormat): Directory containing Kraken2
-            report files for contigs.
-        outputs (Kraken2OutputDirectoryFormat): Directory containing Kraken2
-            output files with contig classifications.
         table: Feature table of contig abundances per sample.
-        coverage_threshold (float): Minimum percent coverage required to produce
-            a feature. Default is 0.1.
 
     Returns:
-        tuple: A tuple containing:
-            - Taxonomy artifact: Series mapping contig IDs to taxonomy strings
-            - Taxonomy abundance table: Feature table with averaged abundances
+        collapse_table: Feature table with contig abundances collapsed per taxonomy.
     """
-    _get_contig_map = ctx.get_action("annotate", "map_taxonomy_to_contigs")
-    feature_map, taxonomy = _get_contig_map(reports, outputs, coverage_threshold)
-    feature_map_dict = feature_map.view(dict)
-
-    feature_map_rev = {
+    contig_map_dict = contig_map.view(dict)
+    contig_map_rev = {
         contig: tax_id
-        for tax_id, contigs in feature_map_dict.items()
+        for tax_id, contigs in contig_map_dict.items()
         for contig in contigs
     }
 
     contig_ft = table.view(biom.Table)
     contig_ft_collapsed = contig_ft.collapse(
-        f=lambda id_, md: feature_map_rev.get(id_, "0"), axis="observation", norm=False
+        f=lambda id_, md: contig_map_rev.get(id_, "0"), axis="observation", norm=False
     )
-    contig_ft_averaged = _average_by_count(contig_ft_collapsed, feature_map_dict)
+    contig_ft_averaged = _average_by_count(contig_ft_collapsed, contig_map_dict)
     table = ctx.make_artifact("FeatureTable[Frequency]", contig_ft_averaged)
 
-    return table, taxonomy, feature_map
+    return table
 
 
 def map_taxonomy_to_contigs(
