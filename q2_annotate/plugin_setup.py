@@ -688,15 +688,39 @@ plugin.pipelines.register_function(
     ),
 )
 
+plugin.visualizers.register_function(
+    function=q2_annotate.kraken2._visualize_collapsed_contigs,
+    inputs={
+        "table": FeatureTable[Frequency],
+        "contig_map": FeatureMap[TaxonomyToContigs],
+        "taxonomy": FeatureData[Taxonomy],
+    },
+    parameters={},
+    input_descriptions={
+        "table": "Original feature table with contig IDs as feature IDs (before collapsing).",
+        "contig_map": "Mapping between contig IDs and assigned taxonomy IDs.",
+        "taxonomy": "Optional taxonomy mapping to display taxonomy strings instead of IDs.",
+    },
+    parameter_descriptions={},
+    name="Visualize collapsed contig abundances",
+    description=(
+        "Generates a visualization showing histograms of contig abundance distributions "
+        "per taxon per sample from the original (pre-collapsed) table, with interactive "
+        "dropdowns for taxon and sample selection."
+    ),
+)
+
 plugin.pipelines.register_function(
     function=q2_annotate.kraken2.collapse_contigs,
     inputs={
         "table": FeatureTable[Frequency],
         "contig_map": FeatureMap[TaxonomyToContigs],
+        "taxonomy": FeatureData[Taxonomy],
     },
     parameters={},
     outputs=[
         ("collapsed_table", FeatureTable[Frequency]),
+        ("visualization", Visualization),
     ],
     input_descriptions={
         "table": (
@@ -704,6 +728,10 @@ plugin.pipelines.register_function(
             "replaced with taxonomy strings from the Kraken2 classifications."
         ),
         "contig_map": ("Mapping between contig IDs and assingned taxonomy IDs."),
+        "taxonomy": (
+            "Optional taxonomy mapping to display taxonomy strings in the visualization "
+            "instead of taxonomy IDs."
+        ),
     },
     parameter_descriptions={},
     output_descriptions={
@@ -711,6 +739,10 @@ plugin.pipelines.register_function(
             "Contig abundance table with contig IDs replaced by their "
             "taxonomy strings. Contigs with the same taxonomy assignment "
             "will have their abundances averaged."
+        ),
+        "visualization": (
+            "Interactive visualization showing histograms of contig abundance distributions "
+            "per taxon per sample."
         ),
     },
     name="Map contig IDs to taxonomy strings from Kraken 2.",

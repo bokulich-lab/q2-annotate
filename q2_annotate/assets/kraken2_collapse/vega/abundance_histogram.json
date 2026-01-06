@@ -1,0 +1,92 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "params": [
+    {
+      "name": "taxon_param",
+      "value": ""
+    },
+    {
+      "name": "sample_param",
+      "value": ""
+    }
+  ],
+  "description": "Histogram of contig abundance distribution per taxon per sample",
+  "data": {
+    "url": "data/abundance_data.arrow",
+    "format": {"type": "arrow"}
+  },
+  "transform": [
+    {
+      "filter": "(taxon_param == '' || datum.taxon == taxon_param) && (sample_param == '' || datum.sample == sample_param)"
+    },
+    {
+      "flatten": ["abundances"],
+      "as": ["abundance"]
+    },
+    {
+      "bin": true,
+      "field": "abundance",
+      "as": "binned abundance"
+    }
+  ],
+  "mark": "bar",
+  "width": "container",
+  "height": 400,
+  "encoding": {
+    "x": {
+      "field": "binned abundance",
+      "title": "Abundance",
+      "type": "quantitative",
+      "bin": {
+        "binned": true,
+        "maxbins": 20,
+        "nice": true
+      },
+      "axis": {
+        "format": ".1f",
+        "labelAngle": 0
+      }
+    },
+    "x2": {"field": "binned abundance_end"},
+    "y": {
+      "aggregate": "count",
+      "title": "Frequency",
+      "scale": {"zero": true},
+      "axis": {
+        "format": ".0f"
+      }
+    },
+    "tooltip": [
+      {"aggregate": "count", "type": "quantitative", "title": "Count in bin"}
+    ]
+  },
+  "config": {
+    "background": "#fff",
+    "font": "Open Sans, Arial, sans-serif",
+    "axis": {
+      "grid": true,
+      "gridColor": "#eaeaea",
+      "gridWidth": 1,
+      "tickColor": "#888",
+      "labelFont": "Open Sans, Arial, sans-serif",
+      "labelFontSize": 14,
+      "titleFont": "Open Sans, Arial, sans-serif",
+      "titleFontSize": 16,
+      "titleFontWeight": "bold",
+      "domain": false
+    },
+    "view": {
+      "stroke": "#eaeaea",
+      "strokeWidth": 1
+    },
+    "title": {
+      "font": "Open Sans, Arial, sans-serif",
+      "fontSize": 18,
+      "fontWeight": "bold",
+      "anchor": "middle",
+      "color": "#222"
+    }
+  },
+  "title": "Abundance distribution"
+}
+

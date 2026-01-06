@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>Collapsed Contig Abundance Distribution</title>
+<script src="js/bootstrapMagic.js" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-embed@5"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-loader-arrow@0.3.2"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="js/index.js" type="text/javascript"></script>
+<link href="css/styles.css" rel="stylesheet"/>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row" style="margin-top: 20px;">
+    <div class="col-lg-12">
+      <div class="card mb-4 border-muted" id="selector-card">
+        <div class="card-body p-3">
+          <div class="card-text text-muted">
+            This visualization shows the distribution of contig abundances. 
+            Select a taxon and/or sample from the dropdowns below to filter the histogram and view statistics.
+            If both are selected, the histogram shows the distribution for that specific taxon-sample combination.
+            If only one is selected, it shows the distribution across all samples (for a taxon) or all taxa (for a sample).
+          </div>
+          <div class="row selector-row justify-content-left mb-10" style="margin-top: 10px; margin-bottom: 10px;">
+            <div class="col-auto">
+              <label for="taxonDropdown" class="form-label fw-bold">Taxon:</label>
+              <select id="taxonDropdown" class="form-select custom-dropdown">
+                <!-- Options will be populated by JS -->
+              </select>
+            </div>
+            <div class="col-auto">
+              <label for="sampleDropdown" class="form-label fw-bold">Sample:</label>
+              <select id="sampleDropdown" class="form-select custom-dropdown">
+                <!-- Options will be populated by JS -->
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row dashboard-row justify-content-center">
+        <div class="col-md-8 mb-4" id="vega-histogram-container">
+          <div class="plot-spinner" id="spinner-histogram">
+            <div class="rect1"></div> <div class="rect2"></div> <div class="rect3"></div> <div class="rect4"></div> <div class="rect5"></div>
+          </div>
+          <div id="vega-histogram"></div>
+        </div>
+        <div class="col-md-4 mb-4">
+          <div class="card border-muted">
+            <div class="card-body">
+              <h6 class="card-title">Statistics</h6>
+              <div id="statistics-display">
+                <p class="text-muted">Select a taxon and sample to view statistics.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --- Data injected from Python ---
+  window.taxa = {{ taxa | safe }};
+  window.samples = {{ samples | safe }};
+  window.vegaAbundanceHistogramSpec = {{ vega_abundance_histogram_spec | safe }};
+</script>
+{% endblock %}
+
+{% block footer %}
+{% set loading_selector = '#loading' %}
+{% include 'js-error-handler.html' %}
+{% endblock %}
+
