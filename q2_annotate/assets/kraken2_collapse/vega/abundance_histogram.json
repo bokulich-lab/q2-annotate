@@ -2,11 +2,11 @@
   "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
   "params": [
     {
-      "name": "taxon_param",
+      "name": "sample_param",
       "value": ""
     },
     {
-      "name": "sample_param",
+      "name": "taxon_param",
       "value": ""
     }
   ],
@@ -17,34 +17,34 @@
   },
   "transform": [
     {
-      "filter": "(taxon_param == '' || datum.taxon == taxon_param) && (sample_param == '' || datum.sample == sample_param)"
+      "filter": "(sample_param == '' || datum.sample == sample_param) && (taxon_param == '' || datum.taxon == taxon_param)"
     },
     {
       "flatten": ["abundances"],
       "as": ["abundance"]
     },
     {
-      "bin": true,
+      "bin": {
+        "maxbins": 30,
+        "nice": true
+      },
       "field": "abundance",
       "as": "binned abundance"
     }
   ],
   "mark": "bar",
   "width": "container",
-  "height": 400,
+  "height": 250,
   "encoding": {
     "x": {
       "field": "binned abundance",
       "title": "Abundance",
       "type": "quantitative",
-      "bin": {
-        "binned": true,
-        "maxbins": 20,
-        "nice": true
-      },
       "axis": {
         "format": ".1f",
-        "labelAngle": 0
+        "labelAngle": 0,
+        "labelFontSize": 10,
+        "titleFontSize": 11
       }
     },
     "x2": {"field": "binned abundance_end"},
@@ -53,10 +53,15 @@
       "title": "Frequency",
       "scale": {"zero": true},
       "axis": {
-        "format": ".0f"
+        "format": ".0f",
+        "labelFontSize": 10,
+        "titleFontSize": 11
       }
     },
     "tooltip": [
+      {"field": "taxon", "type": "nominal", "title": "Taxon"},
+      {"field": "binned abundance", "type": "quantitative", "title": "Min abundance (bin)", "format": ".2e"},
+      {"field": "binned abundance_end", "type": "quantitative", "title": "Max abundance (bin)", "format": ".2e"},
       {"aggregate": "count", "type": "quantitative", "title": "Count in bin"}
     ]
   },
@@ -64,29 +69,18 @@
     "background": "#fff",
     "font": "Open Sans, Arial, sans-serif",
     "axis": {
-      "grid": true,
+      "grid": false,
       "gridColor": "#eaeaea",
       "gridWidth": 1,
       "tickColor": "#888",
       "labelFont": "Open Sans, Arial, sans-serif",
-      "labelFontSize": 14,
-      "titleFont": "Open Sans, Arial, sans-serif",
-      "titleFontSize": 16,
-      "titleFontWeight": "bold",
+      "labelFontSize": 12,
       "domain": false
     },
     "view": {
       "stroke": "#eaeaea",
       "strokeWidth": 1
-    },
-    "title": {
-      "font": "Open Sans, Arial, sans-serif",
-      "fontSize": 18,
-      "fontWeight": "bold",
-      "anchor": "middle",
-      "color": "#222"
     }
-  },
-  "title": "Abundance distribution"
+  }
 }
 

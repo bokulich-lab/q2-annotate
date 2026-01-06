@@ -96,11 +96,85 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   }
 }
 
-#statistics-display {
-  font-size: 14px;
+#histogram-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
-#statistics-display p {
+#taxonDropdown {
+  margin-bottom: 5px;
+}
+
+.histogram-item {
+  position: relative;
+  border: 1px solid #f2f2f2;
+  border-radius: 4px;
+  padding: 10px;
+  background: #fff;
+  min-width: 0; /* Allow grid item to shrink below content size */
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.histogram-item.highlighted {
+  border: 2px solid #007bff;
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+}
+
+.histogram-plot {
+  width: 100%;
+  overflow: hidden;
+}
+
+.histogram-no-data {
+  width: 100%;
+  min-height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.selection-stats-box {
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  min-width: 200px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stats-title {
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
   margin-bottom: 10px;
+}
+
+.stats-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stat-item {
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.stat-item strong {
+  margin-right: 8px;
+}
+
+.histogram-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 5px;
+  text-align: center;
+  word-wrap: break-word;
+  color: #333;
 }
 
