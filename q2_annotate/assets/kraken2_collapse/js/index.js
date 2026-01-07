@@ -104,7 +104,7 @@ $(document).ready(function () {
                 <div class="stat-item"><strong>Median:</strong> <span>${stats.median.toFixed(1)}</span></div>
                 <div class="stat-item"><strong>Std Dev:</strong> <span>${stats.std.toFixed(1)}</span></div>
             </div>
-        `;s
+        `;
     }
 
     function getTaxonShort(taxon) {
