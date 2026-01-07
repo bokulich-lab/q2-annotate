@@ -9,6 +9,7 @@ import json
 import os
 import shutil
 from importlib import resources
+from typing import Optional
 
 import biom
 import numpy as np
@@ -21,7 +22,7 @@ from q2_types.kraken2 import Kraken2OutputDirectoryFormat, Kraken2ReportDirector
 TEMPLATES = resources.files("q2_annotate") / "assets"
 
 
-def _build_contig_map(kraken2_outputs: Kraken2OutputDirectoryFormat):
+def _build_contig_map(kraken2_outputs: Kraken2OutputDirectoryFormat) -> dict:
     """
     Build a mapping from taxon IDs to lists of contig IDs.
 
@@ -29,7 +30,7 @@ def _build_contig_map(kraken2_outputs: Kraken2OutputDirectoryFormat):
         kraken2_outputs: Kraken2OutputDirectoryFormat with classification results
 
     Returns:
-        dict: Mapping of taxon ID to list of contig IDs
+        dict: Mapping of taxon ID to a list of contig IDs
     """
     taxon_to_contigs = {}
 
@@ -94,11 +95,11 @@ def _df_to_arrow_with_arrays(df: pd.DataFrame, filename: str, output_dir: str):
         writer.write_table(table)
 
 
-def _save_table_data_efficiently(
+def _table_to_parquet(
     table: biom.Table,
     contig_map_rev: dict,
-    taxonomy: pd.Series,
-    output_dir: str
+    taxonomy: Optional[pd.Series],
+    output_dir: str,
 ):
     """
     Save table data as Parquet with arrays of abundances per taxonomy per sample.
@@ -113,45 +114,49 @@ def _save_table_data_efficiently(
     matrix = table.matrix_data
     obs_ids = table.ids(axis="observation")
     sample_ids = table.ids(axis="sample")
-    
+
     # Convert sparse matrix to COO format for efficient processing
     coo = matrix.tocoo()
-    
+
     # Build arrays efficiently - use numpy array indexing for speed
     obs_ids_arr = np.array(obs_ids, dtype=object)
     sample_ids_arr = np.array(sample_ids, dtype=object)
-    
+
     obs_id_array = obs_ids_arr[coo.row].astype(str)
     sample_id_array = sample_ids_arr[coo.col].astype(str)
     abundance_array = coo.data
-    
+
     # Create initial DataFrame with contig_id, sample, abundance
-    table_df = pd.DataFrame({
-        "contig_id": obs_id_array,
-        "sample": sample_id_array,
-        "abundance": abundance_array
-    })
-    
+    table_df = pd.DataFrame(
+        {
+            "contig_id": obs_id_array,
+            "sample": sample_id_array,
+            "abundance": abundance_array,
+        }
+    )
+
     # Filter out zero abundances (shouldn't be any in COO, but just in case)
     table_df = table_df[table_df["abundance"] > 0].copy()
-    
+
     # Map contig_id to taxon_id
-    table_df["taxon_id"] = table_df["contig_id"].map(lambda x: contig_map_rev.get(x, "0"))
-    
+    table_df["taxon_id"] = table_df["contig_id"].map(
+        lambda x: contig_map_rev.get(x, "0")
+    )
+
     # Map taxon_id to taxon string if taxonomy provided
     if taxonomy is not None:
-        table_df["taxon"] = table_df["taxon_id"].astype(str).map(lambda x: taxonomy.get(x, x))
+        table_df["taxon"] = (
+            table_df["taxon_id"].astype(str).map(lambda x: taxonomy.get(x, x))
+        )
     else:
         table_df["taxon"] = table_df["taxon_id"].astype(str)
-    
+
     # Group by taxon and sample, aggregating abundances into arrays
-    grouped = table_df.groupby(["taxon", "sample"])["abundance"].apply(list).reset_index()
+    grouped = (
+        table_df.groupby(["taxon", "sample"])["abundance"].apply(list).reset_index()
+    )
     grouped.rename(columns={"abundance": "abundances"}, inplace=True)
-    
-    # Keep as Python list - pyarrow will convert to Arrow list type automatically
-    # Arrow natively supports list/array types
-    # grouped["abundances"] is already a list column, which pyarrow handles correctly
-    
+
     # Save to Arrow format (supports arrays and works with Vega-Lite)
     _df_to_arrow_with_arrays(grouped, "abundance_data.arrow", output_dir)
 
@@ -173,16 +178,14 @@ def _visualize_collapsed_contigs(
     """
     # Extract biom.Table and build reverse mapping
     contig_map_rev = {
-        contig: tax_id
-        for tax_id, contigs in contig_map.items()
-        for contig in contigs
+        contig: tax_id for tax_id, contigs in contig_map.items() for contig in contigs
     }
-    
+
     os.makedirs(os.path.join(output_dir, "data"), exist_ok=True)
 
     # Save table data as Parquet with arrays of abundances per taxonomy per sample
-    _save_table_data_efficiently(table, contig_map_rev, taxonomy, output_dir)
-    
+    _table_to_parquet(table, contig_map_rev, taxonomy, output_dir)
+
     # Get unique samples for dropdowns from the table directly
     sample_ids = [str(id_) for id_ in table.ids(axis="sample")]
     samples_list = sorted(sample_ids)
@@ -191,22 +194,24 @@ def _visualize_collapsed_contigs(
         TEMPLATES / "kraken2_collapse" / "index.html",
     ]
 
-    vega_spec_path = TEMPLATES / "kraken2_collapse" / "vega" / "abundance_histogram.json"
-    with open(vega_spec_path, 'r') as f:
+    vega_spec_path = (
+        TEMPLATES / "kraken2_collapse" / "vega" / "abundance_histogram.json"
+    )
+    with open(vega_spec_path, "r") as f:
         vega_spec = json.load(f)
-    
+
     context = {
         "samples": json.dumps(samples_list),
         "vega_abundance_histogram_spec": json.dumps(vega_spec),
     }
-    
+
     # Copy JS/CSS files
     for d in ("js", "css"):
         src_dir = TEMPLATES / "kraken2_collapse" / d
         dst_dir = os.path.join(output_dir, d)
         if src_dir.exists():
             shutil.copytree(src_dir, dst_dir, dirs_exist_ok=True)
-    
+
     q2templates.render(templates, output_dir, context=context)
 
 
@@ -220,11 +225,13 @@ def collapse_contigs(
     Map contig IDs to taxonomy strings based on Kraken2 classifications.
 
     Args:
+        contig_map: Taxon-to-contigs mapping.
         table: Feature table of contig abundances per sample.
-        taxonomy: Optional FeatureData[Taxonomy] for taxonomy strings.
+        taxonomy: Optional taxonomy for taxonomy strings.
 
     Returns:
-        collapse_table: Feature table with contig abundances collapsed per taxonomy.
+        collapsed_table: Feature table with averaged contig abundances
+            collapsed per taxonomy.
         visualization: Visualization of abundance distributions.
     """
     contig_map_dict = contig_map.view(dict)
@@ -235,11 +242,11 @@ def collapse_contigs(
     }
 
     contig_ft = table.view(biom.Table)
-    
+
     # Generate visualization using original table (before collapsing)
     _visualize = ctx.get_action("annotate", "_visualize_collapsed_contigs")
     (viz,) = _visualize(table, contig_map, taxonomy)
-    
+
     # Collapse the table
     contig_ft_collapsed = contig_ft.collapse(
         f=lambda id_, md: contig_map_rev.get(id_, "0"), axis="observation", norm=False
@@ -277,12 +284,7 @@ def map_taxonomy_to_contigs(
     # add unclassified
     taxonomy = taxonomy.view(pd.Series)
     taxonomy["0"] = "d__Unclassified"
-    feature_map = _build_contig_map(
-        outputs.view(Kraken2OutputDirectoryFormat)
-    )
-
-    # TODO: we should probably still account for the fact that "0" may not
-    #  be present in the feature map sometimes
+    feature_map = _build_contig_map(outputs.view(Kraken2OutputDirectoryFormat))
 
     if len(taxonomy) < len(feature_map.keys()):
         # we need to account for the taxa with the coverage under the threshold

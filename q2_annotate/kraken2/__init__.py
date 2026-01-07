@@ -20,7 +20,11 @@ from .filter import (
     _align_outputs_with_reports,
     filter_kraken2_results,
 )
-from .collapse import collapse_contigs, map_taxonomy_to_contigs, _visualize_collapsed_contigs
+from .collapse import (
+    collapse_contigs,
+    map_taxonomy_to_contigs,
+    _visualize_collapsed_contigs,
+)
 
 __all__ = [
     "build_kraken_db",
