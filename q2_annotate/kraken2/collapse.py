@@ -172,8 +172,6 @@ def _visualize_collapsed_contigs(
         taxonomy: Optional FeatureData[Taxonomy] artifact for taxonomy strings
     """
     # Extract biom.Table and build reverse mapping
-    # table = table.view(biom.Table)
-    # contig_map_dict = contig_map.view(dict)
     contig_map_rev = {
         contig: tax_id
         for tax_id, contigs in contig_map.items()
@@ -185,23 +183,9 @@ def _visualize_collapsed_contigs(
     # Save table data as Parquet with arrays of abundances per taxonomy per sample
     _save_table_data_efficiently(table, contig_map_rev, taxonomy, output_dir)
     
-    # Get unique taxa and samples for dropdowns from the table directly
-    # We need to compute these for the dropdowns
+    # Get unique samples for dropdowns from the table directly
     sample_ids = [str(id_) for id_ in table.ids(axis="sample")]
     samples_list = sorted(sample_ids)
-    
-    # Get unique taxa by looking up all contig IDs
-    obs_ids = [str(id_) for id_ in table.ids(axis="observation")]
-    taxa_set = set()
-    for obs_id in obs_ids:
-        taxon_id = contig_map_rev.get(obs_id, "0")
-        if taxonomy is not None:
-            taxon = taxonomy.get(str(taxon_id), str(taxon_id))
-        else:
-            taxon = str(taxon_id)
-        taxa_set.add(taxon)
-    
-    taxa_list = sorted(list(taxa_set))
 
     templates = [
         TEMPLATES / "kraken2_collapse" / "index.html",
@@ -211,13 +195,8 @@ def _visualize_collapsed_contigs(
     with open(vega_spec_path, 'r') as f:
         vega_spec = json.load(f)
     
-    # Update Vega spec to indicate if taxonomy is available
-    has_taxonomy = taxonomy is not None
-    
     context = {
-        "taxa": json.dumps(taxa_list),
         "samples": json.dumps(samples_list),
-        "has_taxonomy": json.dumps(has_taxonomy),
         "vega_abundance_histogram_spec": json.dumps(vega_spec),
     }
     

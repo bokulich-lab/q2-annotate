@@ -1,6 +1,5 @@
 $(document).ready(function () {
     removeBS3refs();
-    // adjustTagsToBS3();
 
     // Data injected from Python
     const samples = window.samples || [];
