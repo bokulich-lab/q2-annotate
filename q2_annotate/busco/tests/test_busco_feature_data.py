@@ -158,8 +158,7 @@ class TestBUSCOFeatureData(TestPluginBase):
         mock_clean.assert_called_with(self.temp_dir.name)
 
     # TODO: maybe this could be turned into an actual test
-    @patch("q2_annotate.busco.busco._validate_parameters")
-    def test_evaluate_busco_action(self, mock_validate):
+    def test_evaluate_busco_action(self):
         mags = qiime2.Artifact.import_data(
             "FeatureData[MAG]", self.get_data_path("mags/sample2")
         )
@@ -190,12 +189,12 @@ class TestBUSCOFeatureData(TestPluginBase):
             unbinned_contigs=None,
             db=busco_db,
             num_partitions=2,
+            lineage_dataset="bacteria_odb10",
         )
         exp = ("collated_result", "visualization")
         self.assertTupleEqual(obs, exp)
 
-    @patch("q2_annotate.busco.busco._validate_parameters")
-    def test_evaluate_busco_action_with_unbinned(self, mock_validate):
+    def test_evaluate_busco_action_with_unbinned(self):
         mags = qiime2.Artifact.import_data(
             "FeatureData[MAG]", self.get_data_path("mags/sample2")
         )
@@ -231,6 +230,7 @@ class TestBUSCOFeatureData(TestPluginBase):
                 unbinned_contigs=unbinned,
                 db=busco_db,
                 num_partitions=2,
+                lineage_dataset="bacteria_odb10",
             )
         exp = ("collated_result", "visualization")
         self.assertTupleEqual(obs, exp)
