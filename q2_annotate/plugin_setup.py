@@ -704,12 +704,9 @@ plugin.visualizers.register_function(
         ),
         "contig_map": "Mapping between contig IDs and assigned taxonomy IDs.",
         "taxonomy": (
-            "Optional taxonomy mapping to display taxonomy strings "
-            "instead of IDs."
+            "Optional taxonomy mapping to display taxonomy strings instead of IDs."
         ),
-        "collapsed_table": (
-            "Feature table with contig IDs collapsed to taxonomy IDs."
-        ),
+        "collapsed_table": "Feature table with contig IDs collapsed to taxonomy IDs.",
     },
     parameter_descriptions={},
     name="Visualize collapsed contig abundances",

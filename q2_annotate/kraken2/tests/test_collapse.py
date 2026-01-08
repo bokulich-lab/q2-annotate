@@ -159,10 +159,7 @@ class TestDfToArrowWithArrays(TestPluginBase):
             table = reader.read_all()
             obs_df = table.to_pandas()
 
-        # Check that arrays are preserved
-        self.assertEqual(len(obs_df), 2)
-        self.assertEqual(list(obs_df["abundances"][0]), [1.0, 2.0, 3.0])
-        self.assertEqual(list(obs_df["abundances"][1]), [4.0, 5.0])
+        pd.testing.assert_frame_equal(obs_df, df)
 
 
 class TestTableToParquet(TestPluginBase):
@@ -174,7 +171,8 @@ class TestTableToParquet(TestPluginBase):
 
         # Create a sparse biom table
         # Each contig is unique to one sample:
-        # Contig1 -> taxon1 in sample1, Contig2 -> taxon1 in sample1, Contig3 -> taxon2 in sample2
+        # Contig1 -> taxon1 in sample1, Contig2 -> taxon1 in sample1,
+        # Contig3 -> taxon2 in sample2
         data = np.array([[10.0, 0.0], [20.0, 0.0], [0.0, 30.0]])
         obs_ids = ["contig1", "contig2", "contig3"]
         sample_ids = ["sample1", "sample2"]
@@ -191,8 +189,14 @@ class TestTableToParquet(TestPluginBase):
         # Taxonomy mapping
         self.taxonomy = pd.Series(
             {
-                "taxon1": "d__Bacteria;p__Firmicutes;c__Bacilli;g__Bacillus;s__Bacillus_subtilis",
-                "taxon2": "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;g__Escherichia;s__Escherichia_coli",
+                "taxon1": (
+                    "d__Bacteria;p__Firmicutes;c__Bacilli;"
+                    "g__Bacillus;s__Bacillus_subtilis"
+                ),
+                "taxon2": (
+                    "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;"
+                    "g__Escherichia;s__Escherichia_coli"
+                ),
             }
         )
 
@@ -215,28 +219,19 @@ class TestTableToParquet(TestPluginBase):
             table = reader.read_all()
             obs_df = table.to_pandas()
 
-        # Should have been grouped by taxon and sample
-        self.assertEqual(
-            len(obs_df), 2
-        )  # taxon1-sample1 (contig1, contig2), taxon2-sample2 (contig3)
+        # Build expected DataFrame structure
+        expected_data = {
+            "taxon": [self.taxonomy["taxon1"], self.taxonomy["taxon2"]],
+            "sample": ["sample1", "sample2"],
+            "abundances": [[10.0, 20.0], [30.0]],
+        }
+        exp_df = pd.DataFrame(expected_data)
 
-        # Check taxon1-sample1 has abundances [10.0, 20.0]
-        taxon1_sample1 = obs_df[
-            (obs_df["taxon"] == self.taxonomy["taxon1"])
-            & (obs_df["sample"] == "sample1")
-        ]
-        self.assertEqual(len(taxon1_sample1), 1)
-        self.assertEqual(
-            sorted(list(taxon1_sample1.iloc[0]["abundances"])), [10.0, 20.0]
-        )
+        # Sort both DataFrames for comparison
+        obs_df_sorted = obs_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
+        exp_df_sorted = exp_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
 
-        # Check taxon2-sample2 has abundance [30.0]
-        taxon2_sample2 = obs_df[
-            (obs_df["taxon"] == self.taxonomy["taxon2"])
-            & (obs_df["sample"] == "sample2")
-        ]
-        self.assertEqual(len(taxon2_sample2), 1)
-        self.assertEqual(sorted(list(taxon2_sample2.iloc[0]["abundances"])), [30.0])
+        pd.testing.assert_frame_equal(obs_df_sorted, exp_df_sorted)
 
     def test_table_to_parquet_without_taxonomy(self):
         """Test saving table data efficiently without taxonomy."""
@@ -254,23 +249,19 @@ class TestTableToParquet(TestPluginBase):
             table = reader.read_all()
             obs_df = table.to_pandas()
 
-        # Should use taxon IDs instead of taxonomy strings
-        # Should have 2 rows: taxon1-sample1, taxon2-sample2
-        self.assertEqual(len(obs_df), 2)
+        # Build expected DataFrame structure (using taxon IDs)
+        expected_data = {
+            "taxon": ["taxon1", "taxon2"],
+            "sample": ["sample1", "sample2"],
+            "abundances": [[10.0, 20.0], [30.0]],
+        }
+        exp_df = pd.DataFrame(expected_data)
 
-        taxon1_sample1 = obs_df[
-            (obs_df["taxon"] == "taxon1") & (obs_df["sample"] == "sample1")
-        ]
-        self.assertEqual(len(taxon1_sample1), 1)
-        self.assertEqual(
-            sorted(list(taxon1_sample1.iloc[0]["abundances"])), [10.0, 20.0]
-        )
+        # Sort both DataFrames for comparison
+        obs_df_sorted = obs_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
+        exp_df_sorted = exp_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
 
-        taxon2_sample2 = obs_df[
-            (obs_df["taxon"] == "taxon2") & (obs_df["sample"] == "sample2")
-        ]
-        self.assertEqual(len(taxon2_sample2), 1)
-        self.assertEqual(sorted(list(taxon2_sample2.iloc[0]["abundances"])), [30.0])
+        pd.testing.assert_frame_equal(obs_df_sorted, exp_df_sorted)
 
     def test_table_to_parquet_missing_contig(self):
         """Test saving when contig is not in map (should use '0')."""
@@ -290,12 +281,19 @@ class TestTableToParquet(TestPluginBase):
             table = reader.read_all()
             obs_df = table.to_pandas()
 
-        # contig2 should map to "0" in sample1
-        unclassified = obs_df[
-            (obs_df["taxon"] == "0") & (obs_df["sample"] == "sample1")
-        ]
-        self.assertEqual(len(unclassified), 1)
-        self.assertEqual(sorted(list(unclassified.iloc[0]["abundances"])), [20.0])
+        # Build expected DataFrame structure (contig2 maps to "0")
+        expected_data = {
+            "taxon": ["taxon1", "taxon2", "0"],
+            "sample": ["sample1", "sample2", "sample1"],
+            "abundances": [[10.0], [30.0], [20.0]],
+        }
+        exp_df = pd.DataFrame(expected_data)
+
+        # Sort both DataFrames for comparison
+        obs_df_sorted = obs_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
+        exp_df_sorted = exp_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
+
+        pd.testing.assert_frame_equal(obs_df_sorted, exp_df_sorted)
 
 
 class TestExtractMeanAbundances(TestPluginBase):
@@ -312,8 +310,14 @@ class TestExtractMeanAbundances(TestPluginBase):
         # Create taxonomy mapping
         taxonomy = pd.Series(
             {
-                "taxon1": "d__Bacteria;p__Firmicutes;c__Bacilli;g__Bacillus;s__Bacillus_subtilis",
-                "taxon2": "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;g__Escherichia;s__Escherichia_coli",
+                "taxon1": (
+                    "d__Bacteria;p__Firmicutes;c__Bacilli;"
+                    "g__Bacillus;s__Bacillus_subtilis"
+                ),
+                "taxon2": (
+                    "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;"
+                    "g__Escherichia;s__Escherichia_coli"
+                ),
             }
         )
 
@@ -417,9 +421,12 @@ class TestVisualizeCollapsedContigs(TestPluginBase):
         collapsed_obs_ids = ["taxon1"]
         self.collapsed_table = biom.Table(collapsed_data, collapsed_obs_ids, sample_ids)
 
+        taxon1_str = (
+            "d__Bacteria;p__Firmicutes;c__Bacilli;" "g__Bacillus;s__Bacillus_subtilis"
+        )
         self.taxonomy = pd.Series(
             {
-                "taxon1": "d__Bacteria;p__Firmicutes;c__Bacilli;g__Bacillus;s__Bacillus_subtilis",
+                "taxon1": taxon1_str,
             }
         )
 
@@ -455,33 +462,23 @@ class TestVisualizeCollapsedContigs(TestPluginBase):
         call_args = mock_render.call_args
         context = call_args[1]["context"]
 
-        # Verify context keys
-        self.assertIn("samples", context)
-        self.assertIn("vega_abundance_histogram_spec", context)
-        self.assertIn("mean_abundances", context)
+        # Build expected context
+        expected_context = {
+            "samples": json.dumps(["sample1"]),
+            "mean_abundances": json.dumps({self.taxonomy["taxon1"]: {"sample1": 15.0}}),
+        }
 
         # Verify samples content
-        samples_json = context["samples"]
-        samples_list = json.loads(samples_json)
-        self.assertEqual(samples_list, ["sample1"])
+        context_no_vega = context.copy()
+        del context_no_vega["vega_abundance_histogram_spec"]
+        self.assertDictEqual(context_no_vega, expected_context)
 
-        # Verify Vega spec content
-        vega_spec_json = context["vega_abundance_histogram_spec"]
-        vega_spec = json.loads(vega_spec_json)
+        # Verify Vega spec is a valid dict with expected structure
+        vega_spec = json.loads(context["vega_abundance_histogram_spec"])
         self.assertIsInstance(vega_spec, dict)
         self.assertIn("$schema", vega_spec)
         self.assertIn("data", vega_spec)
         self.assertEqual(vega_spec["data"]["url"], "data/abundance_data.arrow")
-
-        # Verify mean abundances content
-        mean_abundances_json = context["mean_abundances"]
-        mean_abundances = json.loads(mean_abundances_json)
-        self.assertIsInstance(mean_abundances, dict)
-        # With taxonomy, taxon1 should map to the taxonomy string
-        taxonomy_str = self.taxonomy["taxon1"]
-        self.assertIn(taxonomy_str, mean_abundances)
-        self.assertIn("sample1", mean_abundances[taxonomy_str])
-        self.assertEqual(mean_abundances[taxonomy_str]["sample1"], 15.0)
 
     @patch("q2_annotate.kraken2.collapse.q2templates.render")
     @patch("q2_annotate.kraken2.collapse.shutil.copytree")
@@ -505,31 +502,23 @@ class TestVisualizeCollapsedContigs(TestPluginBase):
         call_args = mock_render.call_args
         context = call_args[1]["context"]
 
-        # Verify context keys
-        self.assertIn("samples", context)
-        self.assertIn("vega_abundance_histogram_spec", context)
-        self.assertIn("mean_abundances", context)
+        # Build expected context (without taxonomy, uses taxon IDs)
+        expected_context = {
+            "samples": json.dumps(["sample1"]),
+            "mean_abundances": json.dumps({"taxon1": {"sample1": 15.0}}),
+        }
 
         # Verify samples content
-        samples_json = context["samples"]
-        samples_list = json.loads(samples_json)
-        self.assertEqual(samples_list, ["sample1"])
+        context_no_vega = context.copy()
+        del context_no_vega["vega_abundance_histogram_spec"]
+        self.assertDictEqual(context_no_vega, expected_context)
 
-        # Verify Vega spec content
-        vega_spec_json = context["vega_abundance_histogram_spec"]
-        vega_spec = json.loads(vega_spec_json)
+        # Verify Vega spec is a valid dict with expected structure
+        vega_spec = json.loads(context["vega_abundance_histogram_spec"])
         self.assertIsInstance(vega_spec, dict)
         self.assertIn("$schema", vega_spec)
         self.assertIn("data", vega_spec)
         self.assertEqual(vega_spec["data"]["url"], "data/abundance_data.arrow")
-
-        # Verify mean abundances content (without taxonomy, should use taxon IDs)
-        mean_abundances_json = context["mean_abundances"]
-        mean_abundances = json.loads(mean_abundances_json)
-        self.assertIsInstance(mean_abundances, dict)
-        self.assertIn("taxon1", mean_abundances)
-        self.assertIn("sample1", mean_abundances["taxon1"])
-        self.assertEqual(mean_abundances["taxon1"]["sample1"], 15.0)
 
 
 class TestCollapseContigs(TestPluginBase):
@@ -561,8 +550,14 @@ class TestCollapseContigs(TestPluginBase):
         # Create taxonomy artifact
         taxonomy = pd.Series(
             {
-                "taxon1": "d__Bacteria;p__Firmicutes;c__Bacilli;g__Bacillus;s__Bacillus_subtilis",
-                "taxon2": "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;g__Escherichia;s__Escherichia_coli",
+                "taxon1": (
+                    "d__Bacteria;p__Firmicutes;c__Bacilli;"
+                    "g__Bacillus;s__Bacillus_subtilis"
+                ),
+                "taxon2": (
+                    "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;"
+                    "g__Escherichia;s__Escherichia_coli"
+                ),
             },
             name="Taxon",
         )
@@ -592,8 +587,9 @@ class TestCollapseContigs(TestPluginBase):
         mock_visualize_action.assert_called_once()
         call_args = mock_visualize_action.call_args[0]
         self.assertEqual(call_args[0], self.table_artifact)
-        # Second argument should be the collapsed_table artifact (created by make_artifact)
-        # Since make_artifact returns a mock, we just verify it's the mock artifact
+        # Second argument should be the collapsed_table artifact
+        # (created by make_artifact)
+        # Since make_artifact returns a mock, we just verify it's the mock
         self.assertEqual(call_args[1], mock_artifact)
         self.assertEqual(call_args[2], self.contig_map_artifact)
         self.assertIsNone(call_args[3])
@@ -608,14 +604,16 @@ class TestCollapseContigs(TestPluginBase):
         # Verify the collapsed table has correct structure
         collapsed_table = make_artifact_call_args[1]
         collapsed_df = collapsed_table.to_dataframe(dense=True)
-        # Should have 2 taxa (taxon1, taxon2) and 1 sample
-        self.assertEqual(len(collapsed_df), 2)
-        self.assertEqual(list(collapsed_df.index), ["taxon1", "taxon2"])
-        self.assertEqual(list(collapsed_df.columns), ["sample1"])
-        # taxon1 should have averaged abundance: (10.0 + 20.0) / 2 = 15.0
-        # taxon2 should have abundance: 30.0 / 1 = 30.0
-        self.assertEqual(collapsed_df.loc["taxon1", "sample1"], 15.0)
-        self.assertEqual(collapsed_df.loc["taxon2", "sample1"], 30.0)
+
+        # Build expected DataFrame
+        expected_data = np.array([[15.0], [30.0]])
+        expected_df = pd.DataFrame(
+            expected_data,
+            index=["taxon1", "taxon2"],
+            columns=["sample1"],
+        )
+
+        pd.testing.assert_frame_equal(collapsed_df, expected_df)
 
         self.assertEqual(result_table, mock_artifact)
 
@@ -641,12 +639,14 @@ class TestCollapseContigs(TestPluginBase):
             "annotate", "_visualize_collapsed_contigs"
         )
 
-        # Verify visualization action was called with correct artifacts including taxonomy
+        # Verify visualization action was called with correct artifacts
+        # including taxonomy
         mock_visualize_action.assert_called_once()
         call_args = mock_visualize_action.call_args[0]
         self.assertEqual(call_args[0], self.table_artifact)
-        # Second argument should be the collapsed_table artifact (created by make_artifact)
-        # Since make_artifact returns a mock, we just verify it's the mock artifact
+        # Second argument should be the collapsed_table artifact
+        # (created by make_artifact)
+        # Since make_artifact returns a mock, we just verify it's the mock
         self.assertEqual(call_args[1], mock_artifact)
         self.assertEqual(call_args[2], self.contig_map_artifact)
         self.assertEqual(call_args[3], self.taxonomy_artifact)
@@ -661,14 +661,16 @@ class TestCollapseContigs(TestPluginBase):
         # Verify the collapsed table has correct structure
         collapsed_table = make_artifact_call_args[1]
         collapsed_df = collapsed_table.to_dataframe(dense=True)
-        # Should have 2 taxa (taxon1, taxon2) and 1 sample
-        self.assertEqual(len(collapsed_df), 2)
-        self.assertEqual(list(collapsed_df.index), ["taxon1", "taxon2"])
-        self.assertEqual(list(collapsed_df.columns), ["sample1"])
-        # taxon1 should have averaged abundance: (10.0 + 20.0) / 2 = 15.0
-        # taxon2 should have abundance: 30.0 / 1 = 30.0
-        self.assertEqual(collapsed_df.loc["taxon1", "sample1"], 15.0)
-        self.assertEqual(collapsed_df.loc["taxon2", "sample1"], 30.0)
+
+        # Build expected DataFrame
+        expected_data = np.array([[15.0], [30.0]])
+        expected_df = pd.DataFrame(
+            expected_data,
+            index=["taxon1", "taxon2"],
+            columns=["sample1"],
+        )
+
+        pd.testing.assert_frame_equal(collapsed_df, expected_df)
 
         self.assertEqual(result_table, mock_artifact)
 
