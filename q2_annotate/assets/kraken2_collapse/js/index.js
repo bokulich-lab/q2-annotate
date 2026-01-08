@@ -268,10 +268,19 @@ $(document).ready(function () {
                 // There is data - show plot
                 item.style.display = '';
                 
+                // Get spinner element for this taxon
+                const spinnerId = `spinner-${taxon.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                const spinner = item.querySelector(`#${spinnerId}`);
+                
                 if (!vegaViews[taxon]) {
                     // Plot doesn't exist yet - create it
                     plotDiv.className = 'histogram-plot';
                     plotDiv.innerHTML = '';
+                    
+                    // Show spinner
+                    if (spinner) {
+                        spinner.style.display = 'block';
+                    }
                     
                     const spec = JSON.parse(JSON.stringify(vegaAbundanceHistogramSpec));
                     spec.params[1].value = taxon;
@@ -283,15 +292,28 @@ $(document).ready(function () {
                         vegaViews[taxon] = res.view;
                         // Set the sample filter
                         res.view.signal('sample_param', selectedSample).runAsync();
+                        // Hide spinner when plot is loaded
+                        if (spinner) {
+                            spinner.style.display = 'none';
+                        }
                     }).catch(error => {
                         console.error(`Error embedding histogram for taxon ${taxon}:`, error);
                         plotDiv.innerHTML = '<p class="text-danger" style="font-size: 10px;">Error loading plot</p>';
+                        // Hide spinner on error
+                        if (spinner) {
+                            spinner.style.display = 'none';
+                        }
                     });
                 } else if (plotDiv.className === 'histogram-no-data') {
                     // Plot was destroyed but now we have data - recreate it
                     plotDiv.className = 'histogram-plot';
                     plotDiv.innerHTML = '';
                     
+                    // Show spinner
+                    if (spinner) {
+                        spinner.style.display = 'block';
+                    }
+                    
                     const spec = JSON.parse(JSON.stringify(vegaAbundanceHistogramSpec));
                     spec.params[1].value = taxon;
                     
@@ -302,9 +324,17 @@ $(document).ready(function () {
                         vegaViews[taxon] = res.view;
                         // Set the sample filter
                         res.view.signal('sample_param', selectedSample).runAsync();
+                        // Hide spinner when plot is loaded
+                        if (spinner) {
+                            spinner.style.display = 'none';
+                        }
                     }).catch(error => {
                         console.error(`Error embedding histogram for taxon ${taxon}:`, error);
                         plotDiv.innerHTML = '<p class="text-danger" style="font-size: 10px;">Error loading plot</p>';
+                        // Hide spinner on error
+                        if (spinner) {
+                            spinner.style.display = 'none';
+                        }
                     });
                 } else {
                     // Update existing plot with new sample filter (only if visible)
@@ -326,6 +356,13 @@ $(document).ready(function () {
         titleDiv.className = 'histogram-title';
         titleDiv.textContent = taxonShort;
         containerDiv.appendChild(titleDiv);
+        
+        // Create a spinner for loading indication
+        const spinnerDiv = document.createElement('div');
+        spinnerDiv.className = 'histogram-spinner';
+        spinnerDiv.id = `spinner-${taxon.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        spinnerDiv.innerHTML = '<div class="rect1"></div><div class="rect2"></div><div class="rect3"></div><div class="rect4"></div><div class="rect5"></div>';
+        containerDiv.appendChild(spinnerDiv);
         
         // Create a div for the Vega visualization or "no data" message
         // Don't create the plot yet - it will be created lazily in updateVisualization()
