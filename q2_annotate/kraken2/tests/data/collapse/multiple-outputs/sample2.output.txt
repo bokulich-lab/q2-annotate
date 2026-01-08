@@ -1,0 +1,3 @@
+C	contig3	taxon1	150	1323375:Q
+C	contig4	taxon2	250	545501:Q
+

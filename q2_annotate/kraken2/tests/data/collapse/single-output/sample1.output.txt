@@ -1,0 +1,4 @@
+C	contig1	taxon1	100	1912795:Q
+C	contig2	taxon1	200	1583098:Q
+C	contig3	taxon2	150	1323375:Q
+

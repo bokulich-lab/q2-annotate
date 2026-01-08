@@ -673,7 +673,9 @@ plugin.pipelines.register_function(
         "feature_map": (
             "Taxonomy assignments for contigs. Each contig ID is mapped to "
             "its full taxonomy string based on Kraken2 classifications. "
-            "Unclassified contigs are assigned 'd__Unclassified'."
+            "Unclassified contigs are assigned 'd__Unclassified'. Assignments "
+            "below the provided coverage threshold will be treated as "
+            "'d__Unclassified'."
         ),
         "taxonomy": select_features_taxonomy_description,
     },
@@ -682,9 +684,7 @@ plugin.pipelines.register_function(
         "Maps contig IDs to their full taxonomy strings based on Kraken2 "
         "classifications. This action processes Kraken2 reports and outputs "
         "produced from contig sequences to create a taxonomy mapping where "
-        "each contig ID is associated with its assigned taxonomy. "
-        "Additionally, converts a contig abundance table to a taxonomy "
-        "abundance table by replacing contig IDs with their taxonomy strings."
+        "each contig ID is associated with its assigned taxonomy."
     ),
 )
 
@@ -694,19 +694,29 @@ plugin.visualizers.register_function(
         "table": FeatureTable[Frequency],
         "contig_map": FeatureMap[TaxonomyToContigs],
         "taxonomy": FeatureData[Taxonomy],
+        "collapsed_table": FeatureTable[Frequency],
     },
     parameters={},
     input_descriptions={
-        "table": "Original feature table with contig IDs as feature IDs (before collapsing).",
+        "table": (
+            "Original feature table with contig IDs as feature "
+            "IDs (before collapsing)."
+        ),
         "contig_map": "Mapping between contig IDs and assigned taxonomy IDs.",
-        "taxonomy": "Optional taxonomy mapping to display taxonomy strings instead of IDs.",
+        "taxonomy": (
+            "Optional taxonomy mapping to display taxonomy strings "
+            "instead of IDs."
+        ),
+        "collapsed_table": (
+            "Feature table with contig IDs collapsed to taxonomy IDs."
+        ),
     },
     parameter_descriptions={},
     name="Visualize collapsed contig abundances",
     description=(
-        "Generates a visualization showing histograms of contig abundance distributions "
-        "per taxon per sample from the original (pre-collapsed) table, with interactive "
-        "dropdowns for taxon and sample selection."
+        "Generates a visualization showing histograms of contig abundance "
+        "distributions per taxon per sample from the original (pre-collapsed) "
+        "table."
     ),
 )
 
@@ -725,12 +735,12 @@ plugin.pipelines.register_function(
     input_descriptions={
         "table": (
             "Table of contig abundances per sample. Feature IDs will be "
-            "replaced with taxonomy strings from the Kraken2 classifications."
+            "replaced with taxonomy strings."
         ),
         "contig_map": ("Mapping between contig IDs and assingned taxonomy IDs."),
         "taxonomy": (
-            "Optional taxonomy mapping to display taxonomy strings in the visualization "
-            "instead of taxonomy IDs."
+            "Optional taxonomy mapping to display taxonomy strings in the "
+            "visualization instead of taxonomy IDs."
         ),
     },
     parameter_descriptions={},
@@ -741,14 +751,15 @@ plugin.pipelines.register_function(
             "will have their abundances averaged."
         ),
         "visualization": (
-            "Interactive visualization showing histograms of contig abundance distributions "
-            "per taxon per sample."
+            "Interactive visualization showing histograms of contig abundance "
+            "distributions per taxon per sample."
         ),
     },
-    name="Map contig IDs to taxonomy strings from Kraken 2.",
+    name="Collapse the contig abundances based on taxonomy.",
     description=(
-        "This action collapses contig abundances based on their taxonomy assignments. "
-        "Contig abundances for contigs with the same taxonomy assignment will be averaged."
+        "This action collapses contig abundances based on their taxonomy "
+        "assignments. Contig abundances for contigs with the same taxonomy "
+        "assignment will be averaged."
     ),
 )
 

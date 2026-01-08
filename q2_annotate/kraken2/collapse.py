@@ -17,7 +17,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.ipc as ipc
 import q2templates
-from q2_types.kraken2 import Kraken2OutputDirectoryFormat, Kraken2ReportDirectoryFormat
+from q2_types.kraken2 import Kraken2OutputDirectoryFormat
 
 TEMPLATES = resources.files("q2_annotate") / "assets"
 
@@ -161,9 +161,47 @@ def _table_to_parquet(
     _df_to_arrow_with_arrays(grouped, "abundance_data.arrow", output_dir)
 
 
+def _extract_mean_abundances(
+    collapsed_table: biom.Table, taxonomy: pd.Series = None
+) -> dict:
+    """
+    Extract mean abundances per taxon per sample from the collapsed table.
+
+    Args:
+        collapsed_table: feature table with contig IDs collapsed
+            to taxonomy IDs
+        taxonomy: Optional taxonomy for taxonomy strings
+
+    Returns:
+        dict: Mapping of taxon -> sample -> mean abundance
+    """
+    collapsed_df = collapsed_table.to_dataframe(dense=True)
+
+    # Map taxon IDs to taxonomy strings if taxonomy provided
+    if taxonomy is not None:
+        collapsed_df.index = collapsed_df.index.map(
+            lambda x: taxonomy.get(str(x), str(x))
+        )
+
+    # Calculate mean abundances per taxon per sample
+    mean_abundances = {}
+    for taxon in collapsed_df.index:
+        taxon_str = str(taxon)
+        mean_abundances[taxon_str] = {}
+
+        for sample in collapsed_df.columns:
+            sample_str = str(sample)
+            value = collapsed_df.loc[taxon, sample]
+            if pd.notna(value) and value > 0:
+                mean_abundances[taxon_str][sample_str] = float(value)
+
+    return mean_abundances
+
+
 def _visualize_collapsed_contigs(
     output_dir: str,
     table: biom.Table,
+    collapsed_table: biom.Table,
     contig_map: dict,
     taxonomy: pd.Series = None,
 ):
@@ -173,6 +211,8 @@ def _visualize_collapsed_contigs(
     Args:
         output_dir: Directory to write visualization files
         table: FeatureTable[Frequency] artifact with contig IDs as observation IDs
+        collapsed_table: FeatureTable[Frequency] artifact with contig IDs
+            collapsed to taxonomy IDs
         contig_map: FeatureMap[TaxonomyToContigs] artifact
         taxonomy: Optional FeatureData[Taxonomy] artifact for taxonomy strings
     """
@@ -190,6 +230,9 @@ def _visualize_collapsed_contigs(
     sample_ids = [str(id_) for id_ in table.ids(axis="sample")]
     samples_list = sorted(sample_ids)
 
+    # Extract mean abundances from collapsed_table for efficient sorting
+    mean_abundances = _extract_mean_abundances(collapsed_table, taxonomy)
+
     templates = [
         TEMPLATES / "kraken2_collapse" / "index.html",
     ]
@@ -203,6 +246,7 @@ def _visualize_collapsed_contigs(
     context = {
         "samples": json.dumps(samples_list),
         "vega_abundance_histogram_spec": json.dumps(vega_spec),
+        "mean_abundances": json.dumps(mean_abundances),
     }
 
     # Copy JS/CSS files
@@ -243,18 +287,18 @@ def collapse_contigs(
 
     contig_ft = table.view(biom.Table)
 
-    # Generate visualization using original table (before collapsing)
-    _visualize = ctx.get_action("annotate", "_visualize_collapsed_contigs")
-    (viz,) = _visualize(table, contig_map, taxonomy)
-
     # Collapse the table
     contig_ft_collapsed = contig_ft.collapse(
         f=lambda id_, md: contig_map_rev.get(id_, "0"), axis="observation", norm=False
     )
     contig_ft_averaged = _average_by_count(contig_ft_collapsed, contig_map_dict)
-    table = ctx.make_artifact("FeatureTable[Frequency]", contig_ft_averaged)
+    collapsed_table = ctx.make_artifact("FeatureTable[Frequency]", contig_ft_averaged)
 
-    return table, viz
+    # Generate visualization using original table (before collapsing)
+    _visualize = ctx.get_action("annotate", "_visualize_collapsed_contigs")
+    (viz,) = _visualize(table, collapsed_table, contig_map, taxonomy)
+
+    return collapsed_table, viz
 
 
 def map_taxonomy_to_contigs(
