@@ -51,7 +51,7 @@ class TestKaijuClassification(TestPluginBase):
             ("feature_table", "merge_taxa"): self.mock_merge_taxa,
             ("demux", "partition_samples_single"): self.mock_partition_single,
             ("demux", "partition_samples_paired"): self.mock_partition_paired,
-            ("assembly", "partition_contigs"): self.mock_partition_contigs,
+            ("types", "partition_contigs"): self.mock_partition_contigs,
             ("types", "partition_sample_data_mags"): self.mock_partition_mags,
         }[domain, action_name]
 
@@ -562,7 +562,7 @@ class TestKaijuClassification(TestPluginBase):
         self.ctx.get_action.assert_any_call("annotate", "_classify_kaiju")
         self.ctx.get_action.assert_any_call("feature_table", "merge")
         self.ctx.get_action.assert_any_call("feature_table", "merge_taxa")
-        self.ctx.get_action.assert_any_call("assembly", "partition_contigs")
+        self.ctx.get_action.assert_any_call("types", "partition_contigs")
 
         self.mock_partition_contigs.assert_called_once_with(fake_seqs, 1)
         self.mock_classify_kaiju.assert_called_once_with(
