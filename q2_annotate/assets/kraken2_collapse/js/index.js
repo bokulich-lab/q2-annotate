@@ -272,8 +272,11 @@ $(document).ready(function () {
                 const spinnerId = `spinner-${taxon.replace(/[^a-zA-Z0-9]/g, '_')}`;
                 const spinner = item.querySelector(`#${spinnerId}`);
                 
-                if (!vegaViews[taxon]) {
-                    // Plot doesn't exist yet - create it
+                // Check if plot already exists and is still valid
+                const plotExists = plotDiv.querySelector('canvas, svg');
+                
+                if (!vegaViews[taxon] || !plotExists) {
+                    // Plot doesn't exist yet or was destroyed - create it
                     plotDiv.className = 'histogram-plot';
                     plotDiv.innerHTML = '';
                     
@@ -303,6 +306,8 @@ $(document).ready(function () {
                         if (spinner) {
                             spinner.style.display = 'none';
                         }
+                        // Clean up view reference on error
+                        delete vegaViews[taxon];
                     });
                 } else if (plotDiv.className === 'histogram-no-data') {
                     // Plot was destroyed but now we have data - recreate it
@@ -338,8 +343,20 @@ $(document).ready(function () {
                     });
                 } else {
                     // Update existing plot with new sample filter (only if visible)
-                    vegaViews[taxon].signal('sample_param', selectedSample)
-                        .runAsync();
+                    // Check if view is still valid before updating
+                    if (vegaViews[taxon] && plotDiv.querySelector('canvas, svg')) {
+                        try {
+                            vegaViews[taxon].signal('sample_param', selectedSample)
+                                .runAsync();
+                        } catch (e) {
+                            // View might have been destroyed, recreate it
+                            console.warn(`View for ${taxon} was invalid, recreating...`);
+                            delete vegaViews[taxon];
+                            // Trigger recreation by clearing plotDiv
+                            plotDiv.innerHTML = '';
+                            // This will be handled in the next updateVisualization call
+                        }
+                    }
                 }
             }
         });
@@ -492,18 +509,24 @@ $(document).ready(function () {
         const newTaxaList = taxaWithValues.map(item => item.taxon);
         
         // Reorder DOM elements to match new sort order
+        // Use a document fragment to avoid multiple reflows, but preserve existing elements
         const itemsByTaxon = {};
         histogramItems.forEach(item => {
             itemsByTaxon[item.dataset.taxon] = item;
         });
         
-        // Clear grid and re-append in new order
-        histogramGrid.innerHTML = '';
+        // Create a fragment and append items in new order
+        // appendChild automatically moves elements if they're already in the DOM
+        const fragment = document.createDocumentFragment();
         newTaxaList.forEach(taxon => {
             if (itemsByTaxon[taxon]) {
-                histogramGrid.appendChild(itemsByTaxon[taxon]);
+                fragment.appendChild(itemsByTaxon[taxon]);
             }
         });
+        
+        // Clear grid and append fragment (this preserves plot containers)
+        histogramGrid.innerHTML = '';
+        histogramGrid.appendChild(fragment);
         
         taxaList = newTaxaList;
     }
@@ -597,7 +620,7 @@ $(document).ready(function () {
             // Set slider max value if it exists
             if (taxaLimitSlider) {
                 taxaLimitSlider.max = taxaList.length;
-                taxaLimitSlider.value = Math.min(50, taxaList.length);
+                taxaLimitSlider.value = Math.min(20, taxaList.length);
                 if (taxaLimitValue) {
                     taxaLimitValue.textContent = taxaLimitSlider.value;
                 }
