@@ -627,12 +627,14 @@ class TestBUSCOUtils(TestPluginBase):
     @patch("q2_annotate.busco.utils._count_contigs")
     def test_add_unbinned_metrics(self, mock_count_contigs):
         # Set up test data with scaffolds column
-        df = pd.DataFrame({
-            "sample_id": ["sample1", "sample1"],
-            "mag_id": ["mag1", "mag2"],
-            "scaffolds": [10, 20],  # 30 total binned contigs for sample1
-            "busco_score": [95.0, 90.0]
-        })
+        df = pd.DataFrame(
+            {
+                "sample_id": ["sample1", "sample1"],
+                "mag_id": ["mag1", "mag2"],
+                "scaffolds": [10, 20],  # 30 total binned contigs for sample1
+                "busco_score": [95.0, 90.0],
+            }
+        )
 
         # Mock unbinned_contigs
         unbinned_mock = MagicMock()
@@ -655,17 +657,21 @@ class TestBUSCOUtils(TestPluginBase):
         # 5 unbinned / (30 binned + 5 unbinned) * 100 = ~14.29%
         expected_percentage = (5 / (30 + 5)) * 100
         for _, row in result.iterrows():
-            self.assertAlmostEqual(row["unbinned_contigs"], expected_percentage, places=2)
+            self.assertAlmostEqual(
+                row["unbinned_contigs"], expected_percentage, places=2
+            )
             self.assertEqual(row["unbinned_contigs_count"], 5)
 
     @patch("q2_annotate.busco.utils._count_contigs")
     def test_add_unbinned_metrics_missing_sample_warning(self, mock_count_contigs):
         # BUSCO results with sample1 and sample2
-        df = pd.DataFrame({
-            "sample_id": ["sample1", "sample1", "sample2"],
-            "mag_id": ["mag1", "mag2", "mag3"],
-            "scaffolds": [10, 20, 15],
-        })
+        df = pd.DataFrame(
+            {
+                "sample_id": ["sample1", "sample1", "sample2"],
+                "mag_id": ["mag1", "mag2", "mag3"],
+                "scaffolds": [10, 20, 15],
+            }
+        )
 
         # Unbinned contigs only for sample2 (sample1 is missing)
         unbinned_mock = MagicMock()
@@ -686,22 +692,26 @@ class TestBUSCOUtils(TestPluginBase):
         sample2_rows = result[result["sample_id"] == "sample2"]
         expected_percentage = (5 / (15 + 5)) * 100
         for _, row in sample2_rows.iterrows():
-            self.assertAlmostEqual(row["unbinned_contigs"], expected_percentage, places=2)
+            self.assertAlmostEqual(
+                row["unbinned_contigs"], expected_percentage, places=2
+            )
             self.assertEqual(row["unbinned_contigs_count"], 5)
 
     @patch("q2_annotate.busco.utils._count_contigs")
     def test_add_unbinned_metrics_multiple_samples(self, mock_count_contigs):
         # Multiple samples
-        df = pd.DataFrame({
-            "sample_id": ["sample1", "sample1", "sample2", "sample2"],
-            "mag_id": ["mag1", "mag2", "mag3", "mag4"],
-            "scaffolds": [10, 20, 15, 25],  # sample1: 30, sample2: 40
-        })
+        df = pd.DataFrame(
+            {
+                "sample_id": ["sample1", "sample1", "sample2", "sample2"],
+                "mag_id": ["mag1", "mag2", "mag3", "mag4"],
+                "scaffolds": [10, 20, 15, 25],  # sample1: 30, sample2: 40
+            }
+        )
 
         unbinned_mock = MagicMock()
         unbinned_mock.sample_dict.return_value = {
             "sample1": "fake_unbinned_1.fasta",
-            "sample2": "fake_unbinned_2.fasta"
+            "sample2": "fake_unbinned_2.fasta",
         }
 
         # Return different counts for different samples
@@ -725,11 +735,13 @@ class TestBUSCOUtils(TestPluginBase):
 
     @patch("q2_annotate.busco.utils._count_contigs")
     def test_add_unbinned_metrics_zero_unbinned(self, mock_count_contigs):
-        df = pd.DataFrame({
-            "sample_id": ["sample1"],
-            "mag_id": ["mag1"],
-            "scaffolds": [30],
-        })
+        df = pd.DataFrame(
+            {
+                "sample_id": ["sample1"],
+                "mag_id": ["mag1"],
+                "scaffolds": [30],
+            }
+        )
 
         unbinned_mock = MagicMock()
         unbinned_mock.sample_dict.return_value = {"sample1": "fake_unbinned.fasta"}

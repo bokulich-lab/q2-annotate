@@ -24,28 +24,28 @@ class TestVegaDataPreparation(TestPluginBase):
     def setUp(self):
         super().setUp()
         # Basic test data with all metrics
-        self.full_df = pd.DataFrame({
-            "sample_id": ["sample1", "sample1", "sample2"],
-            "mag_id": ["mag1", "mag2", "mag3"],
-            "dataset": ["bacteria_odb10", "bacteria_odb10", "bacteria_odb10"],
-            "n_markers": [100, 100, 100],
-            "single": [85.0, 90.0, 80.0],
-            "duplicated": [5.0, 3.0, 7.0],
-            "fragmented": [3.0, 2.0, 4.0],
-            "missing": [7.0, 5.0, 9.0],
-            "completeness": [93.0, 95.0, 91.0],
-            "contamination": [5.9, 3.3, 8.8],
-            "contigs_n50": [50000, 60000, 45000],
-            "length": [2000000, 2500000, 1800000],
-            "scaffold_n50": [51000, 61000, 46000],
-            "percent_gaps": [0.5, 0.3, 0.7],
-            "scaffolds": [50, 40, 60],
-        })
+        self.full_df = pd.DataFrame(
+            {
+                "sample_id": ["sample1", "sample1", "sample2"],
+                "mag_id": ["mag1", "mag2", "mag3"],
+                "dataset": ["bacteria_odb10", "bacteria_odb10", "bacteria_odb10"],
+                "n_markers": [100, 100, 100],
+                "single": [85.0, 90.0, 80.0],
+                "duplicated": [5.0, 3.0, 7.0],
+                "fragmented": [3.0, 2.0, 4.0],
+                "missing": [7.0, 5.0, 9.0],
+                "completeness": [93.0, 95.0, 91.0],
+                "contamination": [5.9, 3.3, 8.8],
+                "contigs_n50": [50000, 60000, 45000],
+                "length": [2000000, 2500000, 1800000],
+                "scaffold_n50": [51000, 61000, 46000],
+                "percent_gaps": [0.5, 0.3, 0.7],
+                "scaffolds": [50, 40, 60],
+            }
+        )
 
         # Test data without completeness/contamination
-        self.basic_df = self.full_df.drop(
-            columns=["completeness", "contamination"]
-        )
+        self.basic_df = self.full_df.drop(columns=["completeness", "contamination"])
 
     def test_prepare_histogram_data_with_all_metrics(self):
         result = _prepare_histogram_data(self.full_df)
@@ -68,8 +68,16 @@ class TestVegaDataPreparation(TestPluginBase):
 
         # Check that all expected metrics are present
         categories = {record["category"] for record in data}
-        expected = {"single", "duplicated", "fragmented", "missing",
-                    "completeness", "contamination", "contigs_n50", "length"}
+        expected = {
+            "single",
+            "duplicated",
+            "fragmented",
+            "missing",
+            "completeness",
+            "contamination",
+            "contigs_n50",
+            "length",
+        }
         self.assertEqual(categories, expected)
 
     def test_prepare_histogram_data_without_completeness(self):
@@ -81,8 +89,14 @@ class TestVegaDataPreparation(TestPluginBase):
         self.assertEqual(len(data), 18)
 
         categories = {record["category"] for record in data}
-        expected = {"single", "duplicated", "fragmented", "missing",
-                    "contigs_n50", "length"}
+        expected = {
+            "single",
+            "duplicated",
+            "fragmented",
+            "missing",
+            "contigs_n50",
+            "length",
+        }
         self.assertEqual(categories, expected)
 
         # Ensure completeness and contamination are not present
@@ -96,8 +110,16 @@ class TestVegaDataPreparation(TestPluginBase):
         self.assertIsInstance(result, dict)
 
         # Check all expected metrics are present
-        expected_metrics = ["single", "duplicated", "fragmented", "missing",
-                            "completeness", "contamination", "contigs_n50", "length"]
+        expected_metrics = [
+            "single",
+            "duplicated",
+            "fragmented",
+            "missing",
+            "completeness",
+            "contamination",
+            "contigs_n50",
+            "length",
+        ]
         for metric in expected_metrics:
             self.assertIn(metric, result)
 

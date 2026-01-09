@@ -129,11 +129,7 @@ def _prepare_detailed_data(results: pd.DataFrame) -> str:
     # Estimate fraction of sequences in each BUSCO category
     busco_plot_data["frac_markers"] = (
         "~"
-        + (
-            busco_plot_data["BUSCO_percentage"]
-            * busco_plot_data["n_markers"]
-            / 100
-        )
+        + (busco_plot_data["BUSCO_percentage"] * busco_plot_data["n_markers"] / 100)
         .round()
         .astype(int)
         .astype(str)

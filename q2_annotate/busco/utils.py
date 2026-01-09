@@ -463,8 +463,12 @@ def _add_unbinned_metrics(
 
     if rows:
         unbinned_df = pd.DataFrame(rows).set_index("sample_id")
-        busco_results["unbinned_contigs_count"] = busco_results["sample_id"].map(unbinned_df["unbinned_contigs_count"])
-        busco_results["unbinned_contigs"] = busco_results["sample_id"].map(unbinned_df["unbinned_contigs"])
+        busco_results["unbinned_contigs_count"] = busco_results["sample_id"].map(
+            unbinned_df["unbinned_contigs_count"]
+        )
+        busco_results["unbinned_contigs"] = busco_results["sample_id"].map(
+            unbinned_df["unbinned_contigs"]
+        )
     else:
         busco_results["unbinned_contigs"] = pd.NA
         busco_results["unbinned_contigs_count"] = pd.NA

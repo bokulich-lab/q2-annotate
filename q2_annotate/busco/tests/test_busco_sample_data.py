@@ -200,7 +200,7 @@ class TestBUSCOSampleData(TestPluginBase):
         # Verify render was called with proper structure
         mock_render.assert_called_once()
         call_args = mock_render.call_args
-        context = call_args[1]['context']
+        context = call_args[1]["context"]
 
         # Check that essential keys are present
         self.assertIn("tabs", context)
