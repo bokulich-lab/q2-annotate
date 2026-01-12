@@ -264,6 +264,7 @@ class TestBUSCOSampleData(TestPluginBase):
             db=busco_db,
             unbinned_contigs=unbinned,
             num_partitions=2,
+            lineage_dataset="bacteria_odb10",
         )
         exp = ("collated_result", "visualization")
 
@@ -306,6 +307,7 @@ class TestBUSCOSampleData(TestPluginBase):
             db=busco_db,
             unbinned_contigs=None,
             num_partitions=2,
+            lineage_dataset="bacteria_odb10",
         )
         exp = ("collated_result", "visualization")
 

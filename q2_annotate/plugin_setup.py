@@ -1040,9 +1040,6 @@ busco_params = {
     "augustus": Bool,
     "augustus_parameters": Str,
     "augustus_species": Str,
-    "auto_lineage": Bool,
-    "auto_lineage_euk": Bool,
-    "auto_lineage_prok": Bool,
     "cpu": Int % Range(1, None),
     "contig_break": Int % Range(0, None),
     "evalue": Float % Range(0, None, inclusive_start=False),
@@ -1072,13 +1069,6 @@ busco_param_descriptions = {
         "separated by a comma. Example: '--PARAM1=VALUE1,--PARAM2=VALUE2'."
     ),
     "augustus_species": "Specify a species for Augustus training.",
-    "auto_lineage": "Run auto-lineage to find optimum lineage path.",
-    "auto_lineage_euk": (
-        "Run auto-placement just on eukaryote tree to find optimum lineage path."
-    ),
-    "auto_lineage_prok": (
-        "Run auto-lineage just on non-eukaryote trees to find optimum lineage path."
-    ),
     "cpu": "Specify the number (N=integer) of threads/cores to use.",
     "contig_break": (
         "Number of contiguous Ns to signify a break between contigs. "
