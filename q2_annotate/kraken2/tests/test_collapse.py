@@ -156,7 +156,7 @@ class TestDfToJsonPerSample(TestPluginBase):
         self.assertTrue(os.path.exists(sample2_file))
 
         # Read back and verify sample1
-        with open(sample1_file, 'r') as f:
+        with open(sample1_file, "r") as f:
             sample1_data = json.load(f)
 
         # Sample1 should have exploded abundances for taxon1 and taxon2
@@ -169,12 +169,16 @@ class TestDfToJsonPerSample(TestPluginBase):
         ]
         self.assertEqual(len(sample1_data), 5)
         # Sort for comparison
-        sample1_data_sorted = sorted(sample1_data, key=lambda x: (x["taxon"], x["abundance"]))
-        expected_sample1_sorted = sorted(expected_sample1, key=lambda x: (x["taxon"], x["abundance"]))
+        sample1_data_sorted = sorted(
+            sample1_data, key=lambda x: (x["taxon"], x["abundance"])
+        )
+        expected_sample1_sorted = sorted(
+            expected_sample1, key=lambda x: (x["taxon"], x["abundance"])
+        )
         self.assertEqual(sample1_data_sorted, expected_sample1_sorted)
 
         # Read back and verify sample2
-        with open(sample2_file, 'r') as f:
+        with open(sample2_file, "r") as f:
             sample2_data = json.load(f)
 
         expected_sample2 = [
@@ -238,7 +242,7 @@ class TestTableToJson(TestPluginBase):
         self.assertTrue(os.path.exists(sample2_file))
 
         # Read back and verify sample1
-        with open(sample1_file, 'r') as f:
+        with open(sample1_file, "r") as f:
             sample1_data = json.load(f)
 
         # Sample1 should have taxon1 with abundances [10.0, 20.0]
@@ -251,7 +255,7 @@ class TestTableToJson(TestPluginBase):
         self.assertEqual(sample1_sorted, expected_sample1_sorted)
 
         # Read back and verify sample2
-        with open(sample2_file, 'r') as f:
+        with open(sample2_file, "r") as f:
             sample2_data = json.load(f)
 
         expected_sample2 = [
@@ -273,7 +277,7 @@ class TestTableToJson(TestPluginBase):
         self.assertTrue(os.path.exists(sample2_file))
 
         # Read back and verify sample1 (using taxon IDs)
-        with open(sample1_file, 'r') as f:
+        with open(sample1_file, "r") as f:
             sample1_data = json.load(f)
 
         expected_sample1 = [
@@ -285,7 +289,7 @@ class TestTableToJson(TestPluginBase):
         self.assertEqual(sample1_sorted, expected_sample1_sorted)
 
         # Read back and verify sample2
-        with open(sample2_file, 'r') as f:
+        with open(sample2_file, "r") as f:
             sample2_data = json.load(f)
 
         expected_sample2 = [
@@ -313,7 +317,7 @@ class TestTableToJson(TestPluginBase):
         self.assertTrue(os.path.exists(sample2_file))
 
         # Read back and verify sample1 (contig2 maps to "0")
-        with open(sample1_file, 'r') as f:
+        with open(sample1_file, "r") as f:
             sample1_data = json.load(f)
 
         # Sample1 should have taxon1 (contig1=10.0) and "0" (contig2=20.0)
@@ -321,12 +325,16 @@ class TestTableToJson(TestPluginBase):
             {"taxon": "taxon1", "abundance": 10.0},
             {"taxon": "0", "abundance": 20.0},
         ]
-        sample1_sorted = sorted(sample1_data, key=lambda x: (x["taxon"], x["abundance"]))
-        expected_sample1_sorted = sorted(expected_sample1, key=lambda x: (x["taxon"], x["abundance"]))
+        sample1_sorted = sorted(
+            sample1_data, key=lambda x: (x["taxon"], x["abundance"])
+        )
+        expected_sample1_sorted = sorted(
+            expected_sample1, key=lambda x: (x["taxon"], x["abundance"])
+        )
         self.assertEqual(sample1_sorted, expected_sample1_sorted)
 
         # Read back and verify sample2
-        with open(sample2_file, 'r') as f:
+        with open(sample2_file, "r") as f:
             sample2_data = json.load(f)
 
         expected_sample2 = [
