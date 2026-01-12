@@ -79,7 +79,8 @@ def _df_to_json_per_sample(df: pd.DataFrame, output_dir: str):
     Each JSON contains an array of objects with taxon and abundance fields.
 
     Args:
-        df (pd.DataFrame): The DataFrame to write (with taxon, sample, abundances columns).
+        df (pd.DataFrame): The DataFrame to write (with taxon, sample,
+                           abundances columns).
         output_dir (str): The directory where the 'data' subdirectory
                           will be located or created, and the JSON files
                           will be saved.
