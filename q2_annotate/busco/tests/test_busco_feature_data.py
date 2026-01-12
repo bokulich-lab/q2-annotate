@@ -107,13 +107,31 @@ class TestBUSCOFeatureData(TestPluginBase):
 
         # Check that all expected keys are present
         expected_keys = {
-            "tabs", "vega_histogram_spec", "vega_unbinned_spec",
-            "vega_box_plot_spec", "vega_scatter_spec", "vega_busco_detailed_spec",
-            "vega_assembly_detailed_spec", "histogram_data", "box_plot_data",
-            "scatter_data", "detailed_data", "assembly_data", "mag_ids_sorted",
-            "metrics_json", "assembly_metrics_json", "sample_ids_json",
-            "is_sample_data", "comp_cont", "upper_x", "upper_y",
-            "unbinned", "unbinned_data", "table", "summary_stats_json", "page_size"
+            "tabs",
+            "vega_histogram_spec",
+            "vega_unbinned_spec",
+            "vega_box_plot_spec",
+            "vega_scatter_spec",
+            "vega_busco_detailed_spec",
+            "vega_assembly_detailed_spec",
+            "histogram_data",
+            "box_plot_data",
+            "scatter_data",
+            "detailed_data",
+            "assembly_data",
+            "mag_ids_sorted",
+            "metrics_json",
+            "assembly_metrics_json",
+            "sample_ids_json",
+            "is_sample_data",
+            "comp_cont",
+            "upper_x",
+            "upper_y",
+            "unbinned",
+            "unbinned_data",
+            "table",
+            "summary_stats_json",
+            "page_size",
         }
         self.assertEqual(set(context.keys()), expected_keys)
 

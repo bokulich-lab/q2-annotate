@@ -58,14 +58,20 @@ class TestVegaDataPreparation(TestPluginBase):
         expected = []
         for metric in metrics:
             for i, mag in enumerate(base["mag_id"]):
-                expected.append({
-                    "sample_id": base["sample_id"][i],
-                    "mag_id": mag,
-                    "dataset": base["dataset"],
-                    "n_markers": base["n_markers"],
-                    "category": metric,
-                    "metric": self.full_df.loc[i, metric] if metric in self.full_df.columns else self.basic_df.loc[i, metric],
-                })
+                expected.append(
+                    {
+                        "sample_id": base["sample_id"][i],
+                        "mag_id": mag,
+                        "dataset": base["dataset"],
+                        "n_markers": base["n_markers"],
+                        "category": metric,
+                        "metric": (
+                            self.full_df.loc[i, metric]
+                            if metric in self.full_df.columns
+                            else self.basic_df.loc[i, metric]
+                        ),
+                    }
+                )
         return expected
 
     def _prep_box_plot_expected(self, metrics):
@@ -78,19 +84,33 @@ class TestVegaDataPreparation(TestPluginBase):
         for metric in metrics:
             expected[metric] = []
             for i, mag in enumerate(base["mag_id"]):
-                expected[metric].append({
-                    "sample_id": base["sample_id"][i],
-                    "mag_id": mag,
-                    "value": self.full_df.loc[i, metric] if metric in self.full_df.columns else self.basic_df.loc[i, metric],
-                })
+                expected[metric].append(
+                    {
+                        "sample_id": base["sample_id"][i],
+                        "mag_id": mag,
+                        "value": (
+                            self.full_df.loc[i, metric]
+                            if metric in self.full_df.columns
+                            else self.basic_df.loc[i, metric]
+                        ),
+                    }
+                )
         return expected
 
     def test_prepare_histogram_data_with_all_metrics(self):
         result = _prepare_histogram_data(self.full_df)
         data = json.loads(result)
 
-        metrics = ["single", "duplicated", "fragmented", "missing", "completeness",
-                   "contamination", "contigs_n50", "length"]
+        metrics = [
+            "single",
+            "duplicated",
+            "fragmented",
+            "missing",
+            "completeness",
+            "contamination",
+            "contigs_n50",
+            "length",
+        ]
         expected = self._prep_histogram_expected(metrics)
 
         self.assertEqual(data, expected)
@@ -99,7 +119,14 @@ class TestVegaDataPreparation(TestPluginBase):
         result = _prepare_histogram_data(self.basic_df)
         data = json.loads(result)
 
-        metrics = ["single", "duplicated", "fragmented", "missing", "contigs_n50", "length"]
+        metrics = [
+            "single",
+            "duplicated",
+            "fragmented",
+            "missing",
+            "contigs_n50",
+            "length",
+        ]
         expected = self._prep_histogram_expected(metrics)
 
         self.assertEqual(data, expected)
@@ -107,8 +134,16 @@ class TestVegaDataPreparation(TestPluginBase):
     def test_prepare_box_plot_data_with_all_metrics(self):
         result = _prepare_box_plot_data(self.full_df)
 
-        metrics = ["single", "duplicated", "fragmented", "missing", "completeness",
-                   "contamination", "contigs_n50", "length"]
+        metrics = [
+            "single",
+            "duplicated",
+            "fragmented",
+            "missing",
+            "completeness",
+            "contamination",
+            "contigs_n50",
+            "length",
+        ]
         expected = self._prep_box_plot_expected(metrics)
 
         self.assertEqual(result, expected)
@@ -116,7 +151,14 @@ class TestVegaDataPreparation(TestPluginBase):
     def test_prepare_box_plot_data_without_completeness(self):
         result = _prepare_box_plot_data(self.basic_df)
 
-        metrics = ["single", "duplicated", "fragmented", "missing", "contigs_n50", "length"]
+        metrics = [
+            "single",
+            "duplicated",
+            "fragmented",
+            "missing",
+            "contigs_n50",
+            "length",
+        ]
         expected = self._prep_box_plot_expected(metrics)
 
         self.assertEqual(result, expected)
@@ -178,23 +220,27 @@ class TestVegaDataPreparation(TestPluginBase):
         result = _prepare_detailed_data(self.full_df)
         data = json.loads(result)
 
-        base = {"sample_id": ["sample1", "sample1", "sample2"],
-                "mag_id": ["mag1", "mag2", "mag3"]}
+        base = {
+            "sample_id": ["sample1", "sample1", "sample2"],
+            "mag_id": ["mag1", "mag2", "mag3"],
+        }
         categories = ["single", "duplicated", "fragmented", "missing"]
 
         expected = []
         for cat in categories:
             for i, mag in enumerate(base["mag_id"]):
                 val = self.full_df.loc[i, cat]
-                expected.append({
-                    "sample_id": base["sample_id"][i],
-                    "mag_id": mag,
-                    "dataset": "bacteria_odb10",
-                    "n_markers": 100,
-                    "category": cat,
-                    "BUSCO_percentage": val,
-                    "frac_markers": f"~{int(val)}/100",
-                })
+                expected.append(
+                    {
+                        "sample_id": base["sample_id"][i],
+                        "mag_id": mag,
+                        "dataset": "bacteria_odb10",
+                        "n_markers": 100,
+                        "category": cat,
+                        "BUSCO_percentage": val,
+                        "frac_markers": f"~{int(val)}/100",
+                    }
+                )
 
         self.assertEqual(data, expected)
 
@@ -203,9 +249,30 @@ class TestVegaDataPreparation(TestPluginBase):
         data = json.loads(result)
 
         expected = [
-            {"sample_id": "sample1", "mag_id": "mag1", "scaffold_n50": 51000, "contigs_n50": 50000, "percent_gaps": 0.5, "scaffolds": 50},
-            {"sample_id": "sample1", "mag_id": "mag2", "scaffold_n50": 61000, "contigs_n50": 60000, "percent_gaps": 0.3, "scaffolds": 40},
-            {"sample_id": "sample2", "mag_id": "mag3", "scaffold_n50": 46000, "contigs_n50": 45000, "percent_gaps": 0.7, "scaffolds": 60},
+            {
+                "sample_id": "sample1",
+                "mag_id": "mag1",
+                "scaffold_n50": 51000,
+                "contigs_n50": 50000,
+                "percent_gaps": 0.5,
+                "scaffolds": 50,
+            },
+            {
+                "sample_id": "sample1",
+                "mag_id": "mag2",
+                "scaffold_n50": 61000,
+                "contigs_n50": 60000,
+                "percent_gaps": 0.3,
+                "scaffolds": 40,
+            },
+            {
+                "sample_id": "sample2",
+                "mag_id": "mag3",
+                "scaffold_n50": 46000,
+                "contigs_n50": 45000,
+                "percent_gaps": 0.7,
+                "scaffolds": 60,
+            },
         ]
         self.assertEqual(data, expected)
 
@@ -215,9 +282,27 @@ class TestVegaDataPreparation(TestPluginBase):
         data = json.loads(result)
 
         expected = [
-            {"sample_id": "sample1", "mag_id": "mag1", "contigs_n50": 50000, "percent_gaps": 0.5, "scaffolds": 50},
-            {"sample_id": "sample1", "mag_id": "mag2", "contigs_n50": 60000, "percent_gaps": 0.3, "scaffolds": 40},
-            {"sample_id": "sample2", "mag_id": "mag3", "contigs_n50": 45000, "percent_gaps": 0.7, "scaffolds": 60},
+            {
+                "sample_id": "sample1",
+                "mag_id": "mag1",
+                "contigs_n50": 50000,
+                "percent_gaps": 0.5,
+                "scaffolds": 50,
+            },
+            {
+                "sample_id": "sample1",
+                "mag_id": "mag2",
+                "contigs_n50": 60000,
+                "percent_gaps": 0.3,
+                "scaffolds": 40,
+            },
+            {
+                "sample_id": "sample2",
+                "mag_id": "mag3",
+                "contigs_n50": 45000,
+                "percent_gaps": 0.7,
+                "scaffolds": 60,
+            },
         ]
         self.assertEqual(data, expected)
 
