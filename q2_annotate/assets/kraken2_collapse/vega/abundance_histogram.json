@@ -2,26 +2,17 @@
   "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
   "params": [
     {
-      "name": "sample_param",
-      "value": ""
-    },
-    {
       "name": "taxon_param",
       "value": ""
     }
   ],
   "description": "Histogram of contig abundance distribution per taxon per sample",
   "data": {
-    "url": "data/abundance_data.arrow",
-    "format": {"type": "arrow"}
+    "name": "source"
   },
   "transform": [
     {
-      "filter": "(sample_param == '' || datum.sample == sample_param) && (taxon_param == '' || datum.taxon == taxon_param)"
-    },
-    {
-      "flatten": ["abundances"],
-      "as": ["abundance"]
+      "filter": "(taxon_param == '' || datum.taxon == taxon_param)"
     },
     {
       "bin": {

@@ -13,7 +13,7 @@ $(document).ready(function () {
     const taxaLimitSlider = document.getElementById('taxaLimitSlider');
     const taxaLimitValue = document.getElementById('taxaLimitValue');
     let vegaViews = {}; // Store views for each taxon
-    let abundanceData = null; // Cache the loaded data
+    let abundanceDataBySample = {}; // Cache the loaded data per sample
     let taxaList = []; // List of unique taxa (sorted by mean abundance)
     let taxaMap = {}; // Map from taxon short name to full taxon name
     let taxaMeanAbundances = {}; // Map from taxon to mean abundance
@@ -45,94 +45,146 @@ $(document).ready(function () {
         };
     }
 
+    function loadSampleData(sampleId) {
+        // Load JSON data for a sample if not already loaded
+        if (abundanceDataBySample[sampleId]) {
+            return Promise.resolve();
+        }
+
+        const jsonPath = `data/${sampleId}.json`;
+        return fetch(jsonPath)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to load ${jsonPath}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                abundanceDataBySample[sampleId] = data;
+                console.log(`Loaded ${data.length} rows for sample ${sampleId}`);
+            });
+    }
+
     function getMeanAbundance(taxon, sample = '') {
         // Calculate mean abundance from raw abundance data (same as stats box)
         // This ensures sorting matches what's displayed in the stats box
-        if (!abundanceData || abundanceData.length === 0) {
-            return 0;
-        }
-        
         let filteredData = [];
-        for (const row of abundanceData) {
-            if (row.taxon === taxon && (!sample || row.sample === sample) && row.abundances) {
-                let abundances = row.abundances;
-                if (!Array.isArray(abundances)) {
-                    abundances = Array.from(abundances);
-                }
-                
-                for (const abundance of abundances) {
-                    const val = typeof abundance === 'number' ? abundance : parseFloat(abundance);
+
+        if (sample) {
+            // Single sample case
+            const sampleData = abundanceDataBySample[sample];
+            if (!sampleData || sampleData.length === 0) {
+                return 0;
+            }
+
+            for (const row of sampleData) {
+                if (row.taxon === taxon) {
+                    const val = typeof row.abundance === 'number' ? row.abundance : parseFloat(row.abundance);
                     if (!isNaN(val) && val > 0) {
                         filteredData.push(val);
                     }
                 }
             }
+        } else {
+            // All samples - aggregate across all loaded samples
+            for (const sampleId in abundanceDataBySample) {
+                const sampleData = abundanceDataBySample[sampleId];
+                for (const row of sampleData) {
+                    if (row.taxon === taxon) {
+                        const val = typeof row.abundance === 'number' ? row.abundance : parseFloat(row.abundance);
+                        if (!isNaN(val) && val > 0) {
+                            filteredData.push(val);
+                        }
+                    }
+                }
+            }
         }
-        
+
         return filteredData.length > 0 ? d3.mean(filteredData) : 0;
     }
 
     function getContigCount(taxon, sample = '') {
         // Calculate contig count from raw abundance data
-        if (!abundanceData || abundanceData.length === 0) {
-            return 0;
-        }
-        
         let count = 0;
-        for (const row of abundanceData) {
-            if (row.taxon === taxon && (!sample || row.sample === sample) && row.abundances) {
-                let abundances = row.abundances;
-                if (!Array.isArray(abundances)) {
-                    abundances = Array.from(abundances);
-                }
-                
-                for (const abundance of abundances) {
-                    const val = typeof abundance === 'number' ? abundance : parseFloat(abundance);
+
+        if (sample) {
+            // Single sample case
+            const sampleData = abundanceDataBySample[sample];
+            if (!sampleData || sampleData.length === 0) {
+                return 0;
+            }
+
+            for (const row of sampleData) {
+                if (row.taxon === taxon) {
+                    const val = typeof row.abundance === 'number' ? row.abundance : parseFloat(row.abundance);
                     if (!isNaN(val) && val > 0) {
                         count++;
                     }
                 }
             }
+        } else {
+            // All samples - aggregate across all loaded samples
+            for (const sampleId in abundanceDataBySample) {
+                const sampleData = abundanceDataBySample[sampleId];
+                for (const row of sampleData) {
+                    if (row.taxon === taxon) {
+                        const val = typeof row.abundance === 'number' ? row.abundance : parseFloat(row.abundance);
+                        if (!isNaN(val) && val > 0) {
+                            count++;
+                        }
+                    }
+                }
+            }
         }
-        
+
         return count;
     }
 
     function calculateStatisticsForSelection(taxon, sample) {
         // Get filtered data for the selected taxon and sample
-        if (!abundanceData || abundanceData.length === 0) {
-            return null;
-        }
-        
         let filteredData = [];
-        for (const row of abundanceData) {
-            const matchesTaxon = !taxon || row.taxon === taxon;
-            const matchesSample = !sample || row.sample === sample;
-            
-            if (matchesTaxon && matchesSample && row.abundances) {
-                let abundances = row.abundances;
-                if (!Array.isArray(abundances)) {
-                    abundances = Array.from(abundances);
-                }
-                
-                for (const abundance of abundances) {
-                    const val = typeof abundance === 'number' ? abundance : parseFloat(abundance);
+
+        if (sample) {
+            // Single sample case
+            const sampleData = abundanceDataBySample[sample];
+            if (!sampleData || sampleData.length === 0) {
+                return null;
+            }
+
+            for (const row of sampleData) {
+                const matchesTaxon = !taxon || row.taxon === taxon;
+                if (matchesTaxon) {
+                    const val = typeof row.abundance === 'number' ? row.abundance : parseFloat(row.abundance);
                     if (!isNaN(val) && val > 0) {
                         filteredData.push(val);
                     }
                 }
             }
+        } else {
+            // All samples
+            for (const sampleId in abundanceDataBySample) {
+                const sampleData = abundanceDataBySample[sampleId];
+                for (const row of sampleData) {
+                    const matchesTaxon = !taxon || row.taxon === taxon;
+                    if (matchesTaxon) {
+                        const val = typeof row.abundance === 'number' ? row.abundance : parseFloat(row.abundance);
+                        if (!isNaN(val) && val > 0) {
+                            filteredData.push(val);
+                        }
+                    }
+                }
+            }
         }
-        
+
         if (filteredData.length === 0) {
             return null;
         }
-        
+
         const count = filteredData.length;
         const mean = d3.mean(filteredData);
         const median = d3.median(filteredData);
         const std = d3.deviation(filteredData) || 0;
-        
+
         return { count, mean, median, std };
     }
 
@@ -196,31 +248,31 @@ $(document).ready(function () {
                 return meanAbundancesData[taxon][sampleFilter] !== undefined;
             }
         }
-        
-        // Fall back to checking abundanceData if meanAbundancesData not available
-        if (!abundanceData || abundanceData.length === 0) {
+
+        // Fall back to checking abundanceDataBySample if meanAbundancesData not available
+        if (sampleFilter) {
+            const sampleData = abundanceDataBySample[sampleFilter];
+            if (!sampleData || sampleData.length === 0) {
+                return false;
+            }
+            for (const row of sampleData) {
+                if (row.taxon === taxon) {
+                    return true;
+                }
+            }
             return false;
-        }
-        
-        for (const row of abundanceData) {
-            if (row.taxon === taxon) {
-                // If no sample filter, any data for this taxon counts
-                if (!sampleFilter) {
-                    if (row.abundances && (Array.isArray(row.abundances) ? row.abundances.length > 0 : Array.from(row.abundances).length > 0)) {
+        } else {
+            // Check across all samples
+            for (const sampleId in abundanceDataBySample) {
+                const sampleData = abundanceDataBySample[sampleId];
+                for (const row of sampleData) {
+                    if (row.taxon === taxon) {
                         return true;
-                    }
-                } else {
-                    // Check if this row matches the sample filter and has data
-                    if (row.sample === sampleFilter && row.abundances) {
-                        const abundances = Array.isArray(row.abundances) ? row.abundances : Array.from(row.abundances);
-                        if (abundances.length > 0) {
-                            return true;
-                        }
                     }
                 }
             }
+            return false;
         }
-        return false;
     }
 
     function updateVisualization() {
@@ -279,83 +331,109 @@ $(document).ready(function () {
                     // Plot doesn't exist yet or was destroyed - create it
                     plotDiv.className = 'histogram-plot';
                     plotDiv.innerHTML = '';
-                    
+
                     // Show spinner
                     if (spinner) {
                         spinner.style.display = 'block';
                     }
-                    
-                    const spec = JSON.parse(JSON.stringify(vegaAbundanceHistogramSpec));
-                    spec.params[1].value = taxon;
-                    
-                    vegaEmbed(plotDiv, spec, {
-                        actions: false,
-                        renderer: 'canvas'
-                    }).then(res => {
-                        vegaViews[taxon] = res.view;
-                        // Set the sample filter
-                        res.view.signal('sample_param', selectedSample).runAsync();
-                        // Hide spinner when plot is loaded
-                        if (spinner) {
-                            spinner.style.display = 'none';
-                        }
+
+                    // Load JSON data for the selected sample
+                    loadSampleData(selectedSample).then(() => {
+                        const sampleData = abundanceDataBySample[selectedSample] || [];
+
+                        const spec = JSON.parse(JSON.stringify(vegaAbundanceHistogramSpec));
+                        spec.params[0].value = taxon;
+
+                        vegaEmbed(plotDiv, spec, {
+                            actions: false,
+                            renderer: 'canvas'
+                        }).then(res => {
+                            vegaViews[taxon] = res.view;
+                            // Set the data
+                            res.view.data('source', sampleData).runAsync();
+                            // Hide spinner when plot is loaded
+                            if (spinner) {
+                                spinner.style.display = 'none';
+                            }
+                        }).catch(error => {
+                            console.error(`Error embedding histogram for taxon ${taxon}:`, error);
+                            plotDiv.innerHTML = '<p class="text-danger" style="font-size: 10px;">Error loading plot</p>';
+                            // Hide spinner on error
+                            if (spinner) {
+                                spinner.style.display = 'none';
+                            }
+                            // Clean up view reference on error
+                            delete vegaViews[taxon];
+                        });
                     }).catch(error => {
-                        console.error(`Error embedding histogram for taxon ${taxon}:`, error);
-                        plotDiv.innerHTML = '<p class="text-danger" style="font-size: 10px;">Error loading plot</p>';
-                        // Hide spinner on error
+                        console.error(`Error loading sample data for ${selectedSample}:`, error);
+                        plotDiv.innerHTML = '<p class="text-danger" style="font-size: 10px;">Error loading data</p>';
                         if (spinner) {
                             spinner.style.display = 'none';
                         }
-                        // Clean up view reference on error
-                        delete vegaViews[taxon];
                     });
                 } else if (plotDiv.className === 'histogram-no-data') {
                     // Plot was destroyed but now we have data - recreate it
                     plotDiv.className = 'histogram-plot';
                     plotDiv.innerHTML = '';
-                    
+
                     // Show spinner
                     if (spinner) {
                         spinner.style.display = 'block';
                     }
-                    
-                    const spec = JSON.parse(JSON.stringify(vegaAbundanceHistogramSpec));
-                    spec.params[1].value = taxon;
-                    
-                    vegaEmbed(plotDiv, spec, {
-                        actions: false,
-                        renderer: 'canvas'
-                    }).then(res => {
-                        vegaViews[taxon] = res.view;
-                        // Set the sample filter
-                        res.view.signal('sample_param', selectedSample).runAsync();
-                        // Hide spinner when plot is loaded
-                        if (spinner) {
-                            spinner.style.display = 'none';
-                        }
+
+                    // Load JSON data for the selected sample
+                    loadSampleData(selectedSample).then(() => {
+                        const sampleData = abundanceDataBySample[selectedSample] || [];
+
+                        const spec = JSON.parse(JSON.stringify(vegaAbundanceHistogramSpec));
+                        spec.params[0].value = taxon;
+
+                        vegaEmbed(plotDiv, spec, {
+                            actions: false,
+                            renderer: 'canvas'
+                        }).then(res => {
+                            vegaViews[taxon] = res.view;
+                            // Set the data
+                            res.view.data('source', sampleData).runAsync();
+                            // Hide spinner when plot is loaded
+                            if (spinner) {
+                                spinner.style.display = 'none';
+                            }
+                        }).catch(error => {
+                            console.error(`Error embedding histogram for taxon ${taxon}:`, error);
+                            plotDiv.innerHTML = '<p class="text-danger" style="font-size: 10px;">Error loading plot</p>';
+                            // Hide spinner on error
+                            if (spinner) {
+                                spinner.style.display = 'none';
+                            }
+                        });
                     }).catch(error => {
-                        console.error(`Error embedding histogram for taxon ${taxon}:`, error);
-                        plotDiv.innerHTML = '<p class="text-danger" style="font-size: 10px;">Error loading plot</p>';
-                        // Hide spinner on error
+                        console.error(`Error loading sample data for ${selectedSample}:`, error);
+                        plotDiv.innerHTML = '<p class="text-danger" style="font-size: 10px;">Error loading data</p>';
                         if (spinner) {
                             spinner.style.display = 'none';
                         }
                     });
                 } else {
-                    // Update existing plot with new sample filter (only if visible)
+                    // Update existing plot with new sample data (only if visible)
                     // Check if view is still valid before updating
                     if (vegaViews[taxon] && plotDiv.querySelector('canvas, svg')) {
-                        try {
-                            vegaViews[taxon].signal('sample_param', selectedSample)
-                                .runAsync();
-                        } catch (e) {
-                            // View might have been destroyed, recreate it
-                            console.warn(`View for ${taxon} was invalid, recreating...`);
-                            delete vegaViews[taxon];
-                            // Trigger recreation by clearing plotDiv
-                            plotDiv.innerHTML = '';
-                            // This will be handled in the next updateVisualization call
-                        }
+                        loadSampleData(selectedSample).then(() => {
+                            const sampleData = abundanceDataBySample[selectedSample] || [];
+                            try {
+                                vegaViews[taxon].data('source', sampleData).runAsync();
+                            } catch (e) {
+                                // View might have been destroyed, recreate it
+                                console.warn(`View for ${taxon} was invalid, recreating...`);
+                                delete vegaViews[taxon];
+                                // Trigger recreation by clearing plotDiv
+                                plotDiv.innerHTML = '';
+                                // This will be handled in the next updateVisualization call
+                            }
+                        }).catch(error => {
+                            console.error(`Error loading sample data for ${selectedSample}:`, error);
+                        });
                     }
                 }
             }
@@ -567,36 +645,35 @@ $(document).ready(function () {
     // Debug: Log data availability
     console.log('Samples:', samples);
     console.log('Vega spec keys:', Object.keys(vegaAbundanceHistogramSpec));
-    
-    // Load abundance data directly from Arrow file to avoid Vega dataset access errors
-    // This is loaded separately from Vega so we can calculate statistics without triggering Vega errors
-    fetch('data/abundance_data.arrow')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to load data file');
-            }
-            return response.arrayBuffer();
-        })
-        .then(arrayBuffer => {
-            // Use vega.read to parse Arrow format
-            return vega.read(arrayBuffer, { type: 'arrow', parse: 'auto' });
-        })
-        .then(data => {
-            abundanceData = data;
-            console.log('Loaded abundance data:', abundanceData.length, 'rows');
-            
+
+    // Load initial sample data from JSON file
+    const initialSample = sampleDropdown.value || (samples && samples.length > 0 ? samples[0] : '');
+    if (!initialSample) {
+        console.error('No samples available');
+        document.getElementById('spinner-histogram')?.remove();
+        histogramGrid.innerHTML = '<p class="text-danger">Error: No samples available</p>';
+        return;
+    }
+
+    loadSampleData(initialSample)
+        .then(() => {
+            console.log('Loaded initial sample data');
+
             // Extract unique taxa from the data
             const taxaSet = new Set();
-            for (const row of abundanceData) {
-                if (row.taxon) {
-                    taxaSet.add(row.taxon);
+            for (const sampleId in abundanceDataBySample) {
+                const sampleData = abundanceDataBySample[sampleId];
+                for (const row of sampleData) {
+                    if (row.taxon) {
+                        taxaSet.add(row.taxon);
+                    }
                 }
             }
-            
+
             // Get selected sample for sorting
             const selectedSample = sampleDropdown.value || '';
             const sortBy = document.querySelector('input[name="sortBy"]:checked')?.value || 'abundance';
-            
+
             // Filter to only taxa with data for selected sample, then sort
             const taxaWithValues = Array.from(taxaSet)
                 .filter(taxon => hasDataForTaxon(taxon, selectedSample))
@@ -610,13 +687,13 @@ $(document).ready(function () {
                     }
                     return { taxon, value };
                 });
-            
+
             // Sort by selected metric (highest to lowest)
             taxaWithValues.sort((a, b) => b.value - a.value);
             taxaList = taxaWithValues.map(item => item.taxon);
-            
+
             console.log('Found', taxaList.length, 'unique taxa (sorted by mean abundance)');
-            
+
             // Set slider max value if it exists
             if (taxaLimitSlider) {
                 taxaLimitSlider.max = taxaList.length;
@@ -625,21 +702,21 @@ $(document).ready(function () {
                     taxaLimitValue.textContent = taxaLimitSlider.value;
                 }
             }
-            
+
             // Populate taxon dropdown based on selected sample
             // (will be filtered to only show taxa with data for selected sample)
             updateTaxonDropdown(selectedSample);
-            
+
             // Remove spinner
             document.getElementById('spinner-histogram')?.remove();
-            
+
             // Create a histogram for each taxon (only create DOM elements, plots will be created lazily)
             if (Object.keys(vegaAbundanceHistogramSpec).length > 0 && taxaList.length > 0) {
                 taxaList.forEach(taxon => {
                     const taxonShort = getTaxonShort(taxon);
                     createHistogramForTaxon(taxon, taxonShort);
                 });
-                
+
                 // Initial update with loaded data (will create plots only for visible items and handle hiding)
                 updateVisualization();
                 updateSelectionStats();
@@ -648,7 +725,7 @@ $(document).ready(function () {
             }
         })
         .catch(error => {
-            console.error('Error loading abundance data:', error);
+            console.error('Error loading initial sample data:', error);
             document.getElementById('spinner-histogram')?.remove();
             histogramGrid.innerHTML = '<p class="text-danger">Error loading data: ' + (error.message || error) + '</p>';
         });

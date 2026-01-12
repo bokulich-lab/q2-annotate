@@ -14,8 +14,6 @@ from typing import Optional
 import biom
 import numpy as np
 import pandas as pd
-import pyarrow as pa
-import pyarrow.ipc as ipc
 import q2templates
 from q2_types.kraken2 import Kraken2OutputDirectoryFormat
 
@@ -75,34 +73,40 @@ def _average_by_count(table: biom.Table, contig_map: dict) -> biom.Table:
     return table.transform(divide_by_count, axis="observation")
 
 
-def _df_to_arrow_with_arrays(df: pd.DataFrame, filename: str, output_dir: str):
+def _df_to_json_per_sample(df: pd.DataFrame, output_dir: str):
     """
-    Writes a pandas DataFrame with array columns to an Arrow IPC file.
-    Arrow format supports list/array types natively.
+    Writes a pandas DataFrame to separate JSON files per sample.
+    Each JSON contains an array of objects with taxon and abundance fields.
 
     Args:
-        df (pd.DataFrame): The DataFrame to write (may contain list/array columns).
-        filename (str): The name of the Arrow file to create.
+        df (pd.DataFrame): The DataFrame to write (with taxon, sample, abundances columns).
         output_dir (str): The directory where the 'data' subdirectory
-                          will be located or created, and the Arrow file
+                          will be located or created, and the JSON files
                           will be saved.
     """
-    # Convert DataFrame to Arrow Table
-    # PyArrow automatically handles list columns
-    table = pa.Table.from_pandas(df)
-    fp = os.path.join(output_dir, "data", filename)
-    with ipc.RecordBatchFileWriter(fp, table.schema) as writer:
-        writer.write_table(table)
+    data_dir = os.path.join(output_dir, "data")
+
+    # Group by sample and save each to a separate JSON
+    for sample, group in df.groupby("sample"):
+        # Explode the abundances column to get one row per abundance value
+        sample_df = group[["taxon", "abundances"]].copy()
+        sample_df = sample_df.explode("abundances")
+        sample_df.columns = ["taxon", "abundance"]
+
+        # Save to JSON file named after the sample
+        json_filename = f"{sample}.json"
+        json_path = os.path.join(data_dir, json_filename)
+        sample_df.to_json(json_path, orient="records", indent=2)
 
 
-def _table_to_parquet(
+def _table_to_json(
     table: biom.Table,
     contig_map_rev: dict,
     taxonomy: Optional[pd.Series],
     output_dir: str,
 ):
     """
-    Save table data as Parquet with arrays of abundances per taxonomy per sample.
+    Save table data as JSON files with one file per sample.
 
     Args:
         table: biom.Table to save
@@ -157,8 +161,8 @@ def _table_to_parquet(
     )
     grouped.rename(columns={"abundance": "abundances"}, inplace=True)
 
-    # Save to Arrow format (supports arrays and works with Vega-Lite)
-    _df_to_arrow_with_arrays(grouped, "abundance_data.arrow", output_dir)
+    # Save to JSON files per sample
+    _df_to_json_per_sample(grouped, output_dir)
 
 
 def _extract_mean_abundances(
@@ -223,8 +227,8 @@ def _visualize_collapsed_contigs(
 
     os.makedirs(os.path.join(output_dir, "data"), exist_ok=True)
 
-    # Save table data as Parquet with arrays of abundances per taxonomy per sample
-    _table_to_parquet(table, contig_map_rev, taxonomy, output_dir)
+    # Save table data as JSON files with one file per sample
+    _table_to_json(table, contig_map_rev, taxonomy, output_dir)
 
     # Get unique samples for dropdowns from the table directly
     sample_ids = [str(id_) for id_ in table.ids(axis="sample")]

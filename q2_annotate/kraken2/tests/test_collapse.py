@@ -14,7 +14,6 @@ from unittest.mock import patch, MagicMock, ANY
 import biom
 import numpy as np
 import pandas as pd
-import pyarrow.ipc as ipc
 from qiime2 import Artifact
 from qiime2.plugin.testing import TestPluginBase
 from q2_types.kraken2 import (
@@ -25,8 +24,8 @@ from q2_types.kraken2 import (
 from q2_annotate.kraken2.collapse import (
     _build_contig_map,
     _average_by_count,
-    _df_to_arrow_with_arrays,
-    _table_to_parquet,
+    _df_to_json_per_sample,
+    _table_to_json,
     _extract_mean_abundances,
     _visualize_collapsed_contigs,
     collapse_contigs,
@@ -124,7 +123,7 @@ class TestAverageByCount(TestPluginBase):
         pd.testing.assert_frame_equal(obs_df, exp_df)
 
 
-class TestDfToArrowWithArrays(TestPluginBase):
+class TestDfToJsonPerSample(TestPluginBase):
     package = "q2_annotate.kraken2.tests"
 
     def setUp(self):
@@ -134,35 +133,57 @@ class TestDfToArrowWithArrays(TestPluginBase):
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
 
-    def test_df_to_arrow_with_arrays(self):
-        """Test writing DataFrame with array columns to Arrow format."""
+    def test_df_to_json_per_sample(self):
+        """Test writing DataFrame to separate JSON files per sample."""
         # Create DataFrame with array column
         df = pd.DataFrame(
             {
-                "taxon": ["taxon1", "taxon2"],
-                "sample": ["sample1", "sample1"],
-                "abundances": [[1.0, 2.0, 3.0], [4.0, 5.0]],
+                "taxon": ["taxon1", "taxon2", "taxon1"],
+                "sample": ["sample1", "sample1", "sample2"],
+                "abundances": [[1.0, 2.0, 3.0], [4.0, 5.0], [6.0]],
             }
         )
 
         # Create data directory
         os.makedirs(os.path.join(self.temp_dir, "data"), exist_ok=True)
 
-        _df_to_arrow_with_arrays(df, "test.arrow", self.temp_dir)
+        _df_to_json_per_sample(df, self.temp_dir)
 
-        # Verify file was created
-        arrow_file = os.path.join(self.temp_dir, "data", "test.arrow")
-        self.assertTrue(os.path.exists(arrow_file))
+        # Verify JSON files were created
+        sample1_file = os.path.join(self.temp_dir, "data", "sample1.json")
+        sample2_file = os.path.join(self.temp_dir, "data", "sample2.json")
+        self.assertTrue(os.path.exists(sample1_file))
+        self.assertTrue(os.path.exists(sample2_file))
 
-        # Read back and verify
-        with ipc.RecordBatchFileReader(arrow_file) as reader:
-            table = reader.read_all()
-            obs_df = table.to_pandas()
+        # Read back and verify sample1
+        with open(sample1_file, 'r') as f:
+            sample1_data = json.load(f)
 
-        pd.testing.assert_frame_equal(obs_df, df)
+        # Sample1 should have exploded abundances for taxon1 and taxon2
+        expected_sample1 = [
+            {"taxon": "taxon1", "abundance": 1.0},
+            {"taxon": "taxon1", "abundance": 2.0},
+            {"taxon": "taxon1", "abundance": 3.0},
+            {"taxon": "taxon2", "abundance": 4.0},
+            {"taxon": "taxon2", "abundance": 5.0},
+        ]
+        self.assertEqual(len(sample1_data), 5)
+        # Sort for comparison
+        sample1_data_sorted = sorted(sample1_data, key=lambda x: (x["taxon"], x["abundance"]))
+        expected_sample1_sorted = sorted(expected_sample1, key=lambda x: (x["taxon"], x["abundance"]))
+        self.assertEqual(sample1_data_sorted, expected_sample1_sorted)
+
+        # Read back and verify sample2
+        with open(sample2_file, 'r') as f:
+            sample2_data = json.load(f)
+
+        expected_sample2 = [
+            {"taxon": "taxon1", "abundance": 6.0},
+        ]
+        self.assertEqual(sample2_data, expected_sample2)
 
 
-class TestTableToParquet(TestPluginBase):
+class TestTableToJson(TestPluginBase):
     package = "q2_annotate.kraken2.tests"
 
     def setUp(self):
@@ -203,67 +224,76 @@ class TestTableToParquet(TestPluginBase):
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
 
-    def test_table_to_parquet_with_taxonomy(self):
-        """Test saving table data efficiently with taxonomy."""
+    def test_table_to_json_with_taxonomy(self):
+        """Test saving table data as JSON files with taxonomy."""
         # Create data directory (normally done by _visualize_collapsed_contigs)
         os.makedirs(os.path.join(self.temp_dir, "data"), exist_ok=True)
 
-        _table_to_parquet(self.table, self.contig_map_rev, self.taxonomy, self.temp_dir)
+        _table_to_json(self.table, self.contig_map_rev, self.taxonomy, self.temp_dir)
 
-        # Verify Arrow file was created
-        arrow_file = os.path.join(self.temp_dir, "data", "abundance_data.arrow")
-        self.assertTrue(os.path.exists(arrow_file))
+        # Verify JSON files were created
+        sample1_file = os.path.join(self.temp_dir, "data", "sample1.json")
+        sample2_file = os.path.join(self.temp_dir, "data", "sample2.json")
+        self.assertTrue(os.path.exists(sample1_file))
+        self.assertTrue(os.path.exists(sample2_file))
 
-        # Read back and verify
-        with ipc.RecordBatchFileReader(arrow_file) as reader:
-            table = reader.read_all()
-            obs_df = table.to_pandas()
+        # Read back and verify sample1
+        with open(sample1_file, 'r') as f:
+            sample1_data = json.load(f)
 
-        # Build expected DataFrame structure
-        expected_data = {
-            "taxon": [self.taxonomy["taxon1"], self.taxonomy["taxon2"]],
-            "sample": ["sample1", "sample2"],
-            "abundances": [[10.0, 20.0], [30.0]],
-        }
-        exp_df = pd.DataFrame(expected_data)
+        # Sample1 should have taxon1 with abundances [10.0, 20.0]
+        expected_sample1 = [
+            {"taxon": self.taxonomy["taxon1"], "abundance": 10.0},
+            {"taxon": self.taxonomy["taxon1"], "abundance": 20.0},
+        ]
+        sample1_sorted = sorted(sample1_data, key=lambda x: x["abundance"])
+        expected_sample1_sorted = sorted(expected_sample1, key=lambda x: x["abundance"])
+        self.assertEqual(sample1_sorted, expected_sample1_sorted)
 
-        # Sort both DataFrames for comparison
-        obs_df_sorted = obs_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
-        exp_df_sorted = exp_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
+        # Read back and verify sample2
+        with open(sample2_file, 'r') as f:
+            sample2_data = json.load(f)
 
-        pd.testing.assert_frame_equal(obs_df_sorted, exp_df_sorted)
+        expected_sample2 = [
+            {"taxon": self.taxonomy["taxon2"], "abundance": 30.0},
+        ]
+        self.assertEqual(sample2_data, expected_sample2)
 
-    def test_table_to_parquet_without_taxonomy(self):
-        """Test saving table data efficiently without taxonomy."""
+    def test_table_to_json_without_taxonomy(self):
+        """Test saving table data as JSON files without taxonomy."""
         # Create data directory (normally done by _visualize_collapsed_contigs)
         os.makedirs(os.path.join(self.temp_dir, "data"), exist_ok=True)
 
-        _table_to_parquet(self.table, self.contig_map_rev, None, self.temp_dir)
+        _table_to_json(self.table, self.contig_map_rev, None, self.temp_dir)
 
-        # Verify Arrow file was created
-        arrow_file = os.path.join(self.temp_dir, "data", "abundance_data.arrow")
-        self.assertTrue(os.path.exists(arrow_file))
+        # Verify JSON files were created
+        sample1_file = os.path.join(self.temp_dir, "data", "sample1.json")
+        sample2_file = os.path.join(self.temp_dir, "data", "sample2.json")
+        self.assertTrue(os.path.exists(sample1_file))
+        self.assertTrue(os.path.exists(sample2_file))
 
-        # Read back and verify
-        with ipc.RecordBatchFileReader(arrow_file) as reader:
-            table = reader.read_all()
-            obs_df = table.to_pandas()
+        # Read back and verify sample1 (using taxon IDs)
+        with open(sample1_file, 'r') as f:
+            sample1_data = json.load(f)
 
-        # Build expected DataFrame structure (using taxon IDs)
-        expected_data = {
-            "taxon": ["taxon1", "taxon2"],
-            "sample": ["sample1", "sample2"],
-            "abundances": [[10.0, 20.0], [30.0]],
-        }
-        exp_df = pd.DataFrame(expected_data)
+        expected_sample1 = [
+            {"taxon": "taxon1", "abundance": 10.0},
+            {"taxon": "taxon1", "abundance": 20.0},
+        ]
+        sample1_sorted = sorted(sample1_data, key=lambda x: x["abundance"])
+        expected_sample1_sorted = sorted(expected_sample1, key=lambda x: x["abundance"])
+        self.assertEqual(sample1_sorted, expected_sample1_sorted)
 
-        # Sort both DataFrames for comparison
-        obs_df_sorted = obs_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
-        exp_df_sorted = exp_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
+        # Read back and verify sample2
+        with open(sample2_file, 'r') as f:
+            sample2_data = json.load(f)
 
-        pd.testing.assert_frame_equal(obs_df_sorted, exp_df_sorted)
+        expected_sample2 = [
+            {"taxon": "taxon2", "abundance": 30.0},
+        ]
+        self.assertEqual(sample2_data, expected_sample2)
 
-    def test_table_to_parquet_missing_contig(self):
+    def test_table_to_json_missing_contig(self):
         """Test saving when contig is not in map (should use '0')."""
         # Create data directory (normally done by _visualize_collapsed_contigs)
         os.makedirs(os.path.join(self.temp_dir, "data"), exist_ok=True)
@@ -274,26 +304,35 @@ class TestTableToParquet(TestPluginBase):
             "contig3": "taxon2",
         }
 
-        _table_to_parquet(self.table, contig_map_rev, None, self.temp_dir)
+        _table_to_json(self.table, contig_map_rev, None, self.temp_dir)
 
-        arrow_file = os.path.join(self.temp_dir, "data", "abundance_data.arrow")
-        with ipc.RecordBatchFileReader(arrow_file) as reader:
-            table = reader.read_all()
-            obs_df = table.to_pandas()
+        # Verify JSON files were created
+        sample1_file = os.path.join(self.temp_dir, "data", "sample1.json")
+        sample2_file = os.path.join(self.temp_dir, "data", "sample2.json")
+        self.assertTrue(os.path.exists(sample1_file))
+        self.assertTrue(os.path.exists(sample2_file))
 
-        # Build expected DataFrame structure (contig2 maps to "0")
-        expected_data = {
-            "taxon": ["taxon1", "taxon2", "0"],
-            "sample": ["sample1", "sample2", "sample1"],
-            "abundances": [[10.0], [30.0], [20.0]],
-        }
-        exp_df = pd.DataFrame(expected_data)
+        # Read back and verify sample1 (contig2 maps to "0")
+        with open(sample1_file, 'r') as f:
+            sample1_data = json.load(f)
 
-        # Sort both DataFrames for comparison
-        obs_df_sorted = obs_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
-        exp_df_sorted = exp_df.sort_values(["taxon", "sample"]).reset_index(drop=True)
+        # Sample1 should have taxon1 (contig1=10.0) and "0" (contig2=20.0)
+        expected_sample1 = [
+            {"taxon": "taxon1", "abundance": 10.0},
+            {"taxon": "0", "abundance": 20.0},
+        ]
+        sample1_sorted = sorted(sample1_data, key=lambda x: (x["taxon"], x["abundance"]))
+        expected_sample1_sorted = sorted(expected_sample1, key=lambda x: (x["taxon"], x["abundance"]))
+        self.assertEqual(sample1_sorted, expected_sample1_sorted)
 
-        pd.testing.assert_frame_equal(obs_df_sorted, exp_df_sorted)
+        # Read back and verify sample2
+        with open(sample2_file, 'r') as f:
+            sample2_data = json.load(f)
+
+        expected_sample2 = [
+            {"taxon": "taxon2", "abundance": 30.0},
+        ]
+        self.assertEqual(sample2_data, expected_sample2)
 
 
 class TestExtractMeanAbundances(TestPluginBase):
@@ -450,9 +489,9 @@ class TestVisualizeCollapsedContigs(TestPluginBase):
         # Verify data directory was created
         self.assertTrue(os.path.exists(os.path.join(self.temp_dir, "data")))
 
-        # Verify Arrow file was created
-        arrow_file = os.path.join(self.temp_dir, "data", "abundance_data.arrow")
-        self.assertTrue(os.path.exists(arrow_file))
+        # Verify JSON file was created
+        json_file = os.path.join(self.temp_dir, "data", "sample1.json")
+        self.assertTrue(os.path.exists(json_file))
 
         # Verify JS/CSS files were copied
         self.assertEqual(mock_copytree.call_count, 2)
@@ -478,7 +517,7 @@ class TestVisualizeCollapsedContigs(TestPluginBase):
         self.assertIsInstance(vega_spec, dict)
         self.assertIn("$schema", vega_spec)
         self.assertIn("data", vega_spec)
-        self.assertEqual(vega_spec["data"]["url"], "data/abundance_data.arrow")
+        self.assertEqual(vega_spec["data"]["name"], "source")
 
     @patch("q2_annotate.kraken2.collapse.q2templates.render")
     @patch("q2_annotate.kraken2.collapse.shutil.copytree")
@@ -493,9 +532,9 @@ class TestVisualizeCollapsedContigs(TestPluginBase):
         # Verify data directory was created
         self.assertTrue(os.path.exists(os.path.join(self.temp_dir, "data")))
 
-        # Verify Arrow file was created
-        arrow_file = os.path.join(self.temp_dir, "data", "abundance_data.arrow")
-        self.assertTrue(os.path.exists(arrow_file))
+        # Verify JSON file was created
+        json_file = os.path.join(self.temp_dir, "data", "sample1.json")
+        self.assertTrue(os.path.exists(json_file))
 
         # Verify render was called with correct context
         mock_render.assert_called_once()
@@ -518,7 +557,7 @@ class TestVisualizeCollapsedContigs(TestPluginBase):
         self.assertIsInstance(vega_spec, dict)
         self.assertIn("$schema", vega_spec)
         self.assertIn("data", vega_spec)
-        self.assertEqual(vega_spec["data"]["url"], "data/abundance_data.arrow")
+        self.assertEqual(vega_spec["data"]["name"], "source")
 
 
 class TestCollapseContigs(TestPluginBase):
