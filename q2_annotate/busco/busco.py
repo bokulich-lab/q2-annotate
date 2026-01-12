@@ -20,7 +20,6 @@ import q2templates
 from q2_annotate.busco.utils import (
     _parse_busco_params,
     _parse_df_columns,
-    _partition_dataframe,
     _calculate_summary_stats,
     _get_feature_table,
     _cleanup_bootstrap,
@@ -32,12 +31,10 @@ from q2_annotate.busco.utils import (
 
 from q2_annotate._utils import _process_common_input_params, run_command
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
-from q2_types.sample_data import SampleData
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import (
     MultiMAGSequencesDirFmt,
     ContigSequencesDirFmt,
-    MAGs,
 )
 import warnings
 

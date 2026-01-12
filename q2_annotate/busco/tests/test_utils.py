@@ -14,10 +14,7 @@ from unittest.mock import patch, MagicMock
 
 import pandas as pd
 from q2_types.feature_data_mag import MAGSequencesDirFmt
-from q2_types.per_sample_sequences import ContigSequencesDirFmt
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
-from qiime2 import Artifact
-from qiime2 import Metadata
 from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
