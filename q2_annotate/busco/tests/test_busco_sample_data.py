@@ -259,8 +259,7 @@ class TestBUSCOSampleData(TestPluginBase):
         "q2_annotate.busco.busco._filter_unbinned_for_partition",
         return_value="filtered_unbinned",
     )
-    @patch("q2_annotate.busco.busco._validate_parameters")
-    def test_evaluate_busco_action(self, mock_validate, mock_filter):
+    def test_evaluate_busco_action(self, mock_filter):
         mags = qiime2.Artifact.import_data(
             "SampleData[MAGs]", self.get_data_path("mags")
         )
@@ -294,6 +293,7 @@ class TestBUSCOSampleData(TestPluginBase):
             db=busco_db,
             unbinned_contigs=unbinned,
             num_partitions=2,
+            lineage_dataset="bacteria_odb10",
         )
         exp = ("collated_result", "visualization")
 
@@ -309,8 +309,7 @@ class TestBUSCOSampleData(TestPluginBase):
         "q2_annotate.busco.busco._filter_unbinned_for_partition",
         return_value="filtered_unbinned",
     )
-    @patch("q2_annotate.busco.busco._validate_parameters")
-    def test_evaluate_busco_action_no_unbinned(self, mock_validate, mock_filter):
+    def test_evaluate_busco_action_no_unbinned(self, mock_filter):
         mags = qiime2.Artifact.import_data(
             "SampleData[MAGs]", self.get_data_path("mags")
         )
@@ -337,6 +336,7 @@ class TestBUSCOSampleData(TestPluginBase):
             db=busco_db,
             unbinned_contigs=None,
             num_partitions=2,
+            lineage_dataset="bacteria_odb10",
         )
         exp = ("collated_result", "visualization")
 

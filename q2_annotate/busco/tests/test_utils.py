@@ -29,7 +29,6 @@ from q2_annotate.busco.utils import (
     _calculate_summary_stats,
     _validate_lineage_dataset_input,
     _extract_json_data,
-    _validate_parameters,
     _calculate_contamination_completeness,
     _process_busco_results,
     _calculate_unbinned_percentage,
@@ -134,21 +133,16 @@ class TestBUSCOUtils(TestPluginBase):
         }
 
     def test_parse_busco_params_1(self):
-        observed = _parse_busco_params("auto_lineage", True)
-        expected = ["--auto-lineage"]
-        self.assertSetEqual(set(observed), set(expected))
-
-    def test_parse_busco_params_2(self):
         observed = _parse_busco_params("evalue", 0.66)
         expected = ["--evalue", str(0.66)]
         self.assertSetEqual(set(observed), set(expected))
 
-    def test_parse_busco_params_3(self):
+    def test_parse_busco_params_2(self):
         observed = _parse_busco_params("augustus", True)
         expected = ["--augustus"]
         self.assertSetEqual(set(observed), set(expected))
 
-    def test_parse_busco_params_4(self):
+    def test_parse_busco_params_3(self):
         observed = _parse_busco_params("lineage_dataset", "bacteria-XYZ")
         expected = ["--lineage_dataset", "bacteria-XYZ"]
         self.assertSetEqual(set(observed), set(expected))
@@ -408,11 +402,7 @@ class TestBUSCOUtils(TestPluginBase):
         busco_db = BuscoDatabaseDirFmt(path=p, mode="r")
         _validate_lineage_dataset_input(
             lineage_dataset="lineage_1",
-            auto_lineage=False,
-            auto_lineage_euk=False,
-            auto_lineage_prok=False,
             busco_db=busco_db,
-            kwargs={},
         )
 
     def test_validate_lineage_dataset_input_invalid(self):
@@ -424,43 +414,8 @@ class TestBUSCOUtils(TestPluginBase):
             # Run busco
             _validate_lineage_dataset_input(
                 lineage_dataset="lineage2",
-                auto_lineage=False,
-                auto_lineage_euk=False,
-                auto_lineage_prok=False,
                 busco_db=busco_db,
-                kwargs={},
             )
-
-    def test_validate_lineage_dataset_input_warning(self):
-        # Give path to valid database
-        p = self.get_data_path("busco_db")
-        busco_db = BuscoDatabaseDirFmt(path=p, mode="r")
-        kwargs = {
-            "auto_lineage": True,
-            "auto_lineage_euk": False,
-            "auto_lineage_prok": False,
-        }
-        with self.assertWarnsRegex(
-            Warning, "`--p-auto-lineage` flags will be ignored."
-        ):
-            # Run busco
-            _validate_lineage_dataset_input(
-                lineage_dataset="lineage_1",
-                auto_lineage=True,
-                auto_lineage_euk=False,
-                auto_lineage_prok=False,
-                busco_db=busco_db,
-                kwargs=kwargs,
-            )
-
-        self.assertDictEqual(
-            kwargs,
-            {
-                "auto_lineage": False,
-                "auto_lineage_euk": False,
-                "auto_lineage_prok": False,
-            },
-        )
 
     def test_extract_json_data(self):
         obs = _extract_json_data(
@@ -551,18 +506,6 @@ class TestBUSCOUtils(TestPluginBase):
         }
 
         self.assertEqual(output, expected)
-
-    def test_validate_parameters_lineage_all_false(self):
-        with self.assertRaisesRegex(ValueError, "At least one of these parameters"):
-            _validate_parameters(None, False, False, False)
-
-    def test_validate_parameters_lineage_and_auto(self):
-        with self.assertRaisesRegex(ValueError, "If 'lineage-dataset' is provided"):
-            _validate_parameters(True, False, True, False)
-        with self.assertRaisesRegex(ValueError, "If 'lineage-dataset' is provided"):
-            _validate_parameters(True, True, False, False)
-        with self.assertRaisesRegex(ValueError, "If 'lineage-dataset' is provided"):
-            _validate_parameters(True, False, False, True)
 
     def test_count_binned_contigs(self):
         sample_path = Path(self.get_data_path("mags")) / "sample1"

@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 import json
 import os
-import warnings
 from pathlib import Path
 from typing import List, Callable
 
@@ -23,9 +22,6 @@ from qiime2 import Metadata
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
 
 arguments_with_hyphens = {
-    "auto_lineage": "auto-lineage",
-    "auto_lineage_euk": "auto-lineage-euk",
-    "auto_lineage_prok": "auto-lineage-prok",
     "list_datasets": "list-datasets",
     "update_data": "update-data",
 }
@@ -41,22 +37,8 @@ MARKER_COLS = [
 
 def _validate_lineage_dataset_input(
     lineage_dataset: str,
-    auto_lineage: bool,
-    auto_lineage_euk: bool,
-    auto_lineage_prok: bool,
     busco_db: BuscoDatabaseDirFmt,
-    kwargs,
 ) -> None:
-    # When lineage_dataset is specified, all other lineage flags are ignored
-    if any([auto_lineage, auto_lineage_euk, auto_lineage_prok]):
-        warnings.warn(
-            f"`--p-lineage-dataset` was specified as '{lineage_dataset}'. "
-            "`--p-auto-lineage` flags will be ignored."
-        )
-        kwargs["auto_lineage"] = False
-        kwargs["auto_lineage_euk"] = False
-        kwargs["auto_lineage_prok"] = False
-
     # Check that lineage indeed exists inside Busco DB (if provided)
     if busco_db is not None:
         if not os.path.exists(f"{str(busco_db)}/lineages/{lineage_dataset}"):
@@ -295,22 +277,6 @@ def _calculate_contamination_completeness(missing, total, duplicated, complete):
         contamination = None
 
     return completeness, contamination
-
-
-def _validate_parameters(
-    lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok
-):
-    if not any([lineage_dataset, auto_lineage, auto_lineage_euk, auto_lineage_prok]):
-        raise ValueError(
-            "At least one of these parameters must be provided/set to True: "
-            "'lineage-dataset', 'auto-lineage', 'auto-lineage-euk', "
-            "'auto-lineage-prok'."
-        )
-    if lineage_dataset and any([auto_lineage, auto_lineage_euk, auto_lineage_prok]):
-        raise ValueError(
-            "If 'lineage-dataset' is provided, all the parameters 'auto-lineage', "
-            "'auto-lineage-euk' and 'auto-lineage-prok' must be set to False."
-        )
 
 
 def _process_busco_results(results, sample_id, mag_id, file_name, additional_metrics):
