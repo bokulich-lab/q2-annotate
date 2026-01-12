@@ -58,31 +58,16 @@ class TestBUSCOFeatureData(TestPluginBase):
             sample_id="feature_data",
             params=["--lineage_dataset", "bacteria_odb10"],
         )
-        mock_process.assert_has_calls(
-            [
-                call(
-                    ANY,
-                    "feature_data",
-                    "24dee6fe-9b84-45bb-8145-de7b092533a1",
-                    "24dee6fe-9b84-45bb-8145-de7b092533a1.fasta",
-                    True,
-                ),
-                call(
-                    ANY,
-                    "feature_data",
-                    "ca7012fc-ba65-40c3-84f5-05aa478a7585",
-                    "ca7012fc-ba65-40c3-84f5-05aa478a7585.fasta",
-                    True,
-                ),
-                call(
-                    ANY,
-                    "feature_data",
-                    "fb0bc871-04f6-486b-a10e-8e0cb66f8de3",
-                    "fb0bc871-04f6-486b-a10e-8e0cb66f8de3.fasta",
-                    True,
-                ),
-            ]
-        )
+        mag_ids = [
+            "24dee6fe-9b84-45bb-8145-de7b092533a1",
+            "ca7012fc-ba65-40c3-84f5-05aa478a7585",
+            "fb0bc871-04f6-486b-a10e-8e0cb66f8de3",
+        ]
+        expected_calls = [
+            call(ANY, "feature_data", mag_id, f"{mag_id}.fasta", True)
+            for mag_id in mag_ids
+        ]
+        mock_process.assert_has_calls(expected_calls)
 
     @patch("q2_annotate.busco.busco._get_feature_table", return_value="table1")
     @patch("q2_annotate.busco.busco._calculate_summary_stats", return_value="stats1")
@@ -104,29 +89,33 @@ class TestBUSCOFeatureData(TestPluginBase):
             ),
         )
 
-        # Verify render was called with proper structure
         mock_render.assert_called_once()
-        call_args = mock_render.call_args
-        context = call_args[1]["context"]
+        context = mock_render.call_args[1]["context"]
 
-        # Check that essential keys are present
-        self.assertIn("tabs", context)
-        self.assertIn("table", context)
-        self.assertIn("summary_stats_json", context)
-        self.assertIn("comp_cont", context)
-        self.assertIn("unbinned", context)
-        self.assertIn("page_size", context)
-
-        # Check tab structure
+        # Check that tabs are correct
         self.assertEqual(len(context["tabs"]), 3)
         self.assertEqual(context["tabs"][0]["title"], "QC overview")
         self.assertEqual(context["tabs"][1]["title"], "Per-MAG metrics")
         self.assertEqual(context["tabs"][2]["title"], "Feature details")
 
-        # Check values
+        # Check that mocked values are passed through
         self.assertEqual(context["table"], "table1")
         self.assertEqual(context["summary_stats_json"], "stats1")
+
+        # Check unbinned flag
         self.assertFalse(context["unbinned"])
+
+        # Check that all expected keys are present
+        expected_keys = {
+            "tabs", "vega_histogram_spec", "vega_unbinned_spec",
+            "vega_box_plot_spec", "vega_scatter_spec", "vega_busco_detailed_spec",
+            "vega_assembly_detailed_spec", "histogram_data", "box_plot_data",
+            "scatter_data", "detailed_data", "assembly_data", "mag_ids_sorted",
+            "metrics_json", "assembly_metrics_json", "sample_ids_json",
+            "is_sample_data", "comp_cont", "upper_x", "upper_y",
+            "unbinned", "unbinned_data", "table", "summary_stats_json", "page_size"
+        }
+        self.assertEqual(set(context.keys()), expected_keys)
 
         mock_clean.assert_called_with(self.temp_dir.name)
 
