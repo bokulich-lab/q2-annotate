@@ -224,8 +224,7 @@ class TestBUSCOSampleData(TestPluginBase):
         mock_clean.assert_called_with(self.temp_dir.name)
 
     # TODO: maybe this could be turned into an actual test
-    @patch("q2_annotate.busco.busco._validate_parameters")
-    def test_evaluate_busco_action(self, mock_validate):
+    def test_evaluate_busco_action(self):
         mags = qiime2.Artifact.import_data(
             "SampleData[MAGs]", self.get_data_path("mags")
         )
@@ -270,8 +269,7 @@ class TestBUSCOSampleData(TestPluginBase):
 
         self.assertTupleEqual(obs, exp)
 
-    @patch("q2_annotate.busco.busco._validate_parameters")
-    def test_evaluate_busco_action_no_unbinned(self, mock_validate):
+    def test_evaluate_busco_action_no_unbinned(self):
         mags = qiime2.Artifact.import_data(
             "SampleData[MAGs]", self.get_data_path("mags")
         )

@@ -7,18 +7,14 @@
 # ----------------------------------------------------------------------------
 import json
 import os
+import warnings
 from pathlib import Path
-from typing import List, Callable
+from typing import List
 
 import numpy as np
 import pandas as pd
-import qiime2
 import skbio.io
-from q2_types.per_sample_sequences import (
-    MultiMAGSequencesDirFmt,
-    ContigSequencesDirFmt,
-)
-from qiime2 import Metadata
+from q2_types.per_sample_sequences import ContigSequencesDirFmt
 
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
 
