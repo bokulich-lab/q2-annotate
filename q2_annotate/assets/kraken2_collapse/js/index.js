@@ -148,13 +148,21 @@ $(document).ready(function () {
     function updateSelectionStats() {
         const selectedTaxonLabel = taxonDropdown.value;
         const selectedSample = sampleDropdown.value || '';
-        const selectedTaxon = selectedTaxonLabel ? (taxaMap[selectedTaxonLabel] || selectedTaxonLabel) : '';
-        
-        const stats = calculateStatisticsForSelection(selectedTaxon, selectedSample);
-        
-        if (!stats) {
+
+        // If no taxon is selected, show default message
+        if (!selectedTaxonLabel) {
             selectionStats.innerHTML = `
                 <small class="text-muted">Select taxon and sample to view statistics</small>
+            `;
+            return;
+        }
+
+        const selectedTaxon = taxaMap[selectedTaxonLabel] || selectedTaxonLabel;
+        const stats = calculateStatisticsForSelection(selectedTaxon, selectedSample);
+
+        if (!stats) {
+            selectionStats.innerHTML = `
+                <small class="text-muted">No data available for this selection</small>
             `;
             return;
         }
@@ -162,9 +170,9 @@ $(document).ready(function () {
         selectionStats.innerHTML = `
             <div class="stats-content">
                 <span class="stat-item">Contig count: <span class="badge bg-success">${stats.count.toLocaleString()}</span></span>
-                <span class="stat-item">Mean: <span class="badge bg-success">${stats.mean.toFixed(1)}</span></span>
-                <span class="stat-item">Median: <span class="badge bg-success">${stats.median.toFixed(1)}</span></span>
-                <span class="stat-item">Std Dev: <span class="badge bg-success">${stats.std.toFixed(1)}</span></span>
+                <span class="stat-item">Mean abundance: <span class="badge bg-success">${stats.mean.toFixed(1)}</span></span>
+                <span class="stat-item">Median abundance: <span class="badge bg-success">${stats.median.toFixed(1)}</span></span>
+                <span class="stat-item">Abundance std dev: <span class="badge bg-success">${stats.std.toFixed(1)}</span></span>
             </div>
         `;
     }
@@ -254,12 +262,23 @@ $(document).ready(function () {
                 renderer: 'canvas'
             }).then(res => {
                 vegaViews[taxon] = res.view;
-                // Set the data
-                res.view.data('source', sampleData).runAsync();
-                // Hide spinner when plot is loaded
-                if (spinner) {
-                    spinner.style.display = 'none';
-                }
+                // Set the data and run
+                return res.view.data('source', sampleData).runAsync().then(() => {
+                    // Hide spinner when plot is loaded
+                    if (spinner) {
+                        spinner.style.display = 'none';
+                    }
+                    // Force resize after a delay to ensure grid layout is complete
+                    // The grid needs time to calculate final column widths
+                    setTimeout(() => {
+                        try {
+                            res.view.resize();
+                            res.view.runAsync();
+                        } catch (e) {
+                            console.warn(`Could not resize view for ${taxon}:`, e);
+                        }
+                    }, 100);
+                });
             }).catch(error => {
                 console.error(`Error embedding histogram for taxon ${taxon}:`, error);
                 plotDiv.innerHTML = '<p class="text-danger" style="font-size: 10px;">Error loading plot</p>';
@@ -529,10 +548,15 @@ $(document).ready(function () {
     // Event listener for sample dropdown
     sampleDropdown.addEventListener('change', () => {
         const selectedSample = sampleDropdown.value || '';
-        updateTaxonDropdown(selectedSample);
-        resortTaxaByMeanAbundance(selectedSample);
-        debouncedUpdateVisualization();
-        updateSelectionStats();
+        // Load the new sample data first, then update everything
+        loadSampleData(selectedSample).then(() => {
+            updateTaxonDropdown(selectedSample);
+            resortTaxaByMeanAbundance(selectedSample);
+            debouncedUpdateVisualization();
+            updateSelectionStats();
+        }).catch(error => {
+            console.error(`Error loading sample data for ${selectedSample}:`, error);
+        });
     });
     
     // Event listener for taxon dropdown
@@ -619,9 +643,14 @@ $(document).ready(function () {
                     createHistogramForTaxon(taxon, taxonShort);
                 });
 
-                // Initial update with loaded data (will create plots only for visible items and handle hiding)
-                updateVisualization();
-                updateSelectionStats();
+                // Wait for DOM to finish layout before creating plots
+                // This ensures containers have correct dimensions
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        updateVisualization();
+                        updateSelectionStats();
+                    });
+                });
             } else {
                 histogramGrid.innerHTML = '<p class="text-danger">Error: No data or invalid visualization specification.</p>';
             }
