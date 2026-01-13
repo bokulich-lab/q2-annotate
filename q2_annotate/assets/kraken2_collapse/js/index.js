@@ -105,8 +105,20 @@ $(document).ready(function () {
     }
 
     function getMeanAbundance(taxon, sample = '') {
-        // Calculate mean abundance from raw abundance data (same as stats box)
-        // This ensures sorting matches what's displayed in the stats box
+        // Use pre-computed mean abundance data when available
+        if (meanAbundancesData && meanAbundancesData[taxon]) {
+            if (sample) {
+                // Return mean for specific sample
+                return meanAbundancesData[taxon][sample] || 0;
+            } else {
+                // Return overall mean across all samples
+                const values = Object.values(meanAbundancesData[taxon]);
+                console.log(`Calculating abundance for taxon: ${taxon}`)
+                return values.length > 0 ? d3.mean(values) : 0;
+            }
+        }
+
+        // Fallback: calculate from raw abundance data if pre-computed data not available
         const filteredData = getFilteredAbundanceData(taxon, sample);
         return filteredData.length > 0 ? d3.mean(filteredData) : 0;
     }
