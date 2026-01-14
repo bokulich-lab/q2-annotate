@@ -8,6 +8,7 @@
 import json
 import os
 import shutil
+from collections import defaultdict
 from importlib import resources
 from typing import Optional
 
@@ -54,23 +55,55 @@ def _build_contig_map(kraken2_outputs: Kraken2OutputDirectoryFormat) -> dict:
     return taxon_to_contigs
 
 
-def _average_by_count(table: biom.Table, contig_map: dict) -> biom.Table:
+def _average_by_count(
+    collapsed_table: biom.Table, original_table: biom.Table, contig_map_rev: dict
+) -> biom.Table:
     """
-    Average abundances by dividing by the number of collapsed contigs.
+    Average abundances by dividing by the number of contigs per sample per taxon.
 
     Args:
-        table: Collapsed biom.Table
-        contig_map: Mapping of contig IDs to taxonomy IDs
+        collapsed_table: Collapsed biom.Table with taxonomy IDs as observations
+        original_table: Original biom.Table with contig IDs as observations
+        contig_map_rev: Reverse mapping of contig IDs to taxonomy IDs
 
     Returns:
         biom.Table: Table with averaged abundances
     """
-    counts = {tax_id: len(contigs) for tax_id, contigs in contig_map.items()}
 
-    def divide_by_count(data, id_, _):
-        return data / counts[id_]
+    # Build contig counts per sample per taxon
+    contig_counts = {}
 
-    return table.transform(divide_by_count, axis="observation")
+    for sample_id in original_table.ids(axis="sample"):
+        # Filter to this sample and remove zero abundances
+        sample_table = original_table.filter(
+            [sample_id], axis="sample", inplace=False
+        ).filter(lambda val, id_, md: val > 0, axis="observation", inplace=False)
+
+        # Map contig IDs to taxon IDs and count
+        contig_ids = sample_table.ids(axis="observation")
+        taxon_ids = [contig_map_rev.get(cid, "0") for cid in contig_ids]
+
+        # Count using pandas Series value_counts
+        contig_counts[str(sample_id)] = pd.Series(taxon_ids).value_counts().to_dict()
+
+    # Build count matrix matching the shape of collapsed table
+    sample_ids = list(collapsed_table.ids(axis='sample'))
+    taxon_ids = list(collapsed_table.ids(axis='observation'))
+
+    # Build a count matrix (taxa x samples)
+    count_matrix = np.zeros((len(taxon_ids), len(sample_ids)))
+    for i, taxon_id in enumerate(taxon_ids):
+        for j, sample_id in enumerate(sample_ids):
+            count_matrix[i, j] = contig_counts.get(str(sample_id), {}).get(str(taxon_id), 0)
+
+    # Get collapsed data as dense array
+    collapsed_data = collapsed_table.matrix_data.toarray()
+
+    # Vectorized division (handle division by zero)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        averaged_data = np.where(count_matrix > 0, collapsed_data / count_matrix, 0.0)
+
+    return biom.Table(averaged_data, taxon_ids, sample_ids)
 
 
 def _df_to_json_per_sample(df: pd.DataFrame, output_dir: str):
@@ -296,7 +329,10 @@ def collapse_contigs(
     contig_ft_collapsed = contig_ft.collapse(
         f=lambda id_, md: contig_map_rev.get(id_, "0"), axis="observation", norm=False
     )
-    contig_ft_averaged = _average_by_count(contig_ft_collapsed, contig_map_dict)
+    # Average by contig counts per sample
+    contig_ft_averaged = _average_by_count(
+        contig_ft_collapsed, contig_ft, contig_map_rev
+    )
     collapsed_table = ctx.make_artifact("FeatureTable[Frequency]", contig_ft_averaged)
 
     # Generate visualization using original table (before collapsing)

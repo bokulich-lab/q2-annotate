@@ -80,26 +80,36 @@ class TestAverageByCount(TestPluginBase):
 
     def setUp(self):
         super().setUp()
-        # Create a simple biom table
-        data = np.array([[10.0, 20.0], [30.0, 40.0]])
-        obs_ids = ["taxon1", "taxon2"]
+        # Create a collapsed biom table (taxa x samples)
+        collapsed_data = np.array([[30.0, 50.0], [30.0, 40.0]])
+        collapsed_obs_ids = ["taxon1", "taxon2"]
         sample_ids = ["sample1", "sample2"]
-        self.table = biom.Table(data, obs_ids, sample_ids)
+        self.collapsed_table = biom.Table(collapsed_data, collapsed_obs_ids, sample_ids)
 
-        # Create contig map with counts
-        self.contig_map = {
-            "taxon1": ["contig1", "contig2"],  # 2 contigs
-            "taxon2": ["contig3"],  # 1 contig
+        # Create original biom table (contigs x samples)
+        # taxon1 has contig1 (10) and contig2 (20) in sample1, contig1 (30) and contig2 (20) in sample2
+        # taxon2 has contig3 (30) in sample1, contig3 (40) in sample2
+        original_data = np.array([[10.0, 30.0], [20.0, 20.0], [30.0, 40.0]])
+        original_obs_ids = ["contig1", "contig2", "contig3"]
+        self.original_table = biom.Table(original_data, original_obs_ids, sample_ids)
+
+        # Create reverse contig map (contig -> taxon)
+        self.contig_map_rev = {
+            "contig1": "taxon1",
+            "contig2": "taxon1",
+            "contig3": "taxon2",
         }
 
     def test_average_by_count(self):
-        """Test averaging abundances by contig count."""
-        obs = _average_by_count(self.table, self.contig_map)
+        """Test averaging abundances by contig count per sample."""
+        obs = _average_by_count(self.collapsed_table, self.original_table, self.contig_map_rev)
 
-        # Expected: divide by count of contigs per taxon
-        # taxon1: [10, 20] / 2 = [5, 10]
-        # taxon2: [30, 40] / 1 = [30, 40]
-        exp_data = np.array([[5.0, 10.0], [30.0, 40.0]])
+        # Expected: divide by count of contigs per taxon per sample
+        # taxon1 in sample1: 30 / 2 = 15.0 (contig1=10, contig2=20)
+        # taxon1 in sample2: 50 / 2 = 25.0 (contig1=30, contig2=20)
+        # taxon2 in sample1: 30 / 1 = 30.0 (contig3=30)
+        # taxon2 in sample2: 40 / 1 = 40.0 (contig3=40)
+        exp_data = np.array([[15.0, 25.0], [30.0, 40.0]])
         exp_table = biom.Table(exp_data, ["taxon1", "taxon2"], ["sample1", "sample2"])
 
         obs_df = obs.to_dataframe(dense=True)
@@ -108,17 +118,55 @@ class TestAverageByCount(TestPluginBase):
         pd.testing.assert_frame_equal(obs_df, exp_df)
 
     def test_average_by_count_single_contig(self):
-        """Test averaging when each taxon has one contig."""
-        contig_map = {
-            "taxon1": ["contig1"],
-            "taxon2": ["contig2"],
+        """Test averaging when each taxon has one contig per sample."""
+        # Create collapsed table
+        collapsed_data = np.array([[10.0, 20.0], [30.0, 40.0]])
+        collapsed_table = biom.Table(collapsed_data, ["taxon1", "taxon2"], ["sample1", "sample2"])
+
+        # Create original table where each taxon has one contig
+        original_data = np.array([[10.0, 20.0], [30.0, 40.0]])
+        original_table = biom.Table(original_data, ["contig1", "contig2"], ["sample1", "sample2"])
+
+        contig_map_rev = {
+            "contig1": "taxon1",
+            "contig2": "taxon2",
         }
 
-        obs = _average_by_count(self.table, contig_map)
+        obs = _average_by_count(collapsed_table, original_table, contig_map_rev)
 
         # Should be unchanged since dividing by 1
         obs_df = obs.to_dataframe(dense=True)
-        exp_df = self.table.to_dataframe(dense=True)
+        exp_df = collapsed_table.to_dataframe(dense=True)
+
+        pd.testing.assert_frame_equal(obs_df, exp_df)
+
+    def test_average_by_count_per_sample_variation(self):
+        """Test that averaging uses per-sample contig counts, not global counts."""
+        # Create collapsed table
+        collapsed_data = np.array([[30.0, 10.0]])
+        collapsed_table = biom.Table(collapsed_data, ["taxon1"], ["sample1", "sample2"])
+
+        # Create original table where taxon1 has 2 contigs in sample1, 1 in sample2
+        # sample1: contig1=10, contig2=20 (both present)
+        # sample2: contig1=10, contig2=0 (only contig1 present)
+        original_data = np.array([[10.0, 10.0], [20.0, 0.0]])
+        original_table = biom.Table(original_data, ["contig1", "contig2"], ["sample1", "sample2"])
+
+        contig_map_rev = {
+            "contig1": "taxon1",
+            "contig2": "taxon1",
+        }
+
+        obs = _average_by_count(collapsed_table, original_table, contig_map_rev)
+
+        # Expected:
+        # sample1: 30 / 2 = 15.0 (2 contigs with non-zero values)
+        # sample2: 10 / 1 = 10.0 (1 contig with non-zero value)
+        exp_data = np.array([[15.0, 10.0]])
+        exp_table = biom.Table(exp_data, ["taxon1"], ["sample1", "sample2"])
+
+        obs_df = obs.to_dataframe(dense=True)
+        exp_df = exp_table.to_dataframe(dense=True)
 
         pd.testing.assert_frame_equal(obs_df, exp_df)
 

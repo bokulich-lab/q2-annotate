@@ -127,19 +127,25 @@ $(document).ready(function () {
     }
 
     function getMeanAbundance(taxon, sample = '') {
-        // Use pre-computed mean abundance data when available
+        // Use pre-computed mean abundance data from collapsed table when available
         if (meanAbundancesData && meanAbundancesData[taxon]) {
             if (sample) {
                 // Return mean for specific sample
-                return meanAbundancesData[taxon][sample] || 0;
+                const value = meanAbundancesData[taxon][sample];
+                if (value !== undefined && value !== null) {
+                    return value;
+                }
             } else {
                 // Return overall mean across all samples
                 const values = Object.values(meanAbundancesData[taxon]);
-                return values.length > 0 ? d3.mean(values) : 0;
+                if (values.length > 0) {
+                    return d3.mean(values);
+                }
             }
         }
 
         // Fallback: calculate from raw abundance data if pre-computed data not available
+        // This ensures we still work even if meanAbundancesData is missing or incomplete
         const filteredData = getFilteredAbundanceData(taxon, sample);
         return filteredData.length > 0 ? d3.mean(filteredData) : 0;
     }
@@ -198,7 +204,44 @@ $(document).ready(function () {
         }
 
         const count = filteredData.length;
-        const mean = d3.mean(filteredData);
+        
+        // Use precomputed mean abundance if available (matches sorting logic)
+        // Otherwise calculate from raw data
+        let mean;
+        let calculatedMean = d3.mean(filteredData);
+        let precomputedMean = null;
+        let usingPrecomputed = false;
+        
+        if (meanAbundancesData && meanAbundancesData[taxon] && sample) {
+            precomputedMean = meanAbundancesData[taxon][sample];
+            if (precomputedMean !== undefined && precomputedMean !== null) {
+                mean = precomputedMean;
+                usingPrecomputed = true;
+            } else {
+                mean = calculatedMean;
+            }
+        } else {
+            mean = calculatedMean;
+        }
+        
+        // Debug logging
+        console.log('=== calculateStatisticsForSelection Debug ===');
+        console.log('Taxon:', taxon);
+        console.log('Sample:', sample);
+        console.log('Filtered data count:', filteredData.length);
+        console.log('Filtered data (first 10 values):', filteredData.slice(0, 10));
+        console.log('Calculated mean (from raw data):', calculatedMean);
+        console.log('Precomputed mean (from collapsed table):', precomputedMean);
+        console.log('Using precomputed:', usingPrecomputed);
+        console.log('Final mean value:', mean);
+        console.log('Difference (calculated - precomputed):', calculatedMean - (precomputedMean || 0));
+        if (meanAbundancesData && meanAbundancesData[taxon]) {
+            console.log('Available samples in meanAbundancesData:', Object.keys(meanAbundancesData[taxon]));
+        } else {
+            console.log('meanAbundancesData[taxon] not available');
+        }
+        console.log('==========================================');
+        
         const median = d3.median(filteredData);
         const std = d3.deviation(filteredData) || 0;
 
@@ -218,7 +261,14 @@ $(document).ready(function () {
             });
 
         // Sort by selected metric (highest to lowest)
-        taxaWithValues.sort((a, b) => b.value - a.value);
+        // Use stable sort: if values are equal, sort by taxon name alphabetically
+        taxaWithValues.sort((a, b) => {
+            if (b.value !== a.value) {
+                return b.value - a.value; // Higher values first
+            }
+            // If values are equal, sort alphabetically by taxon name
+            return a.taxon.localeCompare(b.taxon);
+        });
         return taxaWithValues.map(item => item.taxon);
     }
 
@@ -454,13 +504,23 @@ $(document).ready(function () {
         const selectedSample = sampleDropdown.value || '';
         const taxaLimit = taxaLimitSlider ? parseInt(taxaLimitSlider.value) : taxaList.length;
 
-        // Update all histogram items to show/hide plots or "no data" messages
+        // Create a map of taxon to DOM element for efficient lookup
+        const itemsByTaxon = {};
         const histogramItems = document.querySelectorAll('.histogram-item');
-        histogramItems.forEach((item, index) => {
+        histogramItems.forEach(item => {
             const taxon = item.dataset.taxon;
-            const plotDiv = item.querySelector('.histogram-plot, .histogram-no-data');
+            if (taxon) {
+                itemsByTaxon[taxon] = item;
+            }
+        });
 
-            if (!taxon || !plotDiv) return;
+        // Iterate through taxaList (the sorted order) instead of DOM order
+        taxaList.forEach((taxon, index) => {
+            const item = itemsByTaxon[taxon];
+            if (!item) return;
+
+            const plotDiv = item.querySelector('.histogram-plot, .histogram-no-data');
+            if (!plotDiv) return;
 
             // Hide items beyond the limit
             if (index >= taxaLimit) {
@@ -526,6 +586,14 @@ $(document).ready(function () {
                         });
                     }
                 }
+            }
+        });
+
+        // Hide any items in DOM that are not in taxaList (shouldn't happen, but safety check)
+        histogramItems.forEach(item => {
+            const taxon = item.dataset.taxon;
+            if (taxon && !taxaList.includes(taxon)) {
+                item.style.display = 'none';
             }
         });
     }
@@ -611,6 +679,14 @@ $(document).ready(function () {
         .then(() => {
             console.log('Loaded initial sample data');
 
+            // Verify data is loaded
+            if (!abundanceDataBySample[initialSample] || abundanceDataBySample[initialSample].length === 0) {
+                console.error('No data loaded for initial sample:', initialSample);
+                document.getElementById('spinner-histogram')?.remove();
+                histogramGrid.innerHTML = '<p class="text-danger">Error: No data loaded for sample</p>';
+                return;
+            }
+
             // Extract unique taxa from the data
             const taxaSet = new Set();
             for (const sampleId in abundanceDataBySample) {
@@ -629,7 +705,28 @@ $(document).ready(function () {
             // Sort taxa using shared helper
             taxaList = sortTaxaByValue(Array.from(taxaSet), selectedSample, sortBy);
 
-            console.log('Found', taxaList.length, 'unique taxa (sorted by mean abundance)');
+            // Debug: Log first few sorted taxa with their values and data source
+            if (taxaList.length > 0 && console.log) {
+                const debugTaxa = taxaList.slice(0, Math.min(5, taxaList.length));
+                console.log('Top taxa after sorting:', debugTaxa.map(taxon => {
+                    const value = sortBy === 'count' 
+                        ? getContigCount(taxon, selectedSample)
+                        : getMeanAbundance(taxon, selectedSample);
+                    const usingPrecomputed = meanAbundancesData && 
+                        meanAbundancesData[taxon] && 
+                        meanAbundancesData[taxon][selectedSample] !== undefined;
+                    return {
+                        taxon: getTaxonShort(taxon),
+                        value: value,
+                        usingPrecomputed: usingPrecomputed,
+                        precomputedValue: usingPrecomputed ? meanAbundancesData[taxon][selectedSample] : 'N/A'
+                    };
+                }));
+                console.log('meanAbundancesData available:', !!meanAbundancesData);
+                console.log('meanAbundancesData sample keys:', meanAbundancesData && Object.keys(meanAbundancesData).slice(0, 3));
+            }
+
+            console.log('Found', taxaList.length, 'unique taxa (sorted by', sortBy, ')');
 
             // Set slider max value if it exists
             if (taxaLimitSlider) {
