@@ -82,7 +82,6 @@ $(document).ready(function () {
             })
             .then(data => {
                 abundanceDataBySample[sampleId] = data;
-                console.log(`Loaded ${data.length} rows for sample ${sampleId}`);
             });
     }
 
@@ -127,27 +126,31 @@ $(document).ready(function () {
     }
 
     function getMeanAbundance(taxon, sample = '') {
-        // Use pre-computed mean abundance data from collapsed table when available
+        // Use pre-computed mean abundance data from collapsed table
         if (meanAbundancesData && meanAbundancesData[taxon]) {
             if (sample) {
                 // Return mean for specific sample
                 const value = meanAbundancesData[taxon][sample];
                 if (value !== undefined && value !== null) {
                     return value;
+                } else {
+                    console.error(`Precomputed mean abundance not available for taxon "${taxon}" and sample "${sample}"`);
+                    return 0;
                 }
             } else {
                 // Return overall mean across all samples
                 const values = Object.values(meanAbundancesData[taxon]);
                 if (values.length > 0) {
                     return d3.mean(values);
+                } else {
+                    console.error(`Precomputed mean abundance not available for taxon "${taxon}"`);
+                    return 0;
                 }
             }
         }
 
-        // Fallback: calculate from raw abundance data if pre-computed data not available
-        // This ensures we still work even if meanAbundancesData is missing or incomplete
-        const filteredData = getFilteredAbundanceData(taxon, sample);
-        return filteredData.length > 0 ? d3.mean(filteredData) : 0;
+        console.error(`Precomputed mean abundance data not available for taxon "${taxon}"`);
+        return 0;
     }
 
     function getContigCount(taxon, sample = '') {
@@ -205,42 +208,20 @@ $(document).ready(function () {
 
         const count = filteredData.length;
         
-        // Use precomputed mean abundance if available (matches sorting logic)
-        // Otherwise calculate from raw data
+        // Use precomputed mean abundance (matches sorting logic)
         let mean;
-        let calculatedMean = d3.mean(filteredData);
-        let precomputedMean = null;
-        let usingPrecomputed = false;
-        
         if (meanAbundancesData && meanAbundancesData[taxon] && sample) {
-            precomputedMean = meanAbundancesData[taxon][sample];
+            const precomputedMean = meanAbundancesData[taxon][sample];
             if (precomputedMean !== undefined && precomputedMean !== null) {
                 mean = precomputedMean;
-                usingPrecomputed = true;
             } else {
-                mean = calculatedMean;
+                console.error(`Precomputed mean abundance not available for taxon "${taxon}" and sample "${sample}"`);
+                mean = 0;
             }
         } else {
-            mean = calculatedMean;
+            console.error(`Precomputed mean abundance data not available for taxon "${taxon}"`);
+            mean = 0;
         }
-        
-        // Debug logging
-        console.log('=== calculateStatisticsForSelection Debug ===');
-        console.log('Taxon:', taxon);
-        console.log('Sample:', sample);
-        console.log('Filtered data count:', filteredData.length);
-        console.log('Filtered data (first 10 values):', filteredData.slice(0, 10));
-        console.log('Calculated mean (from raw data):', calculatedMean);
-        console.log('Precomputed mean (from collapsed table):', precomputedMean);
-        console.log('Using precomputed:', usingPrecomputed);
-        console.log('Final mean value:', mean);
-        console.log('Difference (calculated - precomputed):', calculatedMean - (precomputedMean || 0));
-        if (meanAbundancesData && meanAbundancesData[taxon]) {
-            console.log('Available samples in meanAbundancesData:', Object.keys(meanAbundancesData[taxon]));
-        } else {
-            console.log('meanAbundancesData[taxon] not available');
-        }
-        console.log('==========================================');
         
         const median = d3.median(filteredData);
         const std = d3.deviation(filteredData) || 0;
@@ -662,9 +643,6 @@ $(document).ready(function () {
         console.warn('No samples data available for dropdown');
     }
 
-    // Debug: Log data availability
-    console.log('Samples:', samples);
-    console.log('Vega spec keys:', Object.keys(vegaAbundanceHistogramSpec));
 
     // Load initial sample data from JSON file
     const initialSample = sampleDropdown.value || (samples && samples.length > 0 ? samples[0] : '');
@@ -677,8 +655,6 @@ $(document).ready(function () {
 
     loadSampleData(initialSample)
         .then(() => {
-            console.log('Loaded initial sample data');
-
             // Verify data is loaded
             if (!abundanceDataBySample[initialSample] || abundanceDataBySample[initialSample].length === 0) {
                 console.error('No data loaded for initial sample:', initialSample);
@@ -704,29 +680,6 @@ $(document).ready(function () {
 
             // Sort taxa using shared helper
             taxaList = sortTaxaByValue(Array.from(taxaSet), selectedSample, sortBy);
-
-            // Debug: Log first few sorted taxa with their values and data source
-            if (taxaList.length > 0 && console.log) {
-                const debugTaxa = taxaList.slice(0, Math.min(5, taxaList.length));
-                console.log('Top taxa after sorting:', debugTaxa.map(taxon => {
-                    const value = sortBy === 'count' 
-                        ? getContigCount(taxon, selectedSample)
-                        : getMeanAbundance(taxon, selectedSample);
-                    const usingPrecomputed = meanAbundancesData && 
-                        meanAbundancesData[taxon] && 
-                        meanAbundancesData[taxon][selectedSample] !== undefined;
-                    return {
-                        taxon: getTaxonShort(taxon),
-                        value: value,
-                        usingPrecomputed: usingPrecomputed,
-                        precomputedValue: usingPrecomputed ? meanAbundancesData[taxon][selectedSample] : 'N/A'
-                    };
-                }));
-                console.log('meanAbundancesData available:', !!meanAbundancesData);
-                console.log('meanAbundancesData sample keys:', meanAbundancesData && Object.keys(meanAbundancesData).slice(0, 3));
-            }
-
-            console.log('Found', taxaList.length, 'unique taxa (sorted by', sortBy, ')');
 
             // Set slider max value if it exists
             if (taxaLimitSlider) {

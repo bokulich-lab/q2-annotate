@@ -8,7 +8,6 @@
 import json
 import os
 import shutil
-from collections import defaultdict
 from importlib import resources
 from typing import Optional
 
@@ -16,6 +15,7 @@ import biom
 import numpy as np
 import pandas as pd
 import q2templates
+import scipy.sparse as sp
 from q2_types.kraken2 import Kraken2OutputDirectoryFormat
 
 TEMPLATES = resources.files("q2_annotate") / "assets"
@@ -70,40 +70,66 @@ def _average_by_count(
         biom.Table: Table with averaged abundances
     """
 
-    # Build contig counts per sample per taxon
-    contig_counts = {}
+    # We want: for each (taxon, sample), divide the collapsed abundance by the
+    # number of *contigs present* (abundance > 0) for that taxon in that sample.
 
-    for sample_id in original_table.ids(axis="sample"):
-        # Filter to this sample and remove zero abundances
-        sample_table = original_table.filter(
-            [sample_id], axis="sample", inplace=False
-        ).filter(lambda val, id_, md: val > 0, axis="observation", inplace=False)
+    sample_ids = list(collapsed_table.ids(axis="sample"))
+    taxon_ids = list(collapsed_table.ids(axis="observation"))
 
-        # Map contig IDs to taxon IDs and count
-        contig_ids = sample_table.ids(axis="observation")
-        taxon_ids = [contig_map_rev.get(cid, "0") for cid in contig_ids]
+    taxon_index = {str(tid): i for i, tid in enumerate(taxon_ids)}
 
-        # Count using pandas Series value_counts
-        contig_counts[str(sample_id)] = pd.Series(taxon_ids).value_counts().to_dict()
+    # original table as COO so we can remap row indices efficiently
+    orig = original_table.matrix_data.tocoo()
 
-    # Build count matrix matching the shape of collapsed table
-    sample_ids = list(collapsed_table.ids(axis='sample'))
-    taxon_ids = list(collapsed_table.ids(axis='observation'))
+    # keep only present contigs (abundance > 0). In COO, data is non-zero by
+    # definition, but we keep the explicit check for safety.
+    present_mask = orig.data > 0
+    contig_rows = orig.row[present_mask]
+    sample_cols = orig.col[present_mask]
 
-    # Build a count matrix (taxa x samples)
-    count_matrix = np.zeros((len(taxon_ids), len(sample_ids)))
-    for i, taxon_id in enumerate(taxon_ids):
-        for j, sample_id in enumerate(sample_ids):
-            count_matrix[i, j] = contig_counts.get(str(sample_id), {}).get(str(taxon_id), 0)
+    # map each contig row index to a taxon row index
+    obs_ids = np.array(list(original_table.ids(axis="observation")), dtype=object)
+    contig_to_taxon = np.array(
+        [str(contig_map_rev.get(str(cid), "0")) for cid in obs_ids], dtype=object
+    )
 
-    # Get collapsed data as dense array
-    collapsed_data = collapsed_table.matrix_data.toarray()
+    mapped_taxon_rows = np.fromiter(
+        (taxon_index.get(tid, -1) for tid in contig_to_taxon[contig_rows]),
+        dtype=np.int64,
+        count=len(contig_rows),
+    )
 
-    # Vectorized division (handle division by zero)
-    with np.errstate(divide='ignore', invalid='ignore'):
-        averaged_data = np.where(count_matrix > 0, collapsed_data / count_matrix, 0.0)
+    # drop any contigs whose taxon isn't in the collapsed table (shouldn't happen)
+    valid = mapped_taxon_rows >= 0
+    mapped_taxon_rows = mapped_taxon_rows[valid]
+    sample_cols = sample_cols[valid]
 
-    return biom.Table(averaged_data, taxon_ids, sample_ids)
+    # build sparse contig-counts per (taxon, sample)
+    ones = np.ones(mapped_taxon_rows.shape[0], dtype=np.int32)
+    count_matrix = sp.coo_matrix(
+        (ones, (mapped_taxon_rows, sample_cols)),
+        shape=(len(taxon_ids), len(sample_ids)),
+    ).tocsr()
+
+    # divide only where collapsed table has data (stay sparse)
+    # if we divided the two matrices directly we would get a dense matrix
+    collapsed = collapsed_table.matrix_data.tocoo()
+    denom = count_matrix[collapsed.row, collapsed.col].A1
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        new_data = np.divide(
+            collapsed.data,
+            denom,
+            out=np.zeros_like(collapsed.data, dtype=float),
+            where=denom > 0,
+        )
+
+    averaged = sp.coo_matrix(
+        (new_data, (collapsed.row, collapsed.col)),
+        shape=collapsed_table.matrix_data.shape,
+    ).tocsr()
+
+    return biom.Table(averaged, taxon_ids, sample_ids)
 
 
 def _df_to_json_per_sample(df: pd.DataFrame, output_dir: str):
