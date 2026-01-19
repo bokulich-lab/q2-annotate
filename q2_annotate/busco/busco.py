@@ -55,7 +55,7 @@ def _prepare_histogram_data(results: pd.DataFrame) -> str:
     ]
 
     if not ("completeness" in results.columns and "contamination" in results.columns):
-        cols[0].remove("completeness")
+        cols[1].remove("completeness")
         cols[1].remove("contamination")
 
     melted = pd.melt(

@@ -34,12 +34,12 @@ class TestVegaDataPreparation(TestPluginBase):
                 "duplicated": [5.0, 3.0, 7.0],
                 "fragmented": [3.0, 2.0, 4.0],
                 "missing": [7.0, 5.0, 9.0],
+                "complete": [90.0, 93.0, 87.0],
                 "completeness": [93.0, 95.0, 91.0],
                 "contamination": [5.9, 3.3, 8.8],
                 "contigs_n50": [50000, 60000, 45000],
                 "length": [2000000, 2500000, 1800000],
                 "scaffold_n50": [51000, 61000, 46000],
-                "percent_gaps": [0.5, 0.3, 0.7],
                 "scaffolds": [50, 40, 60],
             }
         )
@@ -106,6 +106,7 @@ class TestVegaDataPreparation(TestPluginBase):
             "duplicated",
             "fragmented",
             "missing",
+            "complete",
             "completeness",
             "contamination",
             "contigs_n50",
@@ -124,6 +125,7 @@ class TestVegaDataPreparation(TestPluginBase):
             "duplicated",
             "fragmented",
             "missing",
+            "complete",
             "contigs_n50",
             "length",
         ]
@@ -139,6 +141,7 @@ class TestVegaDataPreparation(TestPluginBase):
             "duplicated",
             "fragmented",
             "missing",
+            "complete",
             "completeness",
             "contamination",
             "contigs_n50",
@@ -156,6 +159,7 @@ class TestVegaDataPreparation(TestPluginBase):
             "duplicated",
             "fragmented",
             "missing",
+            "complete",
             "contigs_n50",
             "length",
         ]
@@ -190,8 +194,8 @@ class TestVegaDataPreparation(TestPluginBase):
         self.assertEqual(data[2]["completeness"], 91.0)
         self.assertEqual(data[2]["contamination"], 8.8)
 
-        self.assertAlmostEqual(upper_x, 95.0 * 1.1, places=1)
-        self.assertAlmostEqual(upper_y, 8.8 * 1.1, places=1)
+        self.assertAlmostEqual(upper_x, 95.0 * 1.01, places=1)
+        self.assertAlmostEqual(upper_y, 8.8 * 1.01, places=1)
 
     def test_prepare_scatter_data_without_metrics(self):
         data_str, has_data, upper_x, upper_y = _prepare_scatter_data(self.basic_df)
@@ -254,7 +258,6 @@ class TestVegaDataPreparation(TestPluginBase):
                 "mag_id": "mag1",
                 "scaffold_n50": 51000,
                 "contigs_n50": 50000,
-                "percent_gaps": 0.5,
                 "scaffolds": 50,
             },
             {
@@ -262,7 +265,6 @@ class TestVegaDataPreparation(TestPluginBase):
                 "mag_id": "mag2",
                 "scaffold_n50": 61000,
                 "contigs_n50": 60000,
-                "percent_gaps": 0.3,
                 "scaffolds": 40,
             },
             {
@@ -270,7 +272,6 @@ class TestVegaDataPreparation(TestPluginBase):
                 "mag_id": "mag3",
                 "scaffold_n50": 46000,
                 "contigs_n50": 45000,
-                "percent_gaps": 0.7,
                 "scaffolds": 60,
             },
         ]
@@ -286,21 +287,18 @@ class TestVegaDataPreparation(TestPluginBase):
                 "sample_id": "sample1",
                 "mag_id": "mag1",
                 "contigs_n50": 50000,
-                "percent_gaps": 0.5,
                 "scaffolds": 50,
             },
             {
                 "sample_id": "sample1",
                 "mag_id": "mag2",
                 "contigs_n50": 60000,
-                "percent_gaps": 0.3,
                 "scaffolds": 40,
             },
             {
                 "sample_id": "sample2",
                 "mag_id": "mag3",
                 "contigs_n50": 45000,
-                "percent_gaps": 0.7,
                 "scaffolds": 60,
             },
         ]
