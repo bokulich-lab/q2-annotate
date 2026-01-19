@@ -140,7 +140,6 @@ def _get_feature_table(busco_results: pd.DataFrame):
         "contamination": "% contamination",
         "n_markers": "Total markers",
         "contigs_n50": "N50 contigs",
-        "percent_gaps": "Percent gaps",
         "scaffolds": "Contigs",
         "length": "Length (bp)",
         "unbinned_contigs_count": "Unbinned contigs",

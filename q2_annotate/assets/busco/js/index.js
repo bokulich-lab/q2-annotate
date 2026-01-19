@@ -16,6 +16,7 @@ const metricTitles = {
   'duplicated': '% duplicated',
   'fragmented': '% fragmented',
   'missing': '% missing',
+  'complete': '% complete',
   'completeness': '% completeness',
   'contamination': '% contamination',
   'contigs_n50': 'contig N50 [bp]',
@@ -28,6 +29,7 @@ const yFormats = {
   'duplicated': '.1f',
   'fragmented': '.1f',
   'missing': '.1f',
+  'complete': '.1f',
   'completeness': '.1f',
   'contamination': '.1f',
   'contigs_n50': '.2s',
@@ -104,6 +106,9 @@ function renderBoxPlots(grid, boxPlotSpec, boxPlotData, metrics, hidePoints) {
   clearPlots(grid);
   grid.className = 'chart-grid';
 
+  let loadedCount = 0;
+  const totalPlots = metrics.filter(m => boxPlotData[m]).length;
+
   metrics.forEach((metric) => {
     if (!boxPlotData[metric]) return;
 
@@ -136,6 +141,16 @@ function renderBoxPlots(grid, boxPlotSpec, boxPlotData, metrics, hidePoints) {
         result.view.resize();
         window.views.push(result.view);
         window.currentViews.push(result.view);
+
+        // After all plots are loaded, reapply the selected sample
+        loadedCount++;
+        if (loadedCount === totalPlots) {
+          const selectEl = document.getElementById('globalSampleSelect');
+          if (selectEl) {
+            const currentValue = selectEl.value || 'All';
+            updateViewsSelectedId(currentValue);
+          }
+        }
       }
     ).catch(
       function (error) {
@@ -157,9 +172,9 @@ function updateDescription(descriptionEl, type, hasSampleFilter) {
     }
   } else {
     if (hasSampleFilter) {
-      descriptionEl.textContent = 'The box plots below show distributions of BUSCO marker count fractions and assembly metrics. Each box shows the median, quartiles, and outliers for each category. Individual data points are overlaid with low transparency. Use the sample filter to highlight a specific sample across all box plots.';
+      descriptionEl.textContent = 'The box plots below show distributions of BUSCO marker count fractions and assembly metrics. Each box shows the median, quartiles, and outliers for each category. Individual data points are overlaid with low transparency. Use the sample filter to highlight a specific sample across all box plots. Switch between histograms and box plots using the view toggle.';
     } else {
-      descriptionEl.textContent = 'The box plots below show distributions of BUSCO marker count fractions and assembly metrics. Each box shows the median, quartiles, and outliers for each category. Individual data points are overlaid with low transparency.';
+      descriptionEl.textContent = 'The box plots below show distributions of BUSCO marker count fractions and assembly metrics. Each box shows the median, quartiles, and outliers for each category. Individual data points are overlaid with low transparency. Switch between histograms and box plots using the view toggle.';
     }
   }
 }
@@ -272,8 +287,11 @@ function initSampleDataView() {
 
     if (selectedType === 'histograms') {
       renderHistograms(grid, histogramSpec, histogramData, metrics);
+      // Reset sample selector to "All" when switching to histograms
+      selectEl.value = 'All';
     } else {
       renderBoxPlots(grid, boxPlotSpec, boxPlotData, metrics, hidePointsCheckbox.checked);
+      // Box plots will apply the current selection after rendering
     }
   });
 

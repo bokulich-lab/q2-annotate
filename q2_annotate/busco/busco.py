@@ -50,8 +50,8 @@ def _load_vega_spec(spec_name: str) -> dict:
 def _prepare_histogram_data(results: pd.DataFrame) -> str:
     """Prepare melted data for histogram plots."""
     cols = [
-        ["single", "duplicated", "fragmented", "missing", "completeness"],
-        ["contamination", "contigs_n50", "length"],
+        ["single", "duplicated", "fragmented", "missing", "complete"],
+        ["completeness", "contamination", "contigs_n50", "length"],
     ]
 
     if not ("completeness" in results.columns and "contamination" in results.columns):
@@ -75,6 +75,7 @@ def _prepare_box_plot_data(results: pd.DataFrame) -> dict:
         "duplicated",
         "fragmented",
         "missing",
+        "complete",
         "completeness",
         "contamination",
         "contigs_n50",
@@ -105,8 +106,8 @@ def _prepare_scatter_data(results: pd.DataFrame) -> tuple:
     max_cont = pd.to_numeric(results["contamination"], errors="coerce").max(skipna=True)
     max_comp = 0 if pd.isna(max_comp) else float(max_comp)
     max_cont = 0 if pd.isna(max_cont) else float(max_cont)
-    upper_x = max(5.0, min(110.0, round(max_comp * 1.1, 1)))
-    upper_y = max(5.0, min(110.0, round(max_cont * 1.1, 1)))
+    upper_x = max(5.0, min(101.0, round(max_comp * 1.01, 1)))
+    upper_y = max(5.0, min(101.0, round(max_cont * 1.01, 1)))
 
     data = results.to_dict("records")
     return json.dumps(data).replace("NaN", "null"), True, upper_x, upper_y
@@ -328,7 +329,7 @@ def _visualize_busco(
         )
 
     # Available metrics for histograms/box plots
-    metrics = ["single", "duplicated", "fragmented", "missing"]
+    metrics = ["single", "duplicated", "fragmented", "missing", "complete"]
     if "completeness" in results.columns:
         metrics.extend(["completeness", "contamination"])
     metrics.extend(["contigs_n50", "length"])

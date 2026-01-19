@@ -68,6 +68,23 @@
                     </tr>
                 </tbody>
                 </table>
+                <div class="mt-3 p-2" style="background-color: #f8f9fa; border-radius: 4px; font-size: 0.9em;">
+                    <strong>Metric definitions:</strong>
+                    <ul class="mb-0 mt-1" style="padding-left: 1.5rem;">
+                        <li><strong>Single:</strong> genes found exactly once</li>
+                        <li><strong>Duplicated:</strong> genes found more than once</li>
+                        <li><strong>Fragmented:</strong> genes only partially recovered</li>
+                        <li><strong>Missing:</strong> genes not found</li>
+                        <li><strong>Complete:</strong> Single + Duplicated genes</li>
+                        {% if comp_cont %}
+                        <li><strong>Completeness:</strong> (100 - Missing) / Total genes</li>
+                        <li><strong>Contamination:</strong> 100 x Duplicated / Complete genes</li>
+                        {% endif %}
+                        {% if unbinned %}
+                        <li><strong>Unbinned contigs:</strong> Percentage of contigs not assigned to any MAG</li>
+                        {% endif %}
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -99,7 +116,7 @@
                         The box plots below show distributions of BUSCO marker count fractions and assembly metrics.
                         Each box shows the median, quartiles, and outliers for each category. Individual data points
                         are overlaid with low transparency. Use the sample filter to highlight a specific sample
-                        across all box plots.
+                        across all box plots. Switch between histograms and box plots using the view toggle.
                     </p>
                     <div class="col-lg-12" id="summaryHistogramsMarkers">
                         <div id="plotMarkers" class="square-chart-grid" style="margin-top: 5px"></div>
