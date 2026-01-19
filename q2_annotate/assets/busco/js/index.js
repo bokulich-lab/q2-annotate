@@ -75,6 +75,9 @@ function renderHistograms(grid, histogramSpec, histogramData, metrics) {
   clearPlots(grid);
   grid.className = 'square-chart-grid';
 
+  let loadedCount = 0;
+  const totalPlots = metrics.length;
+
   metrics.forEach((metric) => {
     const div = document.createElement('div');
     grid.appendChild(div);
@@ -90,6 +93,16 @@ function renderHistograms(grid, histogramSpec, histogramData, metrics) {
         result.view.resize();
         window.views.push(result.view);
         window.currentViews.push(result.view);
+
+        // After all plots are loaded, reapply the selected sample
+        loadedCount++;
+        if (loadedCount === totalPlots) {
+          const selectEl = document.getElementById('globalSampleSelect');
+          if (selectEl) {
+            const currentValue = selectEl.value || 'All';
+            updateViewsSelectedId(currentValue);
+          }
+        }
       }
     ).catch(
       function (error) {
@@ -287,8 +300,7 @@ function initSampleDataView() {
 
     if (selectedType === 'histograms') {
       renderHistograms(grid, histogramSpec, histogramData, metrics);
-      // Reset sample selector to "All" when switching to histograms
-      selectEl.value = 'All';
+      // Histograms will apply the current selection after rendering
     } else {
       renderBoxPlots(grid, boxPlotSpec, boxPlotData, metrics, hidePointsCheckbox.checked);
       // Box plots will apply the current selection after rendering
