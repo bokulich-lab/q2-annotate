@@ -819,13 +819,15 @@ class TestCollapseContigs(TestPluginBase):
         """Test contig collapsing with a couple of samples."""
         contig_map = Artifact.import_data(
             "FeatureMap[TaxonomyToContigs]",
-            self.get_data_path("collapse/larger-example/feature-map.jsonl")
+            self.get_data_path("collapse/larger-example/feature-map.jsonl"),
         )
         taxonomy = Artifact.import_data(
             "FeatureData[Taxonomy]",
-            self.get_data_path("collapse/larger-example/taxonomy.tsv")
+            self.get_data_path("collapse/larger-example/taxonomy.tsv"),
         )
-        with open(self.get_data_path("collapse/larger-example/feature-table.json")) as f:
+        with open(
+            self.get_data_path("collapse/larger-example/feature-table.json")
+        ) as f:
             table = Artifact.import_data(
                 "FeatureTable[Frequency]", pd.DataFrame.from_dict(json.load(f)).T
             )
@@ -840,9 +842,11 @@ class TestCollapseContigs(TestPluginBase):
         obs_df = obs_df[sorted(obs_df.columns)]
         exp_df = pd.DataFrame(
             np.array(
-                [[0.15, 11.5, 20.5, 30.5],
-                 [0.4, 14.0, 0.0, 32.0],
-                 [0.2, 15.5, 23.0, 32.0]]
+                [
+                    [0.15, 11.5, 20.5, 30.5],
+                    [0.4, 14.0, 0.0, 32.0],
+                    [0.2, 15.5, 23.0, 32.0],
+                ]
             ),
             columns=["0", "taxon_id1", "taxon_id2", "taxon_id3"],
             index=["sample1", "sample2", "sample3"],
