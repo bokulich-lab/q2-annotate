@@ -21,6 +21,7 @@ from q2_types.kraken2 import (
     Kraken2ReportDirectoryFormat,
 )
 
+from qiime2.plugins import annotate
 from q2_annotate.kraken2.collapse import (
     _build_contig_map,
     _average_by_count,
@@ -813,6 +814,41 @@ class TestCollapseContigs(TestPluginBase):
         pd.testing.assert_frame_equal(collapsed_df, expected_df)
 
         self.assertEqual(result_table, mock_artifact)
+
+    def test_collapse_contigs_larger_dataset(self):
+        """Test contig collapsing with a couple of samples."""
+        contig_map = Artifact.import_data(
+            "FeatureMap[TaxonomyToContigs]",
+            self.get_data_path("collapse/larger-example/feature-map.jsonl")
+        )
+        taxonomy = Artifact.import_data(
+            "FeatureData[Taxonomy]",
+            self.get_data_path("collapse/larger-example/taxonomy.tsv")
+        )
+        with open(self.get_data_path("collapse/larger-example/feature-table.json")) as f:
+            table = Artifact.import_data(
+                "FeatureTable[Frequency]", pd.DataFrame.from_dict(json.load(f)).T
+            )
+
+        result_table, result_viz = annotate.pipelines.collapse_contigs(
+            contig_map,
+            table,
+            taxonomy,
+        )
+
+        obs_df = result_table.view(pd.DataFrame)
+        obs_df = obs_df[sorted(obs_df.columns)]
+        exp_df = pd.DataFrame(
+            np.array(
+                [[0.15, 11.5, 20.5, 30.5],
+                 [0.4, 14.0, 0.0, 32.0],
+                 [0.2, 15.5, 23.0, 32.0]]
+            ),
+            columns=["0", "taxon_id1", "taxon_id2", "taxon_id3"],
+            index=["sample1", "sample2", "sample3"],
+        )
+
+        pd.testing.assert_frame_equal(obs_df, exp_df)
 
 
 class TestMapTaxonomyToContigs(TestPluginBase):
