@@ -734,7 +734,7 @@ plugin.pipelines.register_function(
             "Table of contig abundances per sample. Feature IDs will be "
             "replaced with taxonomy strings."
         ),
-        "contig_map": ("Mapping between contig IDs and assingned taxonomy IDs."),
+        "contig_map": ("Mapping between contig IDs and assigned taxonomy IDs."),
         "taxonomy": (
             "Optional taxonomy mapping to display taxonomy strings in the "
             "visualization instead of taxonomy IDs."
