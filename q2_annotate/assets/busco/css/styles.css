@@ -1,3 +1,8 @@
+/* Card styling */
+.card {
+    border-radius: 0.5rem;
+}
+
 #plot {
     margin-top: 50px;
 }
@@ -37,9 +42,84 @@
 .header-inline {
     display: inline-block;
     float: left;
-    margin-right: 10px;
+    margin-right: 2px;
     margin-top: 8px;
     margin-bottom: 8px;
+}
+
+/* Dropdown menu styling */
+.form-select {
+    margin-right: 15px;
+}
+
+/* Responsive grid for multiple charts */
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 4px;
+    width: 100%;
+}
+
+/* Grid for square plots - maintains fixed square dimensions */
+.square-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 10px;
+    width: 100%;
+    /* justify-content: start; */
+}
+
+/* Responsive layout for detailed BUSCO plots */
+.detailed-plot-container {
+    display: flex;
+    width: 100%;
+    gap: 12px;
+}
+
+.detailed-plot-container .busco-plot {
+    flex: 2; /* Takes 2/3 of the space */
+    min-width: 0; /* Allows flex item to shrink below content size */
+}
+
+.detailed-plot-container .assembly-plot {
+    flex: 1; /* Takes 1/3 of the space */
+    min-width: 0; /* Allows flex item to shrink below content size */
+}
+
+/* Responsive behavior for smaller screens */
+@media (max-width: 768px) {
+    .detailed-plot-container {
+        flex-direction: column;
+    }
+    
+    .detailed-plot-container .busco-plot,
+    .detailed-plot-container .assembly-plot {
+        flex: none;
+        width: 100%;
+    }
+}
+
+/* Plot container for scatter view cards - prevent overflow */
+.plot-container {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* Ensure Vega-Lite charts respect container bounds */
+.plot-container > div {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.plot-container svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.my-test-class {
+    padding-right: 0; !important;
 }
 
 /*adjustment for Bootstrap 5*/
@@ -48,8 +128,50 @@
     margin-top: 10px
 }
 
+/* Sample selection container */
+.sample-selection-container {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  min-height: 40px;
+}
+
+/* Individual sample selection items */
+.sample-selection-item {
+  display: inline-flex;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 5px;
+  align-items: center;
+  margin-right: 15px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+/* Highlight selected items */
+.sample-selection-item.selected {
+  border: 1px solid #007bff;
+  opacity: 1;
+  font-weight: bold;
+}
+
 .pagination {
     justify-content: right;
+}
+
+.nav-tabs {
+    margin-top: 10px;
+}
+
+#buscoCol {
+    margin-top: 20px;
+}
+
+#assemblyCol {
+    margin-top: 20px;
 }
 
 /* SPINKIT */

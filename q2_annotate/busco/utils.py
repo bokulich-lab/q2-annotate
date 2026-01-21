@@ -7,17 +7,14 @@
 # ----------------------------------------------------------------------------
 import json
 import os
+import warnings
 from pathlib import Path
-from typing import List, Callable
+from typing import List
 
+import numpy as np
 import pandas as pd
-import qiime2
 import skbio.io
-from q2_types.per_sample_sequences import (
-    MultiMAGSequencesDirFmt,
-    ContigSequencesDirFmt,
-)
-from qiime2 import Metadata
+from q2_types.per_sample_sequences import ContigSequencesDirFmt
 
 from q2_annotate.busco.types import BuscoDatabaseDirFmt
 
@@ -143,7 +140,6 @@ def _get_feature_table(busco_results: pd.DataFrame):
         "contamination": "% contamination",
         "n_markers": "Total markers",
         "contigs_n50": "N50 contigs",
-        "percent_gaps": "Percent gaps",
         "scaffolds": "Contigs",
         "length": "Length (bp)",
         "unbinned_contigs_count": "Unbinned contigs",
@@ -321,31 +317,6 @@ def _process_busco_results(results, sample_id, mag_id, file_name, additional_met
     return results
 
 
-def _filter_unbinned_for_partition(
-    unbinned_contigs: ContigSequencesDirFmt,
-    mag_partition: qiime2.Artifact,
-    _filter_contigs: Callable,
-):
-    """
-    Filters the unbinned contigs to match the sample IDs in a MAG partition.
-
-    Args:
-        unbinned_contigs (ContigSequencesDirFmt): The full unbinned contigs.
-        mag_partition (MultiMAGSequencesDirFmt): One partition of MAGs.
-        _filter_contigs (Callable): QIIME 2 action to filter contigs.
-
-    Returns:
-        ContigSequencesDirFmt: Filtered unbinned contigs matching the partition samples.
-    """
-    sample_ids = list(mag_partition.view(MultiMAGSequencesDirFmt).sample_dict().keys())
-    metadata = Metadata(pd.DataFrame(index=pd.Index(sample_ids, name="ID")))
-    (filtered_unbinned,) = _filter_contigs(
-        contigs=unbinned_contigs,
-        metadata=metadata,
-    )
-    return filtered_unbinned
-
-
 def _count_contigs(file_paths: List[Path]) -> int:
     """
     Count the number of DNA sequences across a list of FASTA files.
@@ -400,33 +371,65 @@ def _calculate_unbinned_percentage(
 
 def _add_unbinned_metrics(
     busco_results: pd.DataFrame,
-    mags: MultiMAGSequencesDirFmt,
     unbinned_contigs: ContigSequencesDirFmt,
 ) -> pd.DataFrame:
-    """Add unbinned contigs percentage and count columns to BUSCO results."""
+    """
+    Add unbinned contigs percentage and count columns to BUSCO results.
 
-    mags_dict = mags.sample_dict()
+    Uses existing scaffold counts from busco_results instead of reading MAG files.
+    """
+    # Validate sample IDs
+    busco_sample_ids = set(busco_results["sample_id"].unique())
+    unbinned_sample_ids = set(unbinned_contigs.sample_dict().keys())
+
+    # Make sure the counts are integers
+    busco_results.loc[:, "scaffolds"] = busco_results.loc[:, "scaffolds"].astype(int)
+
+    missing_samples = busco_sample_ids - unbinned_sample_ids
+    if missing_samples:
+        warnings.warn(
+            f"The following sample IDs are present in BUSCO results but missing "
+            f"from unbinned contigs: {sorted(missing_samples)}. "
+            f"Unbinned contig metrics for these samples will be set to NaN."
+        )
+
     rows = []
 
     for unbinned_id, unbinned_path in unbinned_contigs.sample_dict().items():
-        # Get all FASTA paths for this bin
-        binned_fasta_paths = list(mags_dict[unbinned_id].values())
+        # Count unbinned contigs from the file
+        unbinned_contigs_count = _count_contigs([unbinned_path])
 
-        percentage, count = _calculate_unbinned_percentage(
-            binned_fasta_paths, [unbinned_path]
-        )
+        # Get total binned contigs for this sample from busco_results
+        sample_results = busco_results[busco_results["sample_id"] == unbinned_id]
+
+        if not sample_results.empty:
+            # Sum up all scaffolds (contigs) across all MAGs for this sample
+            binned_contigs = sample_results["scaffolds"].sum()
+
+            # Calculate percentage
+            total = binned_contigs + unbinned_contigs_count
+            percentage_unbinned = (
+                (unbinned_contigs_count / total) * 100 if total > 0 else 0
+            )
+        else:
+            percentage_unbinned = np.NAN
+
         rows.append(
             {
                 "sample_id": unbinned_id,
-                "unbinned_contigs": float(percentage),
-                "unbinned_contigs_count": int(count),
+                "unbinned_contigs": float(percentage_unbinned),
+                "unbinned_contigs_count": int(unbinned_contigs_count),
             }
         )
 
     if rows:
-        unbinned_df = pd.DataFrame(rows)
-        # Merge so that only matching sample_id rows are updated
-        busco_results = busco_results.merge(unbinned_df, on="sample_id", how="left")
+        unbinned_df = pd.DataFrame(rows).set_index("sample_id")
+        busco_results["unbinned_contigs_count"] = busco_results["sample_id"].map(
+            unbinned_df["unbinned_contigs_count"]
+        )
+        busco_results["unbinned_contigs"] = busco_results["sample_id"].map(
+            unbinned_df["unbinned_contigs"]
+        )
     else:
         busco_results["unbinned_contigs"] = pd.NA
         busco_results["unbinned_contigs_count"] = pd.NA

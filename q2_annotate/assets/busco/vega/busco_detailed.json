@@ -1,0 +1,99 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+  "description": "BUSCO detailed stacked bar chart",
+  "params": [
+    {
+      "name": "selected_sample",
+      "value": "All"
+    },
+    {
+      "name": "show_labels",
+      "value": false
+    }
+  ],
+  "data": {
+    "name": "source"
+  },
+  "transform": [
+    {
+      "filter": "(selected_sample == 'All') || (datum.sample_id == selected_sample)"
+    },
+    {
+      "calculate": "datum.category == 'single' ? 1 : datum.category == 'duplicated' ? 2 : datum.category == 'fragmented' ? 3 : 4",
+      "as": "order"
+    }
+  ],
+  "mark": {
+    "type": "bar",
+    "opacity": 0.85
+  },
+  "width": "container",
+  "height": {"step": 25},
+  "encoding": {
+    "x": {
+      "field": "BUSCO_percentage",
+      "type": "quantitative",
+      "aggregate": "sum",
+      "stack": "normalize",
+      "title": "BUSCO fraction"
+    },
+    "y": {
+      "field": "mag_id",
+      "type": "nominal",
+      "axis": {
+        "titleFontSize": 0,
+        "labels": true,
+        "labelExpr": "substring(datum.label, 0, 8)"
+      },
+      "sort": {"field": "sort_order", "order": "ascending"}
+    },
+    "color": {
+      "field": "category",
+      "type": "nominal",
+      "scale": {
+        "domain": ["single", "duplicated", "fragmented", "missing"],
+        "range": ["#2d718e", "#5499b5", "#f2b134", "#d32f2f"]
+      },
+      "legend": null
+    },
+    "order": {
+      "field": "order",
+      "type": "quantitative",
+      "sort": "ascending"
+    },
+    "tooltip": [
+      {"field": "sample_id", "type": "nominal", "title": "Sample ID"},
+      {"field": "mag_id", "type": "nominal", "title": "MAG ID"},
+      {"field": "dataset", "type": "nominal", "title": "Lineage dataset"},
+      {"field": "frac_markers", "type": "nominal", "title": "Approx. markers in category"},
+      {"field": "BUSCO_percentage", "type": "quantitative", "title": "% BUSCOs"}
+    ]
+  },
+  "config": {
+    "background": "#fff",
+    "font": "Open Sans, Arial, sans-serif",
+    "axis": {
+      "labelFontSize": 12,
+      "titleFontSize": 14,
+      "grid": true,
+      "gridColor": "#eaeaea"
+    },
+    "legend": {
+      "labelFontSize": 12,
+      "titleFontSize": 14
+    },
+    "header": {
+      "labelFontSize": 12,
+      "titleFontSize": 14
+    },
+    "view": {
+      "stroke": "#eaeaea"
+    }
+  },
+  "autosize": {
+    "type": "fit",
+    "contains": "padding",
+    "resize": true
+  }
+}
+
