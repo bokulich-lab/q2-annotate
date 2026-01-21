@@ -1,0 +1,66 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+  "description": "Summary histogram for BUSCO metrics",
+  "params": [
+    {
+      "name": "selected_id",
+      "value": "All"
+    },
+    {
+      "name": "metric_param",
+      "value": "single"
+    }
+  ],
+  "data": {
+    "name": "source"
+  },
+  "transform": [
+    {
+      "filter": "(selected_id == 'All') || (datum.sample_id == selected_id)"
+    },
+    {
+      "filter": "datum.category == metric_param"
+    }
+  ],
+  "mark": "bar",
+  "width": "container",
+  "height": 400,
+  "encoding": {
+    "x": {
+      "field": "metric",
+      "type": "quantitative",
+      "bin": true,
+      "title": null
+    },
+    "y": {
+      "aggregate": "count",
+      "type": "quantitative",
+      "title": "MAG count",
+      "scale": {"zero": true}
+    },
+    "color": {
+      "value": "#2d718e"
+    },
+    "tooltip": [
+      {"aggregate": "count", "type": "quantitative", "title": "Count"}
+    ]
+  },
+  "config": {
+    "background": "#fff",
+    "font": "Open Sans, Arial, sans-serif",
+    "axis": {
+      "labelFontSize": 12,
+      "titleFontSize": 15,
+      "grid": true,
+      "gridColor": "#eaeaea"
+    },
+    "header": {
+      "labelFontSize": 12,
+      "titleFontSize": 15
+    },
+    "view": {
+      "stroke": "#eaeaea"
+    }
+  }
+}
+

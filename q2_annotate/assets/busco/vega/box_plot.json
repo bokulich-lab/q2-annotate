@@ -1,0 +1,148 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+  "description": "Box-whiskers plot for BUSCO metrics",
+  "params": [
+    {
+      "name": "selected_id",
+      "value": "All"
+    },
+    {
+      "name": "metric_param",
+      "value": "single"
+    },
+    {
+      "name": "y_format",
+      "value": ".0f"
+    },
+    {
+      "name": "hide_points",
+      "value": false
+    }
+  ],
+  "data": {
+    "name": "source"
+  },
+  "width": "container",
+  "height": 300,
+  "transform": [{"calculate": "random() * (0.6 - 0.4) + 0.4", "as": "random"}],
+  "layer": [
+    {
+      "mark": {
+        "type": "boxplot",
+        "size": 30,
+        "opacity": 0.8
+      },
+      "encoding": {
+        "y": {
+          "field": "value",
+          "type": "quantitative",
+          "title": null,
+          "scale": {"zero": false},
+          "axis": {
+            "labels": true,
+            "format": {"expr": "y_format"}
+          }
+        },
+        "x": {
+          "datum": 0.5,
+          "type": "quantitative",
+          "scale": {"domain": [0, 1], "padding": 0.1},
+          "axis": {"labels": false, "title": null, "ticks":  false}
+        },
+        "color": {"value": null},
+        "stroke": {"value": "black"},
+        "strokeWidth": {"value": 1.2}
+      }
+    },
+    {
+      "transform": [
+        {"filter": "datum.sample_id != selected_id || selected_id == 'All'"}
+      ],
+      "mark": {
+        "type": "circle",
+        "size": 50,
+        "stroke": null
+      },
+      "encoding": {
+        "y": {
+          "field": "value",
+          "type": "quantitative",
+          "scale": {"zero": false}
+        },
+        "x": {
+          "field": "random",
+          "type": "quantitative",
+          "scale": {"domain": [0, 1], "padding": 0.15},
+          "axis": {"labels": false, "title": null, "ticks":  false}
+        },
+        "color": {
+          "value": "#2d718e"
+        },
+        "opacity": {
+          "condition": {"test": "hide_points", "value": 0},
+          "value": 0.3
+        },
+        "tooltip": [
+          {"field": "sample_id", "type": "nominal", "title": "Sample ID"},
+          {"field": "mag_id", "type": "nominal", "title": "MAG ID"},
+          {"field": "value", "type": "quantitative", "title": "Value", "format": {"expr": "y_format"}}
+        ]
+      }
+    },
+    {
+      "transform": [
+        {"filter": "datum.sample_id == selected_id && selected_id != 'All'"}
+      ],
+      "mark": {
+        "type": "circle",
+        "size": 50,
+        "stroke": null
+      },
+      "encoding": {
+        "y": {
+          "field": "value",
+          "type": "quantitative",
+          "scale": {"zero": false}
+        },
+        "x": {
+          "field": "random",
+          "type": "quantitative",
+          "scale": {"domain": [0, 1], "padding": 0.15},
+          "axis": {"labels": false, "title": null}
+        },
+        "color": {
+          "value": "red"
+        },
+        "opacity": {
+          "condition": {"test": "hide_points", "value": 0},
+          "value": 0.9
+        },
+        "tooltip": [
+          {"field": "sample_id", "type": "nominal", "title": "Sample ID"},
+          {"field": "mag_id", "type": "nominal", "title": "MAG ID"},
+          {"field": "value", "type": "quantitative", "title": "Value", "format": {"expr": "y_format"}}
+        ]
+      }
+    }
+  ],
+  "config": {
+    "background": "#fff",
+    "font": "Open Sans, Arial, sans-serif",
+    "axis": {
+      "labelFontSize": 12,
+      "titleFontSize": 15,
+      "grid": false
+    },
+    "header": {
+      "labelFontSize": 12,
+      "titleFontSize": 15
+    },
+    "view": {
+      "stroke": "#eaeaea"
+    }
+  }
+}
+
+
+
+

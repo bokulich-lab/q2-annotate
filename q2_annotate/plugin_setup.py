@@ -1117,10 +1117,12 @@ plugin.visualizers.register_function(
     function=q2_annotate.busco._visualize_busco,
     inputs={
         "results": BUSCOResults,
+        "unbinned_contigs": SampleData[Contigs],
     },
     parameters={},
     input_descriptions={
         "results": "BUSCO results table.",
+        "unbinned_contigs": "Contigs which were not assigned to any bin.",
     },
     parameter_descriptions={},
     name="Visualize BUSCO results.",

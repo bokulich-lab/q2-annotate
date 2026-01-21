@@ -1,183 +1,175 @@
 {% extends 'tabbed.html' %}
 
 {% block head %}
-<title>Embedding Vega-Lite</title>
+<title>BUSCO QC Dashboard</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="js/bootstrapMagic.js" type="text/javascript"></script>
 <link href="css/styles.css" rel="stylesheet"/>
 <script type="text/javascript">
     // temporary hack to make it look good with Bootstrap 5
     removeBS3refs();
 </script>
-<script src="https://cdn.jsdelivr.net/npm//vega@5" type="text/javascript"></script>
-<script src="https://cdn.jsdelivr.net/npm//vega-lite@5.16.3" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm//vega@6" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm//vega-lite@6" type="text/javascript"></script>
 <script src="https://cdn.jsdelivr.net/npm//vega-embed@6" type="text/javascript"></script>
-<link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha256-YvdLHPgkqJ8DVUxjjnGVlMMJtNimJ6dYkowFFvp4kKs=" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="js/index.js" type="text/javascript"></script>
 {% endblock %}
 
 {% block tabcontent %}
-<script crossorigin="anonymous" integrity="sha256-9SEPo+fwJFpMUet/KACSwO+Z/dKMReF9q4zFhU/fT9M=" src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <br>
-<div class="row" style="justify-content: space-evenly; align-items: start;">
-    <div class="row" style="margin-bottom: 10px">
-        <div class="col-lg-12" style="margin: unset">
-            <div class="card">
-                <h5 class="card-header">BUSCO summary statistics</h5>
-                <div class="card-body">
-                    <p>
-                        The table below shows the summary statistics of the BUSCO marker count
-                        fractions for the categories
-                        <b>Single</b>, <b>Duplicated</b>, <b>Fragmented</b>, <b>Missing</b> 
-                        {% if not comp_cont %}and {% else %}, {% endif %}<b>Complete</b>{% if comp_cont %}, <b>Completeness</b> and <b>Contamination</b>{% endif %}
-                        for <b>all MAGs</b>.
-                    </p>
-                    <table id="summaryTable" class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">% single</th>
-                            <th scope="col">% duplicated</th>
-                            <th scope="col">% fragmented</th>
-                            <th scope="col">% missing</th>
-                            <th scope="col">% complete</th>
-                            {% if comp_cont %}
-                                <th scope="col">% completeness</th>
-                                <th scope="col">% contamination</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr id="rowMinimum">
-                          <th scope="row">Minimum</th>
-                        </tr>
-                        <tr id="rowMedian">
-                          <th scope="row">Median</th>
-                        </tr>
-                        <tr id="rowMean">
-                          <th scope="row">Mean</th>
-                        </tr>
-                        <tr id="rowMaximum">
-                          <th scope="row">Maximum</th>
-                        </tr>
-                        <tr id="rowTotal">
-                          <th scope="row">Total count</th>
-                        </tr>
-                    </tbody>
-                    </table>
+<div class="row gx-2" style="margin-bottom: 10px">
+    <div class="col-lg-12" style="margin: unset">
+        <div class="card mb-2 border-muted">
+            <div class="card-body p-3">
+                <h5 class="card-title mb-3">BUSCO summary statistics</h5>
+                <p class="card-text text-muted">
+                    The table below shows the summary statistics of the BUSCO marker count
+                    fractions for the categories
+                    <b>Single</b>, <b>Duplicated</b>, <b>Fragmented</b>, <b>Missing</b>
+                    {% if not comp_cont %}and {% else %}, {% endif %}<b>Complete</b>{% if comp_cont %}, <b>Completeness</b> and <b>Contamination</b>{% endif %}
+                    for <b>all MAGs</b>.
+                </p>
+                <table id="summaryTable" class="table table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">% single</th>
+                        <th scope="col">% duplicated</th>
+                        <th scope="col">% fragmented</th>
+                        <th scope="col">% missing</th>
+                        <th scope="col">% complete</th>
+                        {% if comp_cont %}
+                            <th scope="col">% completeness</th>
+                            <th scope="col">% contamination</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="rowMinimum">
+                      <th scope="row">Minimum</th>
+                    </tr>
+                    <tr id="rowMedian">
+                      <th scope="row">Median</th>
+                    </tr>
+                    <tr id="rowMean">
+                      <th scope="row">Mean</th>
+                    </tr>
+                    <tr id="rowMaximum">
+                      <th scope="row">Maximum</th>
+                    </tr>
+                    <tr id="rowTotal">
+                      <th scope="row">Total count</th>
+                    </tr>
+                </tbody>
+                </table>
+                <div class="mt-3 p-2" style="background-color: #f8f9fa; border-radius: 4px; font-size: 0.9em;">
+                    <strong>Metric definitions:</strong>
+                    <ul class="mb-0 mt-1" style="padding-left: 1.5rem;">
+                        <li><strong>Single:</strong> genes found exactly once</li>
+                        <li><strong>Duplicated:</strong> genes found more than once</li>
+                        <li><strong>Fragmented:</strong> genes only partially recovered</li>
+                        <li><strong>Missing:</strong> genes not found</li>
+                        <li><strong>Complete:</strong> Single + Duplicated genes</li>
+                        {% if comp_cont %}
+                        <li><strong>Completeness:</strong> (100 - Missing) / Total genes</li>
+                        <li><strong>Contamination:</strong> 100 x Duplicated / Complete genes</li>
+                        {% endif %}
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="row" style="margin-bottom: 10px">
-        <div class="col-lg-12">
-            <div class="card">
-                <h5 class="card-header">Distribution of BUSCO marker gene counts</h5>
-                <div class="card-body">
-                    <p>
-                        The histograms in the first row below show distributions of BUSCO marker
-                        count fractions across all MAGs for all the marker categories,
-                        as represented in the table above.
-
-                        The histograms in the second row show the distributions of assembly metrics
-                        for all MAGs and can be used to evaluate the quality of the assembly.
+<div class="row" style="margin-bottom: 10px">
+    <div class="col-lg-12">
+        <div class="card mb-2 border-muted">
+            <div class="collapse show" id="histogramsCollapse">
+                <div class="card-body p-3">
+                    <h5 class="card-title mb-3">Distribution of BUSCO marker gene counts</h5>
+                    <div style="display:flex; align-items:center; gap: 12px; margin-bottom: 8px;">
+                        <span class="header-inline">View:</span>
+                        <select id="visualizationToggle" class="form-select form-select-sm" style="width:auto">
+                            <option value="histograms">Histograms</option>
+                            <option value="boxplots" selected>Box Plots</option>
+                        </select>
+                        <div id="hidePointsContainer" class="form-check" style="display: flex; align-items: center; margin-left: 8px;">
+                            <input class="form-check-input" type="checkbox" id="hidePointsCheckbox" style="margin-top: 0;">
+                            <label class="form-check-label" for="hidePointsCheckbox" style="margin-left: 4px; white-space: nowrap;">Hide points</label>
+                        </div>
+                    </div>
+                    <p id="visualizationDescription" class="card-text text-muted">
+                        The box plots below show distributions of BUSCO marker count fractions and assembly metrics.
+                        Each box shows the median, quartiles, and outliers for each category. Individual data points
+                        are overlaid with low transparency. Switch between histograms and box plots using the view toggle.
                     </p>
                     <div class="col-lg-12" id="summaryHistogramsMarkers">
-                        <div id="plotMarkers" style="margin-top: 5px"></div>
+                        <div id="plotMarkers" class="square-chart-grid" style="margin-top: 5px"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {% if comp_cont %}
-    <div class="row" style="margin-bottom: 10px">
-        <div class="col-lg-12">
-            <div class="card">
-                <h5 class="card-header">Completeness vs Contamination</h5>
-                <div class="card-body">
-                    <p>
-                        This scatterplot shows the relationship between BUSCO completeness and contamination
-                        for each MAG across your dataset.
-                    </p>
-                    <div class="col-lg-12" id="scatterDropdownControls" style="margin-bottom: 10px;"></div>
-                    <div id="scatterPlotDiv" style="margin-top: 10px;"></div>
-                </div>
+</div>
+{% if comp_cont %}
+<div class="row" style="margin-bottom: 10px">
+    <div class="col-lg-12">
+        <div class="card mb-2 border-muted">
+            <div class="card-body p-3">
+                <h5 class="card-title mb-3">Completeness vs. contamination</h5>
+                <p class="card-text text-muted">
+                    This scatterplot shows the relationship between BUSCO completeness and contamination
+                    for each MAG across your dataset.
+                </p>
+                <div id="scatterPlotDiv" style="margin-top: 10px; width: 100%;"></div>
             </div>
         </div>
     </div>
-    {% endif %}
 </div>
+{% endif %}
 
-<script id="vega_summary_json" type="application/json">
-    {{
-        vega_summary_json
-        |
-        safe
-    }}
+<!-- Vega Specs -->
+<script id="vega_histogram_spec" type="application/json">
+    {{ vega_histogram_spec | safe }}
+</script>
+
+<script id="vega_box_plot_spec" type="application/json">
+    {{ vega_box_plot_spec | safe }}
+</script>
+
+<script id="vega_scatter_spec" type="application/json">
+    {{ vega_scatter_spec | safe }}
+</script>
+
+<!-- Data -->
+<script id="histogram_data" type="application/json">
+    {{ histogram_data | safe }}
+</script>
+
+<script id="box_plot_data" type="application/json">
+    {{ box_plot_data | safe }}
+</script>
+
+<script id="scatter_data" type="application/json">
+    {{ scatter_data | safe }}
+</script>
+
+<script id="metrics_json" type="application/json">
+    {{ metrics_json | safe }}
 </script>
 
 <script id="summary_stats_json" type="application/json">
-    {{
-        summary_stats_json
-        |
-        safe
-    }}
-</script>
-
-<script id="scatter_json" type="application/json">
-    {{ scatter_json | safe }}
+    {{ summary_stats_json | safe }}
 </script>
 
 <script type="text/javascript">
-    $(document).ready(function () {
-        // temporary hack to make it look good with Bootstrap 5
-        adjustTagsToBS3()
-
-        const summarySpec = JSON.parse(document.getElementById('summary_stats_json').textContent);
-        console.log(summarySpec)
-
-        const rows = ['rowMinimum', 'rowMedian', 'rowMean', 'rowMaximum', 'rowTotal'];
-        const indices = ['min', 'median', 'mean', 'max', 'count'];
-        const cols = ['single', 'duplicated', 'fragmented', 'missing', 'complete', 'completeness', 'contamination'];
-        rows.forEach((rowId, index) => {
-            let rowElement = document.getElementById(rowId)
-            let colVals = summarySpec.data[index]
-            console.log(colVals)
-            cols.forEach((col) => {
-                let td = document.createElement('td');
-                td.textContent = colVals[col];
-                rowElement.appendChild(td);
-            })
-        })
-
-        const vegaSpecSummary = JSON.parse(document.getElementById('vega_summary_json').textContent);
-        vegaEmbed("#plotMarkers", vegaSpecSummary).then(
-            function (result) {
-                result.view.logLevel(vega.Warn);
-                window.v = result.view;
-            }
-        ).catch(
-            function (error) {
-                handleErrors([error], $("#plotMarkers"));
-            }
-        );
-        const scatterSpec = JSON.parse(document.getElementById('scatter_json').textContent);
-vegaEmbed("#scatterPlotDiv", scatterSpec).then(
-    function (result) {
-        result.view.logLevel(vega.Warn);
-
-        const dropdownWrapper = document.querySelector("#scatterPlotDiv .vega-bindings");
-        const target = document.getElementById('scatterDropdownControls');
-        if (dropdownWrapper && target) {
-            target.appendChild(dropdownWrapper);
-        }
-    }
-).catch(
-    function (error) {
-        handleErrors([error], $("#scatterPlotDiv"));
-    }
-);
-    });
+    // Pass template variables to JavaScript
+    {% if comp_cont %}
+    window.buscoUpperX = {{ upper_x | default(100) }};
+    window.buscoUpperY = {{ upper_y | default(100) }};
+    {% endif %}
 </script>
 
 {% endblock %}
