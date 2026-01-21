@@ -232,28 +232,25 @@ def _extract_mean_abundances(
     Returns:
         dict: Mapping of taxon -> sample -> mean abundance
     """
-    # IDs in table order
-    taxon_ids = np.asarray(list(collapsed_table.ids(axis="observation")), dtype=object)
-    sample_ids = np.asarray(list(collapsed_table.ids(axis="sample")), dtype=object)
+    collapsed_df = collapsed_table.to_dataframe(dense=True)
 
-    # Optional taxonomy mapping (normalize index for reliable lookup)
+    # Map taxon IDs to taxonomy strings if taxonomy provided
     if taxonomy is not None:
-        tax = taxonomy.copy()
-        tax.index = tax.index.astype(str)
-        taxon_labels = np.asarray([tax.get(str(t), str(t)) for t in taxon_ids],
-                                  dtype=object)
-    else:
-        taxon_labels = taxon_ids.astype(str)
+        collapsed_df.index = collapsed_df.index.map(
+            lambda x: taxonomy.get(str(x), str(x))
+        )
 
-    # Iterate only non-zeros
-    coo = collapsed_table.matrix_data.tocoo()
+    # Calculate mean abundances per taxon per sample
+    mean_abundances = {}
+    for taxon in collapsed_df.index:
+        taxon_str = str(taxon)
+        mean_abundances[taxon_str] = {}
 
-    mean_abundances: Dict[str, Dict[str, float]] = {}
-    for r, c, v in zip(coo.row, coo.col, coo.data):
-        if v > 0 and np.isfinite(v):
-            taxon = str(taxon_labels[r])
-            sample = str(sample_ids[c])
-            mean_abundances.setdefault(taxon, {})[sample] = float(v)
+        for sample in collapsed_df.columns:
+            sample_str = str(sample)
+            value = collapsed_df.loc[taxon, sample]
+            if pd.notna(value) and value > 0:
+                mean_abundances[taxon_str][sample_str] = float(value)
 
     return mean_abundances
 
