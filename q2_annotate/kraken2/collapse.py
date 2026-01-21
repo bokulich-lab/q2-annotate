@@ -34,9 +34,6 @@ def _build_contig_map(kraken2_outputs: Kraken2OutputDirectoryFormat) -> dict:
     taxon_to_contigs = {}
 
     for relpath, output_df in kraken2_outputs.outputs.iter_views(pd.DataFrame):
-        if output_df.empty:
-            continue
-
         contig_ids = output_df.iloc[:, 1].astype(str)
         taxon_ids = output_df.iloc[:, 2].astype(str)
 
