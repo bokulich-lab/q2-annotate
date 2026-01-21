@@ -9,13 +9,21 @@
 from .bracken import estimate_bracken
 from .database import build_kraken_db
 from .classification import classify_kraken2, _classify_kraken2
-from .select import kraken2_to_features, kraken2_to_mag_features
+from .select import (
+    kraken2_to_features,
+    kraken2_to_mag_features,
+)
 from .merge import _merge_kraken2_results
 from .filter import (
     _filter_kraken2_results_by_metadata,
     _filter_kraken2_reports_by_abundance,
     _align_outputs_with_reports,
     filter_kraken2_results,
+)
+from .collapse import (
+    collapse_contigs,
+    map_taxonomy_to_contigs,
+    _visualize_collapsed_contigs,
 )
 
 __all__ = [
@@ -25,6 +33,9 @@ __all__ = [
     "estimate_bracken",
     "kraken2_to_features",
     "kraken2_to_mag_features",
+    "collapse_contigs",
+    "map_taxonomy_to_contigs",
+    "_visualize_collapsed_contigs",
     "_filter_kraken2_reports_by_abundance",
     "_filter_kraken2_results_by_metadata",
     "_align_outputs_with_reports",

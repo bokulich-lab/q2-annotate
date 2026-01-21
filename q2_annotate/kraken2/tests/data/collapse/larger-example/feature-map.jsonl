@@ -1,0 +1,4 @@
+{"name": "taxon_id1", "members": ["contig1", "contig2", "contig3", "contig4", "contig5", "contig7", "contig8"]}
+{"name": "taxon_id2", "members": ["contig9", "contig10", "contig11"]}
+{"name": "taxon_id3", "members": ["contig13", "contig15", "contig16", "contig17", "contig18"]}
+{"name": "0", "members": ["contig6", "contig12", "contig14", "contig19", "contig20", "contig21"]}

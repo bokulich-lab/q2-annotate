@@ -49,7 +49,7 @@ from q2_types.per_sample_sequences import (
     Contigs,
 )
 from q2_types.sample_data import SampleData
-from q2_types.feature_map import FeatureMap, MAGtoContigs
+from q2_types.feature_map import FeatureMap, MAGtoContigs, TaxonomyToContigs
 from qiime2.core.type import (
     Bool,
     Range,
@@ -645,6 +645,119 @@ plugin.methods.register_function(
     },
     name="Select downstream MAG features from Kraken 2.",
     description=select_features_description,
+)
+
+plugin.pipelines.register_function(
+    function=q2_annotate.kraken2.map_taxonomy_to_contigs,
+    inputs={
+        "reports": SampleData[Kraken2Reports % Properties("contigs")],
+        "outputs": SampleData[Kraken2Outputs % Properties("contigs")],
+    },
+    parameters={
+        "coverage_threshold": Float % Range(0, 100, inclusive_end=True),
+    },
+    outputs=[
+        ("feature_map", FeatureMap[TaxonomyToContigs]),
+        ("taxonomy", FeatureData[Taxonomy]),
+    ],
+    input_descriptions={
+        "reports": "Per-sample Kraken 2 reports for contigs.",
+        "outputs": "Per-sample Kraken 2 output files for contigs.",
+    },
+    parameter_descriptions={
+        "coverage_threshold": (
+            "The minimum percent coverage required to produce a feature."
+        ),
+    },
+    output_descriptions={
+        "feature_map": (
+            "Taxonomy assignments for contigs. Each contig ID is mapped to "
+            "its full taxonomy string based on Kraken2 classifications. "
+            "Unclassified contigs are assigned 'd__Unclassified'. Assignments "
+            "below the provided coverage threshold will be treated as "
+            "'d__Unclassified'."
+        ),
+        "taxonomy": select_features_taxonomy_description,
+    },
+    name="Map contig IDs to taxonomy strings from Kraken 2.",
+    description=(
+        "Maps contig IDs to their full taxonomy strings based on Kraken 2 "
+        "classifications. This action processes Kraken 2 reports and outputs "
+        "produced from contig sequences to create a taxonomy mapping where "
+        "each contig ID is associated with its assigned taxonomy."
+    ),
+)
+
+plugin.visualizers.register_function(
+    function=q2_annotate.kraken2._visualize_collapsed_contigs,
+    inputs={
+        "table": FeatureTable[Frequency],
+        "contig_map": FeatureMap[TaxonomyToContigs],
+        "taxonomy": FeatureData[Taxonomy],
+        "collapsed_table": FeatureTable[Frequency],
+    },
+    parameters={},
+    input_descriptions={
+        "table": (
+            "Original feature table with contig IDs as feature "
+            "IDs (before collapsing)."
+        ),
+        "contig_map": "Mapping between contig IDs and assigned taxonomy IDs.",
+        "taxonomy": (
+            "Optional taxonomy mapping to display taxonomy strings instead of IDs."
+        ),
+        "collapsed_table": "Feature table with contig IDs collapsed to taxonomy IDs.",
+    },
+    parameter_descriptions={},
+    name="Visualize collapsed contig abundances",
+    description=(
+        "Generates a visualization showing histograms of contig abundance "
+        "distributions per taxon per sample from the original (pre-collapsed) "
+        "table."
+    ),
+)
+
+plugin.pipelines.register_function(
+    function=q2_annotate.kraken2.collapse_contigs,
+    inputs={
+        "table": FeatureTable[Frequency],
+        "contig_map": FeatureMap[TaxonomyToContigs],
+        "taxonomy": FeatureData[Taxonomy],
+    },
+    parameters={},
+    outputs=[
+        ("collapsed_table", FeatureTable[Frequency]),
+        ("visualization", Visualization),
+    ],
+    input_descriptions={
+        "table": (
+            "Table of contig abundances per sample. Feature IDs will be "
+            "replaced with taxonomy strings."
+        ),
+        "contig_map": ("Mapping between contig IDs and assigned taxonomy IDs."),
+        "taxonomy": (
+            "Optional taxonomy mapping to display taxonomy strings in the "
+            "visualization instead of taxonomy IDs."
+        ),
+    },
+    parameter_descriptions={},
+    output_descriptions={
+        "collapsed_table": (
+            "Contig abundance table with contig IDs replaced by their "
+            "taxonomy strings. Contigs with the same taxonomy assignment "
+            "will have their abundances averaged."
+        ),
+        "visualization": (
+            "Interactive visualization showing histograms of contig abundance "
+            "distributions per taxon per sample."
+        ),
+    },
+    name="Collapse the contig abundances based on taxonomy.",
+    description=(
+        "This action collapses contig abundances based on their taxonomy "
+        "assignments. Contig abundances for contigs with the same taxonomy "
+        "assignment will be averaged."
+    ),
 )
 
 plugin.methods.register_function(

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "params": [
+    {
+      "name": "taxon_param",
+      "value": ""
+    }
+  ],
+  "description": "Histogram of contig abundance distribution per taxon per sample",
+  "data": {
+    "name": "source"
+  },
+  "transform": [
+    {
+      "filter": "(taxon_param == '' || datum.taxon == taxon_param)"
+    },
+    {
+      "bin": {
+        "maxbins": 30,
+        "nice": true
+      },
+      "field": "abundance",
+      "as": "binned abundance"
+    }
+  ],
+  "mark": "bar",
+  "width": "container",
+  "height": 250,
+  "encoding": {
+    "x": {
+      "field": "binned abundance",
+      "title": "Abundance",
+      "type": "quantitative",
+      "axis": {
+        "format": ".1f",
+        "labelAngle": 0,
+        "labelFontSize": 10,
+        "titleFontSize": 11
+      }
+    },
+    "x2": {"field": "binned abundance_end"},
+    "y": {
+      "aggregate": "count",
+      "title": "Frequency",
+      "scale": {"zero": true},
+      "axis": {
+        "format": ".0f",
+        "labelFontSize": 10,
+        "titleFontSize": 11
+      }
+    },
+    "tooltip": [
+      {"field": "taxon", "type": "nominal", "title": "Taxon"},
+      {"field": "binned abundance", "type": "quantitative", "title": "Min abundance (bin)", "format": ".2e"},
+      {"field": "binned abundance_end", "type": "quantitative", "title": "Max abundance (bin)", "format": ".2e"},
+      {"aggregate": "count", "type": "quantitative", "title": "Count in bin"}
+    ]
+  },
+  "config": {
+    "background": "#fff",
+    "font": "Open Sans, Arial, sans-serif",
+    "axis": {
+      "grid": false,
+      "gridColor": "#eaeaea",
+      "gridWidth": 1,
+      "tickColor": "#888",
+      "labelFont": "Open Sans, Arial, sans-serif",
+      "labelFontSize": 12,
+      "domain": false
+    },
+    "view": {
+      "stroke": "#eaeaea",
+      "strokeWidth": 1
+    }
+  }
+}
+
