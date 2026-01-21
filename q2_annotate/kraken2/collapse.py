@@ -37,15 +37,11 @@ def _build_contig_map(kraken2_outputs: Kraken2OutputDirectoryFormat) -> dict:
         if output_df.empty:
             continue
 
-        df = pd.DataFrame(
-            {
-                "contig_id": output_df.iloc[:, 1].astype(str),
-                "taxon_id": output_df.iloc[:, 2].astype(str),
-            }
-        )
+        contig_ids = output_df.iloc[:, 1].astype(str)
+        taxon_ids = output_df.iloc[:, 2].astype(str)
 
         # Group by taxon ID and aggregate contig IDs into lists
-        grouped = df.groupby("taxon_id")["contig_id"].apply(list).to_dict()
+        grouped = contig_ids.groupby(taxon_ids).apply(list)
 
         for taxon_id, contigs in grouped.items():
             if taxon_id not in taxon_to_contigs:

@@ -681,8 +681,8 @@ plugin.pipelines.register_function(
     },
     name="Map contig IDs to taxonomy strings from Kraken 2.",
     description=(
-        "Maps contig IDs to their full taxonomy strings based on Kraken2 "
-        "classifications. This action processes Kraken2 reports and outputs "
+        "Maps contig IDs to their full taxonomy strings based on Kraken 2 "
+        "classifications. This action processes Kraken 2 reports and outputs "
         "produced from contig sequences to create a taxonomy mapping where "
         "each contig ID is associated with its assigned taxonomy."
     ),
