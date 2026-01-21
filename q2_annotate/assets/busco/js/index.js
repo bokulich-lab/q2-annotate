@@ -197,7 +197,7 @@ function updateDescription(descriptionEl, type, hasSampleFilter) {
  */
 function updateViewsSelectedId(value) {
   window.views.forEach(v => {
-    try { v.signal('selected_id', value).run(); } catch (e) {}
+    try { v.signal('selected_id', value).run(); } catch (e) { }
   });
 }
 
@@ -251,6 +251,7 @@ function embedUnbinnedPlot(containerSelector, unbinnedSpec, unbinnedData) {
     function (result) {
       result.view.logLevel(vega.Warn);
       result.view.resize();
+      window.views.push(result.view);
     }
   ).catch(
     function (error) {
@@ -264,7 +265,17 @@ function embedUnbinnedPlot(containerSelector, unbinnedSpec, unbinnedData) {
  */
 function initSampleDataView() {
   const summarySpec = JSON.parse(document.getElementById('summary_stats_json').textContent);
-  const columns = ['single', 'duplicated', 'fragmented', 'missing', 'complete', 'completeness', 'contamination', 'unbinned_contigs'];
+  // Get columns dynamically from the data keys to ensure we only try to display available metrics
+  let columns = [];
+  if (summarySpec && summarySpec.data && summarySpec.data.length > 0) {
+    // Filter out utility keys if necessary, or just use permitted list intersected with available keys
+    const allPossible = ['single', 'duplicated', 'fragmented', 'missing', 'complete', 'completeness', 'contamination', 'unbinned_contigs'];
+    const dataKeys = Object.keys(summarySpec.data[0]);
+    columns = allPossible.filter(col => dataKeys.includes(col));
+  } else {
+    // Fallback
+    columns = ['single', 'duplicated', 'fragmented', 'missing', 'complete', 'completeness', 'contamination'];
+  }
   populateSummaryTable(summarySpec, columns);
 
   // Populate sample dropdown
@@ -277,7 +288,7 @@ function initSampleDataView() {
       opt.textContent = id;
       selectEl.appendChild(opt);
     });
-  } catch (e) {}
+  } catch (e) { }
 
   // Load specs and data
   const histogramSpec = JSON.parse(document.getElementById('vega_histogram_spec').textContent);
@@ -293,7 +304,7 @@ function initSampleDataView() {
   const hidePointsCheckbox = document.getElementById('hidePointsCheckbox');
 
   // Toggle event listener
-  visualizationToggle.addEventListener('change', function() {
+  visualizationToggle.addEventListener('change', function () {
     const selectedType = this.value;
     updateDescription(descriptionEl, selectedType, true);
     hidePointsContainer.style.display = (selectedType === 'boxplots') ? 'flex' : 'none';
@@ -308,7 +319,7 @@ function initSampleDataView() {
   });
 
   // Hide points checkbox listener
-  hidePointsCheckbox.addEventListener('change', function() {
+  hidePointsCheckbox.addEventListener('change', function () {
     if (visualizationToggle.value === 'boxplots') {
       renderBoxPlots(grid, boxPlotSpec, boxPlotData, metrics, hidePointsCheckbox.checked);
     }
@@ -334,7 +345,11 @@ function initSampleDataView() {
   if (unbinnedSpecEl && unbinnedDataEl) {
     const unbinnedSpec = JSON.parse(unbinnedSpecEl.textContent);
     const unbinnedData = JSON.parse(unbinnedDataEl.textContent);
-    embedUnbinnedPlot("#plotUnbinned", unbinnedSpec, unbinnedData);
+
+    // Only embed if unbinnedData is not null/empty
+    if (unbinnedData) {
+      embedUnbinnedPlot("#plotUnbinned", unbinnedSpec, unbinnedData);
+    }
   }
 
   // Sample selector listener
@@ -385,7 +400,7 @@ function initFeatureDataView() {
   const hidePointsCheckbox = document.getElementById('hidePointsCheckbox');
 
   // Toggle event listener
-  visualizationToggle.addEventListener('change', function() {
+  visualizationToggle.addEventListener('change', function () {
     const selectedType = this.value;
     updateDescription(descriptionEl, selectedType, false);
     hidePointsContainer.style.display = (selectedType === 'boxplots') ? 'flex' : 'none';
@@ -398,7 +413,7 @@ function initFeatureDataView() {
   });
 
   // Hide points checkbox listener
-  hidePointsCheckbox.addEventListener('change', function() {
+  hidePointsCheckbox.addEventListener('change', function () {
     if (visualizationToggle.value === 'boxplots') {
       renderBoxPlots(grid, boxPlotSpec, boxPlotData, metrics, hidePointsCheckbox.checked);
     }

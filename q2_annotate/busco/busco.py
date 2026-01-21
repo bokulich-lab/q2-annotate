@@ -287,35 +287,16 @@ def _visualize_busco(
             dirs_exist_ok=True,
         )
 
-    # Load Vega specs from JSON files
-    vega_histogram_spec = json.dumps(_load_vega_spec("histogram"))
-    vega_unbinned_spec = json.dumps(_load_vega_spec("unbinned"))
-    vega_boxplot_spec = json.dumps(_load_vega_spec("box_plot"))
-    vega_completeness_spec = json.dumps(_load_vega_spec("completeness"))
-    vega_busco_detailed_spec = json.dumps(_load_vega_spec("busco_detailed"))
-    vega_assembly_detailed_spec = json.dumps(_load_vega_spec("assembly_detailed"))
-
-    # Prepare data for plots
-    histogram_data = _prepare_histogram_data(results)
-    box_plot_data = json.dumps(_prepare_box_plot_data(results)).replace("NaN", "null")
+    # Prepare data for the completeness plot
     scatter_data, comp_cont, upper_x, upper_y = _prepare_scatter_data(results)
-    detailed_data = _prepare_detailed_data(results)
-    assembly_data = _prepare_assembly_data(results)
-
-    # Get sorted list of MAG IDs for consistent ordering
-    mag_ids_sorted = json.dumps(sorted(results["mag_id"].unique().tolist()))
 
     # Provide sample IDs for coordinated filtering in templates
     sample_ids = []
     if is_sample_data:
         sample_ids = sorted([sid for sid in results["sample_id"].unique() if sid])
 
-    # Prepare table and summary stats
-    table_json = _get_feature_table(results)
-    summary_stats_json = _calculate_summary_stats(results)
-
     # Check for unbinned contigs data
-    unbinned, unbinned_data = False, None
+    unbinned, unbinned_data = False, "null"
     if (
         "unbinned_contigs" in results.columns
         and "unbinned_contigs_count" in results.columns
@@ -348,19 +329,21 @@ def _visualize_busco(
             {"title": tab_title[1], "url": "table.html"},
         ],
         # Vega specs
-        "vega_histogram_spec": vega_histogram_spec,
-        "vega_unbinned_spec": vega_unbinned_spec,
-        "vega_box_plot_spec": vega_boxplot_spec,
-        "vega_scatter_spec": vega_completeness_spec,
-        "vega_busco_detailed_spec": vega_busco_detailed_spec,
-        "vega_assembly_detailed_spec": vega_assembly_detailed_spec,
+        "vega_histogram_spec": json.dumps(_load_vega_spec("histogram")),
+        "vega_unbinned_spec": json.dumps(_load_vega_spec("unbinned")),
+        "vega_box_plot_spec": json.dumps(_load_vega_spec("box_plot")),
+        "vega_scatter_spec": json.dumps(_load_vega_spec("completeness")),
+        "vega_busco_detailed_spec": json.dumps(_load_vega_spec("busco_detailed")),
+        "vega_assembly_detailed_spec": json.dumps(_load_vega_spec("assembly_detailed")),
         # Data for plots
-        "histogram_data": histogram_data,
-        "box_plot_data": box_plot_data,
+        "histogram_data": _prepare_histogram_data(results),
+        "box_plot_data": json.dumps(_prepare_box_plot_data(results)).replace(
+            "NaN", "null"
+        ),
         "scatter_data": scatter_data,
-        "detailed_data": detailed_data,
-        "assembly_data": assembly_data,
-        "mag_ids_sorted": mag_ids_sorted,
+        "detailed_data": _prepare_detailed_data(results),
+        "assembly_data": _prepare_assembly_data(results),
+        "mag_ids_sorted": json.dumps(sorted(results["mag_id"].unique().tolist())),
         # Metadata
         "metrics_json": json.dumps(metrics),
         "assembly_metrics_json": json.dumps(assembly_metrics),
@@ -372,8 +355,8 @@ def _visualize_busco(
         "unbinned": unbinned,
         "unbinned_data": unbinned_data,
         # Table data
-        "table": table_json,
-        "summary_stats_json": summary_stats_json,
+        "table": _get_feature_table(results),
+        "summary_stats_json": _calculate_summary_stats(results),
         "page_size": 100,
     }
     q2templates.render(templates, output_dir, context=tabbed_context)
