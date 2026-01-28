@@ -391,6 +391,8 @@ def map_taxonomy_to_contigs(
     feature_map = _build_contig_map(outputs.view(Kraken2OutputDirectoryFormat))
 
     if len(taxonomy) < len(feature_map.keys()):
+        if "0" not in feature_map:
+            feature_map["0"] = []
         # we need to account for the taxa with the coverage under the threshold
         missing_taxa = set(feature_map.keys()) - set(taxonomy.index)
         for taxon in missing_taxa:
