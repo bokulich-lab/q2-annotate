@@ -193,11 +193,11 @@ def _extract_generic(
 
 def _merge_maps(maps: list[dict]) -> dict:
     """Merges a list of feature maps into a single dictionary."""
-    merged = defaultdict(list)
+    merged = defaultdict(set)
     for d in maps:
         for k, v in d.items():
-            merged[k].extend(v)
-    return dict(merged)
+            merged[k].update(v)
+    return {k: list(v) for k, v in merged.items()}
 
 
 def extract_annotations(

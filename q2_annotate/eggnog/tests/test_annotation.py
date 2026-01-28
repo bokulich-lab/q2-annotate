@@ -13,7 +13,12 @@ import qiime2
 from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.eggnog import _eggnog_annotate, extract_annotations
-from q2_annotate.eggnog.annotation import _filter, extraction_methods, _extract_generic
+from q2_annotate.eggnog.annotation import (
+    _filter,
+    extraction_methods,
+    _extract_generic,
+    _merge_maps,
+)
 from q2_types.genome_data import (
     OrthologAnnotationDirFmt,
     SeedOrthologDirFmt,
@@ -417,3 +422,19 @@ class TestAnnotationExtraction(TestPluginBase):
     def test_filter_empty(self):
         with self.assertRaisesRegex(ValueError, " resulted in an empty table"):
             _filter(self.df, 0.1, 500.0)
+
+    def test_merge_maps_empty(self):
+        self.assertDictEqual(_merge_maps([]), {})
+
+    def test_merge_maps_combines(self):
+        maps = [{"A": [1, 2], "B": ["x"]}, {"A": [3], "C": ["y", "z"]}]
+        obs = _merge_maps(maps)
+        exp = {"A": [1, 2, 3], "B": ["x"], "C": ["y", "z"]}
+        for k, v in exp.items():
+            self.assertListEqual(sorted(obs[k]), sorted(v))
+
+    def test_merge_maps_deduplicates_values(self):
+        maps = [{"A": ["c1", "c2"]}, {"A": ["c2", "c3"]}]
+        obs = _merge_maps(maps)
+        exp = {"A": ["c1", "c2", "c3"]}
+        self.assertListEqual(sorted(obs["A"]), sorted(exp["A"]))
