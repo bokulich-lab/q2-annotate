@@ -9,7 +9,7 @@ import os
 import tempfile
 import shutil
 import json
-from unittest.mock import patch, MagicMock, ANY
+from unittest.mock import patch, MagicMock
 
 import biom
 import numpy as np
@@ -947,7 +947,9 @@ class TestMapTaxonomyToContigs(TestPluginBase):
 
     @patch("q2_annotate.kraken2.collapse._build_contig_map")
     def test_map_taxonomy_to_contigs_adds_unclassified(self, mock_build_map):
-        """Test that unclassified taxon is added and missing taxa handled without '0' key."""
+        """
+        Test that unclassified taxon is added and missing taxa handled without '0' key.
+        """
         mock_ctx = MagicMock()
 
         # Create real taxonomy artifact for kraken2_to_features return value
