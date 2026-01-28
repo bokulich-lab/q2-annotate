@@ -131,10 +131,11 @@ class TestAnnotationExtraction(TestPluginBase):
         )
         exp_ft = pd.DataFrame(
             data={
-                "L": [2.0, 0.0, 10.0, 3.0],
-                "F": [1.0, 2.0, 0.0, 5.0],
-                "A": [1.0, 0.0, 7.0, 0.0],
+                "L": [2, 0, 9, 3],
+                "F": [1, 2, 0, 5],
+                "A": [1, 0, 7, 0],
             },
+            dtype="float",
             index=pd.Index(
                 [
                     "1e9ffc02-0847-4f2c-b1e2-3965a4a78b15",
@@ -147,6 +148,42 @@ class TestAnnotationExtraction(TestPluginBase):
         )
         exp_ft.columns.name = "annotation_value"
         pd.testing.assert_frame_equal(obs_ft, exp_ft)
+
+        exp_map = {
+            "L": [
+                "k141_150804",
+                "k141_150805",
+                "k141_150808",
+                "k141_150809",
+                "k141_150810",
+            ],
+            "F": ["k141_150804", "k141_150806", "k141_150810"],
+            "A": ["k141_150804", "k141_150808", "k141_150809"],
+        }
+        for k, v in obs_map.items():
+            self.assertListEqual(sorted(v), sorted(exp_map[k]))
+
+        exp_ct = pd.DataFrame(
+            data={
+                "A": [1, 0, 0, 6, 1, 0],
+                "F": [1, 0, 2, 0, 0, 5],
+                "L": [1, 1, 0, 6, 3, 3],
+            },
+            dtype="float",
+            index=pd.Index(
+                [
+                    "k141_150804",
+                    "k141_150805",
+                    "k141_150806",
+                    "k141_150808",
+                    "k141_150809",
+                    "k141_150810",
+                ],
+                name="contig_id",
+            ),
+        )
+        exp_ct.columns.name = "annotation_value"
+        pd.testing.assert_frame_equal(obs_ct, exp_ct)
 
     def test_extract_annotations_not_implemented(self):
         with self.assertRaisesRegex(

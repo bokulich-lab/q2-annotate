@@ -234,6 +234,6 @@ def extract_annotations(
     result.index.name = "id"
 
     merged_maps = _merge_maps(feature_maps)
-    contig_result = pd.concat(contig_counts, axis=0)
+    contig_result = pd.concat(contig_counts, axis=0).fillna(0)
 
     return result, dict(merged_maps), contig_result
