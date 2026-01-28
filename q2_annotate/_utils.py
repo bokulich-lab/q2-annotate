@@ -155,12 +155,14 @@ def _multiply(table1: biom.Table, table2: biom.Table) -> biom.Table:
 
     if not table1_obs_to_keep:
         raise ValueError(
-            "No overlapping features found between table1 observations and table2 samples."
+            "No overlapping features found between table1 observations and "
+            "table2 samples."
         )
 
     if len(table1_obs_to_keep) < len(table1.ids(axis="observation")):
         warnings.warn(
-            f"Removed {len(table1.ids(axis='observation')) - len(table1_obs_to_keep)} features from table1."
+            f"Removed {len(table1.ids(axis='observation')) - len(table1_obs_to_keep)} "
+            f"features from table1."
         )
 
     table1 = table1.filter(table1_obs_to_keep, axis="observation")
