@@ -879,7 +879,6 @@ class TestMapTaxonomyToContigs(TestPluginBase):
         """Test mapping taxonomy to contigs."""
         mock_ctx = MagicMock()
 
-        # Create real taxonomy artifact for kraken2_to_features return value
         taxonomy = pd.Series(
             {
                 "1912795": "d__Bacteria;p__Firmicutes",
@@ -890,12 +889,10 @@ class TestMapTaxonomyToContigs(TestPluginBase):
         taxonomy.index.name = "Feature ID"
         taxonomy_artifact = Artifact.import_data("FeatureData[Taxonomy]", taxonomy)
 
-        # Mock kraken2_to_features action
         mock_to_features_action = MagicMock()
         mock_to_features_action.return_value = (None, taxonomy_artifact)
         mock_ctx.get_action.return_value = mock_to_features_action
 
-        # Mock contig map
         mock_contig_map = {
             "1912795": ["contig1", "contig2"],
             "1583098": ["contig3"],
@@ -912,16 +909,13 @@ class TestMapTaxonomyToContigs(TestPluginBase):
             coverage_threshold=0.1,
         )
 
-        # Verify get_action was called with correct arguments
         mock_ctx.get_action.assert_called_once_with("annotate", "kraken2_to_features")
 
-        # Verify kraken2_to_features action was called with correct arguments
         mock_to_features_action.assert_called_once()
         to_features_call_args = mock_to_features_action.call_args[0]
         self.assertEqual(to_features_call_args[0], self.reports_artifact)
         self.assertEqual(to_features_call_args[1], 0.1)
 
-        # Verify the output artifacts
         obs_map = result_map.view(dict)
         exp_map = {
             "1912795": ["contig1", "contig2"],
@@ -952,7 +946,6 @@ class TestMapTaxonomyToContigs(TestPluginBase):
         """
         mock_ctx = MagicMock()
 
-        # Create real taxonomy artifact for kraken2_to_features return value
         taxonomy = pd.Series(
             {
                 "1912795": "d__Bacteria;p__Firmicutes",
@@ -983,16 +976,13 @@ class TestMapTaxonomyToContigs(TestPluginBase):
             coverage_threshold=0.1,
         )
 
-        # Verify get_action was called with correct arguments
         mock_ctx.get_action.assert_called_once_with("annotate", "kraken2_to_features")
 
-        # Verify kraken2_to_features action was called with correct arguments
         mock_to_features_action.assert_called_once()
         to_features_call_args = mock_to_features_action.call_args[0]
         self.assertEqual(to_features_call_args[0], self.reports_artifact)
         self.assertEqual(to_features_call_args[1], 0.1)
 
-        # Verify the output artifacts
         obs_map = result_map.view(dict)
         exp_map = {
             "1912795": ["contig1"],
@@ -1002,7 +992,6 @@ class TestMapTaxonomyToContigs(TestPluginBase):
         for k, v in obs_map.items():
             self.assertListEqual(sorted(v), sorted(exp_map[k]))
 
-        # Create real artifacts for return values
         obs_taxonomy = result_taxonomy.view(pd.Series)
         exp_taxonomy = pd.Series(
             {
@@ -1021,7 +1010,6 @@ class TestMapTaxonomyToContigs(TestPluginBase):
         """Test handling of taxa missing from taxonomy (below threshold)."""
         mock_ctx = MagicMock()
 
-        # Create real taxonomy artifact for kraken2_to_features return value
         taxonomy = pd.Series(
             {
                 "1912795": "d__Bacteria;p__Firmicutes",
@@ -1054,16 +1042,13 @@ class TestMapTaxonomyToContigs(TestPluginBase):
             coverage_threshold=0.1,
         )
 
-        # Verify get_action was called with correct arguments
         mock_ctx.get_action.assert_called_once_with("annotate", "kraken2_to_features")
 
-        # Verify kraken2_to_features action was called with correct arguments
         mock_to_features_action.assert_called_once()
         to_features_call_args = mock_to_features_action.call_args[0]
         self.assertEqual(to_features_call_args[0], self.reports_artifact)
         self.assertEqual(to_features_call_args[1], 0.1)
 
-        # Verify the output artifacts
         obs_map = result_map.view(dict)
         exp_map = {
             "0": ["contig2"],  # Missing taxon moved to "0"
