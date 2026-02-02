@@ -276,7 +276,7 @@ class TestUtils(TestPluginBase):
         )
         table1_partial = self._df_to_biom(table1_partial)
 
-        with self.assertWarnsRegex(UserWarning, "Removed 1 feature\(s\)"):
+        with self.assertWarnsRegex(UserWarning, r"Removed 1 feature\(s\)"):
             obs = _multiply_tables(table1_partial, self.table2)
 
         # verify the result only includes overlapping features
@@ -452,7 +452,7 @@ class TestUtils(TestPluginBase):
         table2_fewer = pd.DataFrame({"a1": [7, 9], "a2": [8, 10]}, index=["m1", "m2"])
         table2_fewer = self._df_to_biom(table2_fewer)
 
-        with self.assertWarnsRegex(UserWarning, "Removed 1 feature\(s\)"):
+        with self.assertWarnsRegex(UserWarning, r"Removed 1 feature\(s\)"):
             obs = _multiply_tables(self.table1, table2_fewer)
 
         exp = pd.DataFrame(
