@@ -170,9 +170,12 @@ def _multiply(table1: biom.Table, table2: biom.Table) -> biom.Table:
     # Reorder table2 samples to match table1 observations
     table2 = table2.sort_order(table1.ids(axis="observation"), axis="sample")
 
-    # Perform sparse matrix multiplication
-    # table1: samples x observations, table2: samples x observations
-    # result: table1.samples x table2.observations
+    # Perform sparse matrix multiplication.
+    # In biom.Table, matrix_data is stored as observations x samples.
+    # After transpose, both table1.matrix_data.T and table2.matrix_data.T are
+    # shaped as samples x observations; the dot product is then transposed back
+    # when constructing the result biom.Table so that the final table is
+    # observations (from table2) x samples (from table1).
     result_matrix = table1.matrix_data.T.dot(table2.matrix_data.T)
 
     result_table = biom.Table(
