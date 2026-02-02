@@ -276,7 +276,7 @@ class TestUtils(TestPluginBase):
         )
         table1_partial = self._df_to_biom(table1_partial)
 
-        with self.assertWarnsRegex(UserWarning, "Removed 1 features"):
+        with self.assertWarnsRegex(UserWarning, "Removed 1 feature\(s\)"):
             obs = _multiply_tables(table1_partial, self.table2)
 
         # verify the result only includes overlapping features
@@ -426,6 +426,12 @@ class TestUtils(TestPluginBase):
         obs = _multiply_tables_relative(table1_zeros, self.table2)
         # after norm, zero-sum samples should remain zero or become NaN
         self.assertEqual(obs.shape, (2, 2))  # 2 observations, 2 samples
+        obs_df = obs.to_dataframe(dense=True).T
+        obs_values = obs_df.to_numpy()
+        self.assertFalse(np.isinf(obs_values).any())
+        finite_mask = np.isfinite(obs_values)
+        if finite_mask.any():
+            self.assertTrue((obs_values[finite_mask] == 0).all())
 
     def test_multiply_tables_table2_extra_samples(self):
         # Test when table2 has extra samples not in table1 observations
@@ -446,7 +452,7 @@ class TestUtils(TestPluginBase):
         table2_fewer = pd.DataFrame({"a1": [7, 9], "a2": [8, 10]}, index=["m1", "m2"])
         table2_fewer = self._df_to_biom(table2_fewer)
 
-        with self.assertWarnsRegex(UserWarning, "Removed 1 features"):
+        with self.assertWarnsRegex(UserWarning, "Removed 1 feature\(s\)"):
             obs = _multiply_tables(self.table1, table2_fewer)
 
         exp = pd.DataFrame(
