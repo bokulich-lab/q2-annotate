@@ -162,7 +162,7 @@ def _multiply(table1: biom.Table, table2: biom.Table) -> biom.Table:
     if len(table1_obs_to_keep) < len(table1.ids(axis="observation")):
         warnings.warn(
             f"Removed {len(table1.ids(axis='observation')) - len(table1_obs_to_keep)} "
-            f"features from table1."
+            f"feature(s) from table1 that had no matching samples in table2."
         )
 
     table1 = table1.filter(table1_obs_to_keep, axis="observation")
