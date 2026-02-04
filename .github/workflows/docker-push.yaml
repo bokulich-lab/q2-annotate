@@ -9,3 +9,4 @@ on:
 jobs:
   push-docker-images:
     uses: bokulich-lab/utilities/.github/workflows/docker-push.yaml@main
+    secrets: inherit
