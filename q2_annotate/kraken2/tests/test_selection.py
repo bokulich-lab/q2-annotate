@@ -310,6 +310,23 @@ class TestKrakenSelect(TestPluginBase):
         exp.index.name = "Feature ID"
         pandas.testing.assert_frame_equal(obs, exp)
 
+    def test_find_lcas_mode_lca_all_unclassified(self):
+        """
+        Ensures that `_find_lcas` and `_find_lca` continue to work properly
+        when all MAGs are unclassified.
+        """
+        taxa = [self.taxa_mag5, self.taxa_mag5]
+        obs = _find_lcas(taxa, mode="lca")
+        exp = pd.DataFrame.from_dict(
+            {
+                "fed92059-3222-4573-b0ec-726c49fbfabb": ["d__Unclassified"],
+            },
+            orient="index",
+        )
+        exp.columns = ["Taxon"]
+        exp.index.name = "Feature ID"
+        pandas.testing.assert_frame_equal(obs, exp)
+
     # def test_find_lcas_mode_majority(self):
     #     taxa = [
     #       self.taxa_mag1, self.taxa_mag2, self.taxa_mag3, self.taxa_mag4

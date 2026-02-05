@@ -38,13 +38,28 @@ def _process_kraken2_arg(arg_key, arg_val):
 
 
 def _find_lca(taxa):
-    """Find least common ancestor between two semicolon-delimited strings.
+    """
+    This code is adapted from https://github.com/bokulich-lab/RESCRIPt.
 
-    This code was copied over from https://github.com/bokulich-lab/RESCRIPt.
+    Parameters
+    ----------
+    taxa : pd.Series
+        A series of classifications where the indices are featureIDs and the
+        values are list[str] of taxonomic ranks.
+
+    Returns
+    -------
+    list[str] | list[None]
+        A list of taxonomy ranks representing the LCA, or a list with a single
+        `None` value if no LCA exists, i.e. if the root is the LCA.
     """
     # LCA ends where zipped taxonomy strings no longer converge to len == 1
     taxa_comparison = [set(rank) - {None} for rank in zip(*taxa)]
-    return (rank.pop() for rank in takewhile(lambda x: len(x) == 1, taxa_comparison))
+
+    if len(taxa_comparison[0]) > 1:
+        return [None]
+
+    return [rank.pop() for rank in takewhile(lambda x: len(x) == 1, taxa_comparison)]
 
 
 # def _find_lca_majority(taxa):
