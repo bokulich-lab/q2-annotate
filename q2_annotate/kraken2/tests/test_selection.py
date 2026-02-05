@@ -320,7 +320,6 @@ class TestKrakenSelect(TestPluginBase):
         exp = pd.DataFrame.from_dict(
             {
                 "fed92059-3222-4573-b0ec-726c49fbfabb": ["d__Unclassified"],
-                "fed92059-3222-4573-b0ec-726c49fbfabb": ["d__Unclassified"],
             },
             orient="index",
         )
