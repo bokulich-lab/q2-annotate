@@ -9,7 +9,7 @@ import os
 import tempfile
 import shutil
 import json
-from unittest.mock import patch, MagicMock, ANY
+from unittest.mock import patch, MagicMock
 
 import biom
 import numpy as np
@@ -879,7 +879,6 @@ class TestMapTaxonomyToContigs(TestPluginBase):
         """Test mapping taxonomy to contigs."""
         mock_ctx = MagicMock()
 
-        # Create real taxonomy artifact for kraken2_to_features return value
         taxonomy = pd.Series(
             {
                 "1912795": "d__Bacteria;p__Firmicutes",
@@ -890,44 +889,18 @@ class TestMapTaxonomyToContigs(TestPluginBase):
         taxonomy.index.name = "Feature ID"
         taxonomy_artifact = Artifact.import_data("FeatureData[Taxonomy]", taxonomy)
 
-        # Mock kraken2_to_features action
         mock_to_features_action = MagicMock()
         mock_to_features_action.return_value = (None, taxonomy_artifact)
         mock_ctx.get_action.return_value = mock_to_features_action
 
-        # Mock contig map
         mock_contig_map = {
             "1912795": ["contig1", "contig2"],
             "1583098": ["contig3"],
         }
         mock_build_map.return_value = mock_contig_map
-
-        # Create real artifacts for return values
-        taxonomy_result = pd.Series(
-            {
-                "0": "d__Unclassified",
-                "1912795": "d__Bacteria;p__Firmicutes",
-                "1583098": "d__Bacteria;p__Proteobacteria",
-            },
-            name="Taxon",
+        mock_ctx.make_artifact.side_effect = (
+            lambda type_str, data: Artifact.import_data(type_str, data)
         )
-        taxonomy_result.index.name = "Feature ID"
-        taxonomy_result_artifact = Artifact.import_data(
-            "FeatureData[Taxonomy]", taxonomy_result
-        )
-
-        map_result_dict = {
-            "1912795": ["contig1", "contig2"],
-            "1583098": ["contig3"],
-        }
-        map_result_artifact = Artifact.import_data(
-            "FeatureMap[TaxonomyToContigs]", map_result_dict
-        )
-
-        mock_ctx.make_artifact.side_effect = [
-            taxonomy_result_artifact,
-            map_result_artifact,
-        ]
 
         result_map, result_taxonomy = map_taxonomy_to_contigs(
             mock_ctx,
@@ -936,45 +909,43 @@ class TestMapTaxonomyToContigs(TestPluginBase):
             coverage_threshold=0.1,
         )
 
-        # Verify get_action was called with correct arguments
         mock_ctx.get_action.assert_called_once_with("annotate", "kraken2_to_features")
 
-        # Verify kraken2_to_features action was called with correct arguments
         mock_to_features_action.assert_called_once()
         to_features_call_args = mock_to_features_action.call_args[0]
         self.assertEqual(to_features_call_args[0], self.reports_artifact)
         self.assertEqual(to_features_call_args[1], 0.1)
 
-        # Verify _build_contig_map was called with correct arguments
-        mock_build_map.assert_called_once()
-        build_map_call_args = mock_build_map.call_args[0]
-        self.assertEqual(
-            build_map_call_args[0],
-            ANY,
+        obs_map = result_map.view(dict)
+        exp_map = {
+            "1912795": ["contig1", "contig2"],
+            "1583098": ["contig3"],
+        }
+        self.assertListEqual(sorted(obs_map.keys()), sorted(exp_map.keys()))
+        for k, v in obs_map.items():
+            self.assertListEqual(sorted(v), sorted(exp_map[k]))
+
+        obs_taxonomy = result_taxonomy.view(pd.Series)
+        exp_taxonomy = pd.Series(
+            {
+                "0": "d__Unclassified",
+                "1912795": "d__Bacteria;p__Firmicutes",
+                "1583098": "d__Bacteria;p__Proteobacteria",
+            },
+            name="Taxon",
         )
-
-        # Verify artifacts were created with correct arguments
-        self.assertEqual(mock_ctx.make_artifact.call_count, 2)
-
-        # Verify taxonomy artifact creation
-        taxonomy_call_args = mock_ctx.make_artifact.call_args_list[0]
-        self.assertEqual(taxonomy_call_args[0][0], "FeatureData[Taxonomy]")
-        taxonomy = taxonomy_call_args[0][1]
-        self.assertIsInstance(taxonomy, pd.Series)
-        self.assertIn("0", taxonomy.index)
-        self.assertEqual(taxonomy["0"], "d__Unclassified")
-
-        # Verify map artifact creation
-        map_call_args = mock_ctx.make_artifact.call_args_list[1]
-        self.assertEqual(map_call_args[0][0], "FeatureMap[TaxonomyToContigs]")
-        self.assertIsInstance(map_call_args[0][1], dict)
+        exp_taxonomy.index.name = "Feature ID"
+        pd.testing.assert_series_equal(
+            obs_taxonomy.sort_values(), exp_taxonomy.sort_values()
+        )
 
     @patch("q2_annotate.kraken2.collapse._build_contig_map")
     def test_map_taxonomy_to_contigs_adds_unclassified(self, mock_build_map):
-        """Test that unclassified taxon is added."""
+        """
+        Test that unclassified taxon is added and missing taxa handled without '0' key.
+        """
         mock_ctx = MagicMock()
 
-        # Create real taxonomy artifact for kraken2_to_features return value
         taxonomy = pd.Series(
             {
                 "1912795": "d__Bacteria;p__Firmicutes",
@@ -990,35 +961,13 @@ class TestMapTaxonomyToContigs(TestPluginBase):
 
         mock_contig_map = {
             "1912795": ["contig1"],
-            "999": ["contig2"],  # Missing from taxonomy
+            "999": ["contig2"],  # missing from taxonomy
+            "123": ["contig3"],  # missing from taxonomy
         }
         mock_build_map.return_value = mock_contig_map
-
-        # Create real artifacts for return values
-        taxonomy_result = pd.Series(
-            {
-                "0": "d__Unclassified",
-                "1912795": "d__Bacteria;p__Firmicutes",
-            },
-            name="Taxon",
+        mock_ctx.make_artifact.side_effect = (
+            lambda type_str, data: Artifact.import_data(type_str, data)
         )
-        taxonomy_result.index.name = "Feature ID"
-        taxonomy_result_artifact = Artifact.import_data(
-            "FeatureData[Taxonomy]", taxonomy_result
-        )
-
-        map_result = {
-            "1912795": ["contig1"],
-            "0": ["contig2"],  # Missing taxon moved to "0"
-        }
-        map_result_artifact = Artifact.import_data(
-            "FeatureMap[TaxonomyToContigs]", map_result
-        )
-
-        mock_ctx.make_artifact.side_effect = [
-            taxonomy_result_artifact,
-            map_result_artifact,
-        ]
 
         result_map, result_taxonomy = map_taxonomy_to_contigs(
             mock_ctx,
@@ -1027,37 +976,40 @@ class TestMapTaxonomyToContigs(TestPluginBase):
             coverage_threshold=0.1,
         )
 
-        # Verify get_action was called with correct arguments
         mock_ctx.get_action.assert_called_once_with("annotate", "kraken2_to_features")
 
-        # Verify kraken2_to_features action was called with correct arguments
         mock_to_features_action.assert_called_once()
         to_features_call_args = mock_to_features_action.call_args[0]
         self.assertEqual(to_features_call_args[0], self.reports_artifact)
         self.assertEqual(to_features_call_args[1], 0.1)
 
-        # Verify _build_contig_map was called with correct arguments
-        mock_build_map.assert_called_once()
-        build_map_call_args = mock_build_map.call_args[0]
-        self.assertEqual(
-            build_map_call_args[0],
-            ANY,
-        )
+        obs_map = result_map.view(dict)
+        exp_map = {
+            "1912795": ["contig1"],
+            "0": ["contig2", "contig3"],  # Missing taxa moved to "0"
+        }
+        self.assertListEqual(sorted(obs_map.keys()), sorted(exp_map.keys()))
+        for k, v in obs_map.items():
+            self.assertListEqual(sorted(v), sorted(exp_map[k]))
 
-        # Verify unclassified was added to taxonomy
-        taxonomy_call_args = mock_ctx.make_artifact.call_args_list[0]
-        self.assertEqual(taxonomy_call_args[0][0], "FeatureData[Taxonomy]")
-        taxonomy = taxonomy_call_args[0][1]
-        self.assertIsInstance(taxonomy, pd.Series)
-        self.assertIn("0", taxonomy.index)
-        self.assertEqual(taxonomy["0"], "d__Unclassified")
+        obs_taxonomy = result_taxonomy.view(pd.Series)
+        exp_taxonomy = pd.Series(
+            {
+                "0": "d__Unclassified",
+                "1912795": "d__Bacteria;p__Firmicutes",
+            },
+            name="Taxon",
+        )
+        exp_taxonomy.index.name = "Feature ID"
+        pd.testing.assert_series_equal(
+            obs_taxonomy.sort_values(), exp_taxonomy.sort_values()
+        )
 
     @patch("q2_annotate.kraken2.collapse._build_contig_map")
     def test_map_taxonomy_to_contigs_handles_missing_taxa(self, mock_build_map):
         """Test handling of taxa missing from taxonomy (below threshold)."""
         mock_ctx = MagicMock()
 
-        # Create real taxonomy artifact for kraken2_to_features return value
         taxonomy = pd.Series(
             {
                 "1912795": "d__Bacteria;p__Firmicutes",
@@ -1072,39 +1024,16 @@ class TestMapTaxonomyToContigs(TestPluginBase):
         mock_ctx.get_action.return_value = mock_to_features_action
 
         # Contig map has taxa not in taxonomy (below threshold)
-        # Note: "0" must exist in the map for the function to work
+        # "0" key exists initially
         mock_contig_map = {
-            "0": [],  # Unclassified - must exist
+            "0": [],  # Unclassified - already exists
             "1912795": ["contig1"],
             "999": ["contig2"],  # Missing from taxonomy
         }
         mock_build_map.return_value = mock_contig_map
-
-        # Create real artifacts for return values
-        taxonomy_result = pd.Series(
-            {
-                "0": "d__Unclassified",
-                "1912795": "d__Bacteria;p__Firmicutes",
-            },
-            name="Taxon",
+        mock_ctx.make_artifact.side_effect = (
+            lambda type_str, data: Artifact.import_data(type_str, data)
         )
-        taxonomy_result.index.name = "Feature ID"
-        taxonomy_result_artifact = Artifact.import_data(
-            "FeatureData[Taxonomy]", taxonomy_result
-        )
-
-        map_result = {
-            "0": ["contig2"],  # Missing taxon moved to "0"
-            "1912795": ["contig1"],
-        }
-        map_result_artifact = Artifact.import_data(
-            "FeatureMap[TaxonomyToContigs]", map_result
-        )
-
-        mock_ctx.make_artifact.side_effect = [
-            taxonomy_result_artifact,
-            map_result_artifact,
-        ]
 
         result_map, result_taxonomy = map_taxonomy_to_contigs(
             mock_ctx,
@@ -1113,38 +1042,31 @@ class TestMapTaxonomyToContigs(TestPluginBase):
             coverage_threshold=0.1,
         )
 
-        # Verify get_action was called with correct arguments
         mock_ctx.get_action.assert_called_once_with("annotate", "kraken2_to_features")
 
-        # Verify kraken2_to_features action was called with correct arguments
         mock_to_features_action.assert_called_once()
         to_features_call_args = mock_to_features_action.call_args[0]
         self.assertEqual(to_features_call_args[0], self.reports_artifact)
         self.assertEqual(to_features_call_args[1], 0.1)
 
-        # Verify _build_contig_map was called with correct arguments
-        mock_build_map.assert_called_once()
-        build_map_call_args = mock_build_map.call_args[0]
-        self.assertEqual(
-            build_map_call_args[0],
-            ANY,
+        obs_map = result_map.view(dict)
+        exp_map = {
+            "0": ["contig2"],  # Missing taxon moved to "0"
+            "1912795": ["contig1"],
+        }
+        self.assertListEqual(sorted(obs_map.keys()), sorted(exp_map.keys()))
+        for k, v in obs_map.items():
+            self.assertListEqual(sorted(v), sorted(exp_map[k]))
+
+        obs_taxonomy = result_taxonomy.view(pd.Series)
+        exp_taxonomy = pd.Series(
+            {
+                "0": "d__Unclassified",
+                "1912795": "d__Bacteria;p__Firmicutes",
+            },
+            name="Taxon",
         )
-
-        # Verify missing taxa were moved to "0"
-        # The function modifies mock_contig_map in place
-        # After the function, "999" should be deleted and its contigs moved to "0"
-        self.assertNotIn("999", mock_contig_map)
-        self.assertIn("0", mock_contig_map)
-        self.assertIn("contig2", mock_contig_map["0"])
-
-        # Verify artifacts were created with correct arguments
-        self.assertEqual(mock_ctx.make_artifact.call_count, 2)
-
-        # Verify taxonomy artifact creation
-        taxonomy_call_args = mock_ctx.make_artifact.call_args_list[0]
-        self.assertEqual(taxonomy_call_args[0][0], "FeatureData[Taxonomy]")
-
-        # Verify map artifact creation
-        map_call_args = mock_ctx.make_artifact.call_args_list[1]
-        self.assertEqual(map_call_args[0][0], "FeatureMap[TaxonomyToContigs]")
-        self.assertIsInstance(map_call_args[0][1], dict)
+        exp_taxonomy.index.name = "Feature ID"
+        pd.testing.assert_series_equal(
+            obs_taxonomy.sort_values(), exp_taxonomy.sort_values()
+        )
