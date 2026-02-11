@@ -157,9 +157,8 @@ def _extract_generic(
         s = func(x)
         if isinstance(s, pd.Series):
             return s.tolist()
-        # be tolerant if a future extractor returns a scalar or list
         if isinstance(s, (list, tuple, set)):
-            return list(s)
+            raise NotImplementedError(f"Unexpected return type: {type(s)}")
         return [s]
 
     tmp = data[["contig_id", column]].dropna(subset=[column]).copy()

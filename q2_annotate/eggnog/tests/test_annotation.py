@@ -221,6 +221,10 @@ class TestAnnotationExtraction(TestPluginBase):
         exp_ct.columns.name = "annotation_value"
         pd.testing.assert_frame_equal(obs_ct, exp_ct)
 
+    def test_extract_generic_set(self):
+        with self.assertRaisesRegex(NotImplementedError, "Unexpected return type"):
+            _extract_generic(self.annotation_df, "EC", lambda x: set(x.split(".")))
+
     def test_extract_cog(self):
         col, func = extraction_methods["cog"]
         obs_map, obs_ft, obs_ct = _extract_generic(self.annotation_df, col, func)
