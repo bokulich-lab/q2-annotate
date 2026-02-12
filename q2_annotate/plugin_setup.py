@@ -140,7 +140,10 @@ importlib.import_module("q2_annotate.metabat2")
 
 plugin.methods.register_function(
     function=q2_annotate.metabat2.bin_contigs_metabat,
-    inputs={"contigs": SampleData[Contigs], "alignment_maps": SampleData[AlignmentMap]},
+    inputs={
+        "contigs": SampleData[Contigs],
+        "alignment_maps": SampleData[AlignmentMap % Properties("sorted")],
+    },
     parameters={
         "min_contig": Int % Range(1500, None),
         "max_p": Int % Range(1, 100),
