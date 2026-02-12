@@ -21,7 +21,6 @@ from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.metabat2.metabat2 import (
     _assert_samples,
-    _sort_bams,
     _estimate_depth,
     _run_metabat2,
     _process_sample,
@@ -96,28 +95,6 @@ class TestMetabat2(TestPluginBase):
                 _assert_samples(contigs, maps)
 
     @patch("subprocess.run")
-    def test_sort_bams_ok(self, p1):
-        fake_props = {"map": "/some/where/map.bam", "fake_key": "abc"}
-
-        obs_props = _sort_bams("samp1", fake_props, "/new/location")
-        exp_props = {
-            "map": "/new/location/samp1_alignment_sorted.bam",
-            "fake_key": "abc",
-        }
-
-        self.assertDictEqual(exp_props, obs_props)
-        p1.assert_called_once_with(
-            [
-                "samtools",
-                "sort",
-                fake_props["map"],
-                "-o",
-                "/new/location/samp1_alignment_sorted.bam",
-            ],
-            check=True,
-        )
-
-    @patch("subprocess.run")
     def test_estimate_depth_ok(self, p1):
         fake_props = {"map": "/some/where/map.bam", "fake_key": "abc"}
 
@@ -163,31 +140,25 @@ class TestMetabat2(TestPluginBase):
 
     @patch("tempfile.TemporaryDirectory")
     @patch("q2_annotate.metabat2.uuid4")
-    @patch("q2_annotate.metabat2._sort_bams")
     @patch("q2_annotate.metabat2._estimate_depth")
     @patch("q2_annotate.metabat2._run_metabat2")
-    def test_process_sample(self, p1, p2, p3, p4, p5):
+    def test_process_sample(self, p1, p2, p3, p4):
         fake_props = {
             "map": "some/where/samp1_alignment.bam",
-            "contigs": "some/where/samp1_contigs.fasta",
-        }
-        fake_props_mod = {
-            "map": "some/where/samp1_alignment_sorted.bam",
             "contigs": "some/where/samp1_contigs.fasta",
         }
         fake_args = ["--verbose", "--minContig", "1500", "--minClsSize", "10000"]
         fake_unbinned = ContigSequencesDirFmt()
 
-        p3.return_value = fake_props_mod
         p2.return_value = "some/where/samp1_depth.txt"
-        p4.side_effect = [
+        p3.side_effect = [
             "522775d4-b1c6-4ee3-8b47-cd990f17eb8b",
             "684db670-6304-4f33-a0ea-7f570532e178",
             "37356c23-b8db-4bbe-b4c9-d35e1cef615b",
             "51c19113-31f0-4e4c-bbb3-b9df26b949f3",
         ]
         fake_temp_dir = tempfile.mkdtemp()
-        p5.return_value.__enter__.return_value = fake_temp_dir
+        p4.return_value.__enter__.return_value = fake_temp_dir
 
         with tempfile.TemporaryDirectory() as fake_loc:
             p1.return_value = os.path.join(fake_loc, "bins", "samp1")
@@ -235,10 +206,9 @@ class TestMetabat2(TestPluginBase):
             }
             self.assertSetEqual(exp_unbinned, obs_unbinned)
 
-            p3.assert_called_once_with("samp1", fake_props, ANY)
-            p2.assert_called_once_with("samp1", fake_props_mod, ANY)
+            p2.assert_called_once_with("samp1", fake_props, ANY)
             p1.assert_called_once_with(
-                "samp1", fake_props_mod, ANY, "some/where/samp1_depth.txt", fake_args
+                "samp1", fake_props, ANY, "some/where/samp1_depth.txt", fake_args
             )
 
     @patch("q2_annotate.metabat2.ContigSequencesDirFmt")
