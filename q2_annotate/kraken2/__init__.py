@@ -20,6 +20,7 @@ from .filter import (
     _align_outputs_with_reports,
     filter_kraken2_results,
 )
+from .read_filter import filter_kraken2_reads
 from .collapse import (
     collapse_contigs,
     map_taxonomy_to_contigs,
@@ -40,5 +41,6 @@ __all__ = [
     "_filter_kraken2_results_by_metadata",
     "_align_outputs_with_reports",
     "filter_kraken2_results",
+    "filter_kraken2_reads",
     "_merge_kraken2_results",
 ]

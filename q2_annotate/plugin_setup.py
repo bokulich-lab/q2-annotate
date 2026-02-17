@@ -2198,6 +2198,62 @@ plugin.pipelines.register_function(
     ),
 )
 
+plugin.methods.register_function(
+    function=q2_annotate.kraken2.filter_kraken2_reads,
+    inputs={
+        "reads": I_reads,
+        "reports": SampleData[Kraken2Reports % Properties("reads")],
+        "outputs": SampleData[Kraken2Outputs % Properties("reads")],
+    },
+    parameters={
+        "taxonomy": Str,
+        "include_descendants": Bool,
+        "contains": Bool,
+        "exclude": Bool,
+    },
+    outputs=[("filtered_reads", O_reads)],
+    input_descriptions={
+        "reads": (
+            "The original reads that were classified by Kraken2. "
+            "The sample IDs and read headers must match those used to "
+            "generate `reports` and `outputs`."
+        ),
+        "reports": (
+            "Kraken2 reports generated from `reads`. Used to identify matching "
+            "taxa and (optionally) all descendant taxa."
+        ),
+        "outputs": (
+            "Kraken2 per-read outputs generated from `reads`. Used to map matched "
+            "taxa to read IDs that will be filtered."
+        ),
+    },
+    parameter_descriptions={
+        "taxonomy": (
+            "Taxonomy query used for read filtering. Can be a Kraken2 taxon name "
+            '(for example, "Bacteria") or a taxon ID (for example, "2").'
+        ),
+        "include_descendants": (
+            "If True, include all descendant taxa of each matching taxon."
+        ),
+        "contains": (
+            "If True, match taxon names using case-insensitive substring matching. "
+            "If False, use exact case-insensitive matching."
+        ),
+        "exclude": (
+            "If False, retain reads that match the taxonomy query. "
+            "If True, discard matching reads and retain the rest."
+        ),
+    },
+    output_descriptions={
+        "filtered_reads": "Reads filtered according to Kraken2 taxonomy matches."
+    },
+    name="Filter Kraken2-classified reads by taxonomy.",
+    description=(
+        "Filter single-end or paired-end reads by matching Kraken2-assigned "
+        "taxonomy, with optional descendant expansion and inverse filtering."
+    ),
+)
+
 
 plugin.register_semantic_types(BUSCOResults, BUSCO)
 plugin.register_formats(
