@@ -6,6 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import subprocess
+from collections import defaultdict
 
 import pandas as pd
 
@@ -95,32 +96,6 @@ def map_eggnog(
     return collated_annotations
 
 
-def _extract_generic(
-    data: pd.DataFrame, column: str, transform_func: callable
-) -> pd.Series:
-    """
-    Extracts a series from the annotation DataFrame and applies a
-    transformation function to the specified column (annotation).
-
-    Args:
-        data (pd.DataFrame): The input DataFrame.
-        column (str): The annotation column in the DataFrame to extract.
-        transform_func (callable): The transformation function to apply
-            to the extracted column.
-
-    Returns:
-        pd.Series: The extracted series with the transformation applied.
-    """
-    data = data.set_index("seed_ortholog", inplace=False)[column]
-    data = data.apply(transform_func if data.notna().any() else lambda x: x)
-    data = data.stack().reset_index(level=1, drop=True)
-    data = data.value_counts()
-    for char in ("", "-"):
-        if char in data.index:
-            data = data.drop(char, axis=0, inplace=False)
-    return data
-
-
 # this dictionary contains all the supported annotation types
 # each value represents a tuple of:
 # 1. original annotation column name (as it appears in the annotation table)
@@ -151,29 +126,113 @@ def _filter(data: pd.DataFrame, max_evalue: float, min_score: float) -> pd.DataF
     return data
 
 
+def _extract_generic(
+    data: pd.DataFrame, column: str, func: callable
+) -> tuple[dict, pd.Series, pd.DataFrame]:
+    """
+    Converts annotation data to a feature map and counts of annotation values.
+
+    Processes the annotation DataFrame by extracting and expanding annotation
+    values from the specified column, grouping them by contig ID, and counting
+    their occurrences. The function applies a transformation function to expand
+    annotation values and removes empty or dash values.
+
+    Args:
+        data (pd.DataFrame): The input annotation DataFrame.
+        column (str): The annotation column in the DataFrame to extract.
+        func (callable): The transformation function to apply to expand
+            annotation values into lists.
+
+    Returns:
+        tuple[dict, pd.Series, pd.DataFrame]: A tuple containing:
+            - dict: Feature map with annotation values as keys and lists of
+              unique contig IDs as values.
+            - pd.Series: Value counts of all annotation values.
+            - pd.DataFrame: Counts of each annotation value per contig.
+    """
+    data = data.copy()
+    data["contig_id"] = data.index.astype(str).str.rsplit("_", n=1).str[0]
+
+    def _expand(x):
+        s = func(x)
+        if isinstance(s, pd.Series):
+            return s.tolist()
+        if isinstance(s, (list, tuple, set)):
+            raise NotImplementedError(f"Unexpected return type: {type(s)}")
+        return [s]
+
+    tmp = data[["contig_id", column]].dropna(subset=[column]).copy()
+    tmp["annotation_value"] = tmp[column].map(_expand)
+    tmp = tmp.explode("annotation_value")
+
+    # drop empties/dashes and any remaining missing values
+    tmp = tmp[
+        tmp["annotation_value"].notna() & ~tmp["annotation_value"].isin(("", "-"))
+    ]
+
+    # count annotations per contig
+    contig_annotation_counts = (
+        tmp.groupby("contig_id")["annotation_value"]
+        .value_counts()
+        .unstack(fill_value=0)
+    )
+
+    # count all the annotation values
+    annotation_counts = tmp["annotation_value"].value_counts()
+
+    # for the feature map, ensure each (annotation_value, contig_id) pair appears once
+    deduplicated = tmp.drop_duplicates(subset=["annotation_value", "contig_id"])
+
+    feature_map = (
+        deduplicated.groupby("annotation_value")["contig_id"].agg(list).to_dict()
+    )
+
+    return feature_map, annotation_counts, contig_annotation_counts
+
+
+def _merge_maps(maps: list[dict]) -> dict:
+    """Merges a list of feature maps into a single dictionary."""
+    merged = defaultdict(set)
+    for d in maps:
+        for k, v in d.items():
+            merged[k].update(v)
+    return {k: list(v) for k, v in merged.items()}
+
+
 def extract_annotations(
     ortholog_annotations: OrthologAnnotationDirFmt,
     annotation: str,
     max_evalue: float = 1.0,
     min_score: float = 0.0,
-) -> pd.DataFrame:
+) -> (pd.DataFrame, dict, pd.DataFrame):
     extract_method = extraction_methods.get(annotation)
     if not extract_method:
         raise NotImplementedError(f"Annotation '{annotation}' not supported.")
     else:
         col, func = extract_method
 
-    annotations = []
+    annotations, feature_maps, contig_counts = [], [], []
     for _id, fp in ortholog_annotations.annotation_dict().items():
         annot_df = pd.read_csv(
             fp, sep="\t", skiprows=4, index_col=0
         )  # skip the first 4 rows as they contain comments
         annot_df = annot_df.iloc[:-3, :]  # remove the last 3 comment rows
         annot_df = _filter(annot_df, max_evalue, min_score)
-        annot_df = _extract_generic(annot_df, col, func)
+
+        # get feature map, annotation counts, and contig annotation counts
+        feature_map, annot_df, contig_annot_counts = _extract_generic(
+            annot_df, col, func
+        )
         annot_df.name = _id
+
+        feature_maps.append(feature_map)
         annotations.append(annot_df)
+        contig_counts.append(contig_annot_counts)
 
     result = pd.concat(annotations, axis=1).fillna(0).T
     result.index.name = "id"
-    return result
+
+    merged_maps = _merge_maps(feature_maps)
+    contig_result = pd.concat(contig_counts, axis=0).fillna(0)
+
+    return result, dict(merged_maps), contig_result
