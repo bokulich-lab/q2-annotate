@@ -6,22 +6,22 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import glob
-import re
-from uuid import uuid4
-from pathlib import Path
-
 import os.path
+import re
 import shutil
 import tempfile
-from copy import deepcopy
+from pathlib import Path
+from uuid import uuid4
 
-import skbio.io
 from q2_types.feature_data import DNAIterator
+from q2_types.per_sample_sequences import (
+    BAMDirFmt,
+    ContigSequencesDirFmt,
+    MultiFASTADirectoryFormat,
+)
+import skbio
 
-from q2_types.per_sample_sequences import ContigSequencesDirFmt, BAMDirFmt
-from q2_types.per_sample_sequences import MultiFASTADirectoryFormat
-
-from q2_annotate._utils import run_command, _process_common_input_params
+from q2_annotate._utils import _process_common_input_params, run_command
 from q2_annotate.metabat2.utils import _process_metabat2_arg
 
 
@@ -44,14 +44,6 @@ def _assert_samples(contigs, maps) -> dict:
         s: {"contigs": contig_fps[i], "map": map_fps[i]}
         for i, s in enumerate(contig_samples)
     }
-
-
-def _sort_bams(samp_name, samp_props, loc):
-    sorted_bam = os.path.join(loc, f"{samp_name}_alignment_sorted.bam")
-    new_props = deepcopy(samp_props)
-    run_command(["samtools", "sort", new_props["map"], "-o", sorted_bam], verbose=True)
-    new_props["map"] = sorted_bam
-    return new_props
 
 
 def _estimate_depth(samp_name, samp_props, loc):
@@ -89,14 +81,11 @@ def _run_metabat2(samp_name, samp_props, loc, depth_fp, common_args):
 
 def _process_sample(samp_name, samp_props, common_args, result_loc, unbinned_loc):
     with tempfile.TemporaryDirectory() as tmp:
-        # sort alignment map
-        props = _sort_bams(samp_name, samp_props, tmp)
-
         # calculate depth
-        depth_fp = _estimate_depth(samp_name, props, tmp)
+        depth_fp = _estimate_depth(samp_name, samp_props, tmp)
 
         # run metabat2
-        bins_dp = _run_metabat2(samp_name, props, tmp, depth_fp, common_args)
+        bins_dp = _run_metabat2(samp_name, samp_props, tmp, depth_fp, common_args)
 
         all_outputs = glob.glob(os.path.join(bins_dp, "*.fa"))
         all_bins = [x for x in all_outputs if re.search(r"bin\.[0-9]+\.fa$", x)]
