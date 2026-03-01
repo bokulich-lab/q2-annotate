@@ -137,6 +137,7 @@ plugin = Plugin(
 
 importlib.import_module("q2_annotate.eggnog")
 importlib.import_module("q2_annotate.metabat2")
+importlib.import_module("q2_annotate.semibin2")
 
 plugin.methods.register_function(
     function=q2_annotate.metabat2.bin_contigs_metabat,
@@ -206,6 +207,67 @@ plugin.methods.register_function(
     description=("This method uses MetaBAT 2 to bin provided contigs into MAGs."),
     citations=[
         citations["kang2019"],
+        citations["heng2009samtools"],
+        citations["scikit_bio_release"],
+    ],
+)
+
+plugin.methods.register_function(
+    function=q2_annotate.semibin2.bin_contigs_semibin2,
+    inputs={"contigs": SampleData[Contigs], "alignment_maps": SampleData[AlignmentMap]},
+    parameters={
+        "multi_sample": Bool,
+        "threads": Int % Range(1, None),
+        "min_len": Int % Range(1, None),
+        "batch_size": Int % Range(1, None),
+        "epochs": Int % Range(1, None),
+        "random_seed": Int % Range(0, None),
+        "sequencing_type": Str % Choices([
+            "human_gut", "ocean", "soil", "cat_gut", "human_oral", 
+            "mouse_gut", "pig_gut", "built_environment", "wastewater", 
+            "chicken_caecum", "global"
+        ]),
+    },
+    outputs=[
+        ("mags", SampleData[MAGs]),
+        ("contig_map", FeatureMap[MAGtoContigs]),
+    ],
+    input_descriptions={
+        "contigs": "Contigs to be binned.",
+        "alignment_maps": "Reads-to-contig alignment maps.",
+    },
+    parameter_descriptions={
+        "multi_sample": (
+            "Whether to perform multi-sample binning. If True, all samples "
+            "will be binned together. If False (default), each sample will "
+            "be binned individually."
+        ),
+        "threads": "Number of threads to use for binning.",
+        "min_len": "Minimum length of contigs for binning.",
+        "batch_size": "Batch size for neural network training.",
+        "epochs": "Number of epochs for neural network training.",
+        "random_seed": "Random seed for reproducibility.",
+        "sequencing_type": (
+            "Type of sequencing data. This affects the pre-trained model used "
+            "for binning. Choose the most appropriate type for your data."
+        ),
+    },
+    output_descriptions={
+        "mags": "The resulting MAGs.",
+        "contig_map": (
+            "Mapping of MAG identifiers to the contig identifiers "
+            "contained in each MAG."
+        ),
+    },
+    name="Bin contigs into MAGs using SemiBin2.",
+    description=(
+        "This method uses SemiBin2 to bin provided contigs into MAGs. "
+        "SemiBin2 is a deep learning-based binning tool that can perform "
+        "both single-sample and multi-sample binning using pre-trained "
+        "models for different sequencing data types."
+    ),
+    citations=[
+        citations["pan2022semibin"],
         citations["heng2009samtools"],
         citations["scikit_bio_release"],
     ],

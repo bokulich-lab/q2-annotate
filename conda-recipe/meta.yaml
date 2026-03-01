@@ -29,6 +29,7 @@ requirements:
   - q2-assembly >={{ q2_assembly }}
   - q2-quality-control >={{ q2_quality_control }}
   - samtools
+  - semibin >=2.0.0
   - seqtk
   - tqdm
   - xmltodict
