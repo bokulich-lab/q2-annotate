@@ -1425,6 +1425,43 @@ plugin.methods.register_function(
     citations=[citations["menzel2016"]],
 )
 
+plugin.methods.register_function(
+    function=q2_annotate.kaiju.build_kaiju_db,
+    inputs={
+        "proteins": GenomeData[Proteins],
+    },
+    parameters={
+        "metadata": Metadata,
+    },
+    outputs=[
+        ("db", KaijuDB),
+    ],
+    input_descriptions={
+        "proteins": (
+            "Protein sequences from genome assemblies. Each genome should "
+            "be represented by a FASTA file containing all predicted protein "
+            "sequences for that genome."
+        ),
+    },
+    parameter_descriptions={
+        "metadata": (
+            "Metadata mapping genome IDs to NCBI taxon IDs. The genome IDs "
+            "should match the filenames in the proteins input (without the "
+            ".fasta extension), and the metadata should contain a column "
+            "with NCBI taxon IDs."
+        ),
+    },
+    output_descriptions={"db": "Custom Kaiju database built from the input proteins."},
+    name="Build custom Kaiju database.",
+    description=(
+        "This method builds a custom Kaiju database from protein sequences "
+        "using kaiju-mkbwt and kaiju-mkfmi. The method fetches NCBI taxonomy "
+        "files and creates an FMI index that can be used for taxonomic "
+        "classification with Kaiju."
+    ),
+    citations=[citations["menzel2016"]],
+)
+
 kaiju_params = {
     "z": Int % Range(1, None),
     "a": Str % Choices(["greedy", "mem"]),
