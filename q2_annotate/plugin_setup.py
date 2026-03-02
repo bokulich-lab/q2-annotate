@@ -49,7 +49,12 @@ from q2_types.per_sample_sequences import (
     Contigs,
 )
 from q2_types.sample_data import SampleData
-from q2_types.feature_map import FeatureMap, MAGtoContigs, TaxonomyToContigs
+from q2_types.feature_map import (
+    FeatureMap,
+    MAGtoContigs,
+    TaxonomyToContigs,
+    FunctionToContigs,
+)
 from qiime2.core.type import (
     Bool,
     Range,
@@ -1799,11 +1804,21 @@ plugin.methods.register_function(
         "max_evalue": Float % Range(0, None),
         "min_score": Float % Range(0, None),
     },
-    outputs=[("annotation_frequency", FeatureTable[Frequency])],
+    outputs=[
+        ("annotation_counts_per_genome", FeatureTable[Frequency]),
+        ("annotation_map", FeatureMap[FunctionToContigs]),
+        ("annotation_counts_per_contig", FeatureTable[Frequency]),
+    ],
     input_descriptions={"ortholog_annotations": "Ortholog annotations."},
     parameter_descriptions={"annotation": "Annotation to extract."},
     output_descriptions={
-        "annotation_frequency": ("Feature table with frequency of each annotation."),
+        "annotation_counts_per_genome": (
+            "Feature table with frequency of each annotation per genome."
+        ),
+        "annotation_map": "Feature map with function to contigs mapping.",
+        "annotation_counts_per_contig": (
+            "Feature table with frequency of each annotation per contig."
+        ),
     },
     name="Extract annotation frequencies from all annotations.",
     description=(
