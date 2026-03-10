@@ -38,6 +38,7 @@ def _run_semibin2(samp_name, samp_props, loc, mode, common_args):
         bins_prefix,
         "--compression",
         "none",
+        "--verbose",
     ]
     cmd.extend(common_args)
     run_command(cmd, verbose=True)
@@ -108,10 +109,10 @@ def bin_contigs_semibin2(
     kwargs = {
         k: v
         for k, v in locals().items()
-        if k not in ["contigs", "alignment_maps", "mode", "training_type"]
+        if k not in ["contigs", "alignment_maps", "mode", "training_type", "verbose"]
     }
 
-    mode = "single_easy_bin" if "single" else "multi_easy_bin"
+    mode = "single_easy_bin" if mode == "single" else "multi_easy_bin"
 
     common_args = _process_common_input_params(
         processing_func=_process_semibin2_arg, params=kwargs
