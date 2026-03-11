@@ -32,6 +32,15 @@ class TestTreeMerging(TestPluginBase):
     def _get_tree(self, fp):
         return _report_df_to_tree(self._get_tree_df(fp))
 
+    def _df_conv(self, df):
+        df_new = df.sort_values(
+            by="perc_frags_covered",
+            kind="stable",
+            key=lambda s: s.astype(float).round(2),
+            ).reset_index(drop=True)
+
+        return df_new
+
     def test_merge_trees_no_unclassified_nodes(self):
         """
         Tests that two reports are merged as expected. Tree 1 and tree 2 each
@@ -49,11 +58,7 @@ class TestTreeMerging(TestPluginBase):
 
         exp_df = self._get_tree_df("no-unclassified/merged-tree.report.txt")
 
-        assert_frame_equal(
-            obs_df.sort_values(by="taxon_id").reset_index(drop=True),
-            exp_df.sort_values(by="taxon_id").reset_index(drop=True),
-            check_dtype=False,
-        )
+        assert_frame_equal(self._df_conv(obs_df), self._df_conv(exp_df))
 
     def test_merge_trees_one_unclassified_nodes(self):
         """
@@ -66,11 +71,7 @@ class TestTreeMerging(TestPluginBase):
 
         exp_df = self._get_tree_df("one-unclassified/merged-tree.report.txt")
 
-        assert_frame_equal(
-            obs_df.sort_values(by="taxon_id").reset_index(drop=True),
-            exp_df.sort_values(by="taxon_id").reset_index(drop=True),
-            check_dtype=False,
-        )
+        assert_frame_equal(self._df_conv(obs_df), self._df_conv(exp_df))
 
     def test_merge_trees_two_unclassified_nodes(self):
         """
@@ -83,11 +84,7 @@ class TestTreeMerging(TestPluginBase):
 
         exp_df = self._get_tree_df("two-unclassified/merged-tree.report.txt")
 
-        assert_frame_equal(
-            obs_df.sort_values(by="taxon_id").reset_index(drop=True),
-            exp_df.sort_values(by="taxon_id").reset_index(drop=True),
-            check_dtype=False,
-        )
+        assert_frame_equal(self._df_conv(obs_df), self._df_conv(exp_df))
 
 
 class TestResultMerging(TestPluginBase):
