@@ -340,7 +340,7 @@ def classify_kaiju(
     tables = []
     taxonomies = []
     for seq in partitioned_seqs.values():
-        (table, taxonomy) = _classify_kaiju(seq, db, **kwargs)
+        table, taxonomy = _classify_kaiju(seq, db, **kwargs)
         tables.append(table)
         taxonomies.append(taxonomy)
 

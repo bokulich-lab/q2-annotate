@@ -425,14 +425,12 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
         return taxonomy, table
 
     def test_kraken_to_ncbi_tree_simple(self):
-        dirfmt = self.make_dirfmt(
-            """
+        dirfmt = self.make_dirfmt("""
         R;root
         D;  a
         D;  b
         D;  c
-        """
-        )
+        """)
         exp_tax, exp_table = self.make_exp(
             [
                 (2, "d__a"),
@@ -447,8 +445,7 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
         pandas.testing.assert_frame_equal(exp_tax, taxonomy)
 
     def test_kraken_to_ncbi_tree_no_tricks(self):
-        dirfmt = self.make_dirfmt(
-            """
+        dirfmt = self.make_dirfmt("""
         R;root
         D;  a
         K;    a.a
@@ -456,8 +453,7 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
         D;  b
         K;    b.a
         D;  c
-        """
-        )
+        """)
         exp_tax, exp_table = self.make_exp(
             [
                 (3, "d__a;k__a.a"),
@@ -473,8 +469,7 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
         pandas.testing.assert_frame_equal(exp_tax, taxonomy)
 
     def test_kraken_to_ncbi_tree_no_nested_end(self):
-        dirfmt = self.make_dirfmt(
-            """
+        dirfmt = self.make_dirfmt("""
         R;root
         D;  a
         K;    a.a
@@ -482,8 +477,7 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
         D;  b
         K;    b.a
         P;      b.a.a
-        """
-        )
+        """)
         exp_tax, exp_table = self.make_exp(
             [
                 (3, "d__a;k__a.a"),
@@ -498,8 +492,7 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
         pandas.testing.assert_frame_equal(exp_tax, taxonomy)
 
     def test_kraken_to_ncbi_tree_infraclade_ranks(self):
-        dirfmt = self.make_dirfmt(
-            """
+        dirfmt = self.make_dirfmt("""
          R;root
          D;  a
         D1;    a.s
@@ -510,8 +503,7 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
          K;    b.a
          P;      b.a.a
         P1;        b.a.a.a
-        """
-        )
+        """)
         exp_tax, exp_table = self.make_exp(
             [
                 (6, "d__a;k__a.b;p__a.b.s.a"),
@@ -525,8 +517,7 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
         pandas.testing.assert_frame_equal(exp_tax, taxonomy)
 
     def test_kraken_to_ncbi_tree_subspecies_and_skip(self):
-        dirfmt = self.make_dirfmt(
-            """
+        dirfmt = self.make_dirfmt("""
          R;root
          K;  a
         K1;    a.s
@@ -535,8 +526,7 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
          C;        a.b.s.a
          S;          a.b.s.a.a
         S1;            a.b.s.a.a.a
-        """
-        )
+        """)
 
         exp_tax, exp_table = self.make_exp(
             [
@@ -580,15 +570,13 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
         pandas.testing.assert_frame_equal(exp_tax, taxonomy)
 
     def test_kraken_to_ncbi_tree_kingdom_promotion(self):
-        dirfmt = self.make_dirfmt(
-            """
+        dirfmt = self.make_dirfmt("""
         R;root
         D;  Bacteria
         P;    A
         D;  Archaea
         P;    B
-        """
-        )
+        """)
         exp_tax, exp_table = self.make_exp(
             [
                 (3, "d__Bacteria;k__Bacteria;p__A"),

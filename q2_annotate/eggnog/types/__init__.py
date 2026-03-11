@@ -8,7 +8,6 @@
 from ._type import EggnogHmmerIdmap
 from ._format import EggnogHmmerIdmapFileFmt, EggnogHmmerIdmapDirectoryFmt
 
-
 __all__ = [
     "EggnogHmmerIdmapFileFmt",
     "EggnogHmmerIdmapDirectoryFmt",

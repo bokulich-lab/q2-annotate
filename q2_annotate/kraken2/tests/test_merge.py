@@ -37,7 +37,7 @@ class TestTreeMerging(TestPluginBase):
             by="perc_frags_covered",
             kind="stable",
             key=lambda s: s.astype(float).round(2),
-            ).reset_index(drop=True)
+        ).reset_index(drop=True)
 
     def test_merge_trees_no_unclassified_nodes(self):
         """
