@@ -33,13 +33,11 @@ class TestTreeMerging(TestPluginBase):
         return _report_df_to_tree(self._get_tree_df(fp))
 
     def _df_conv(self, df):
-        df_new = df.sort_values(
+        return df.sort_values(
             by="perc_frags_covered",
             kind="stable",
             key=lambda s: s.astype(float).round(2),
             ).reset_index(drop=True)
-
-        return df_new
 
     def test_merge_trees_no_unclassified_nodes(self):
         """
