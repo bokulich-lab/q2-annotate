@@ -13,11 +13,11 @@ def _format_arg(key):
 
 
 def _process_semibin2_arg(arg_key, arg_val):
-    """Creates a list with argument and its value to be consumed by MetaBAT 2.
+    """Creates a list with argument and its value to be consumed by SemiBin2.
 
     Argument names will be converted to command line parameters by
     appending a '--' prefix and concatenating words separated by a '_',
-    e.g.: 'some_parameter_x' -> '--someParameterX'.
+    e.g.: 'some_parameter_x' -> '--some-parameter-x'.
 
     Args:
         arg_key (str): Argument name.
@@ -30,12 +30,12 @@ def _process_semibin2_arg(arg_key, arg_val):
     if arg_key == "training_type":
         if arg_val == "semi":
             return ["--semi-supervised"]
-        elif arg_val == "self":
+        else:
             return ["--self-supervised"]
-    else:
-        arg_key_flag = _format_arg(arg_key)
+
+    arg_key_flag = _format_arg(arg_key)
 
     if isinstance(arg_val, bool) and arg_val:
         return [arg_key_flag]
-    else:
-        return [arg_key_flag, str(arg_val)]
+
+    return [arg_key_flag, str(arg_val)]
