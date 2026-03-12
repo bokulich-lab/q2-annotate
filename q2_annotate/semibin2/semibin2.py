@@ -86,7 +86,7 @@ def _bin_contigs_semibin2(
 def bin_contigs_semibin2(
     contigs: ContigSequencesDirFmt,
     alignment_maps: BAMDirFmt,
-    mode: str,
+    # mode: str,
     training_type: str | None = None,
     orf_finder: str | None = None,
     environment: str | None = None,
@@ -112,7 +112,8 @@ def bin_contigs_semibin2(
         if k not in ["contigs", "alignment_maps", "mode", "training_type", "verbose"]
     }
 
-    mode = "single_easy_bin" if mode == "single" else "multi_easy_bin"
+    # mode = "single_easy_bin" if mode == "single" else "multi_easy_bin"
+    mode = "single_easy_bin"
 
     common_args = _process_common_input_params(
         processing_func=_process_semibin2_arg, params=kwargs

@@ -221,7 +221,7 @@ plugin.methods.register_function(
         "alignment_maps": SampleData[AlignmentMap % Properties("sorted")],
     },
     parameters={
-        "mode": Str % Choices("single", "multi"),
+        # "mode": Str % Choices("single", "multi"),
         "training_type": Str % Choices("semi", "self"),
         "orf_finder": Str % Choices("fast-naive", "prodigal", "fraggenescan"),
         "environment": Str
@@ -264,7 +264,7 @@ plugin.methods.register_function(
         "alignment_maps": "Reads-to-contig alignment maps.",
     },
     parameter_descriptions={
-        "mode": "Binning mode controlling how coverage is used for embedding.",
+        # "mode": "Binning mode controlling how coverage is used for embedding.",
         "training_type": "Training algorithm used to train the model.",
         "orf_finder": "Gene predictor used to estimate the number of bins.",
         "environment": "Which pre-trained model to use.",
