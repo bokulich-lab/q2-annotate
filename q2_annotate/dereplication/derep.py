@@ -18,7 +18,6 @@ from scipy.cluster.hierarchy import ward, fcluster
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import MultiMAGSequencesDirFmt
 
-
 # def find_similar_bins(
 #     distance_matrix: pd.DataFrame, threshold: float
 # ) -> List[List[str]]:

@@ -95,7 +95,7 @@ def _run_eggnog_search_pipeline(
 
     hits, loci = [], []
     for seq in partitioned_sequences.values():
-        (hit, _, locus) = _eggnog_search(seq, *db, num_cpus, db_in_memory)
+        hit, _, locus = _eggnog_search(seq, *db, num_cpus, db_in_memory)
         hits.append(hit)
         loci.append(locus)
 

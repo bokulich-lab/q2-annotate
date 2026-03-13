@@ -12,7 +12,6 @@ from ._format import (
     BuscoDatabaseDirFmt,
 )
 
-
 __all__ = [
     "BUSCOResults",
     "BUSCOResultsFormat",
