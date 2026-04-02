@@ -162,10 +162,10 @@ class TestMetabat2(TestPluginBase):
             p1.assert_called_once_with(exp_cmd, check=True)
 
     @patch("tempfile.TemporaryDirectory")
-    @patch("q2_annotate.metabat2.uuid4")
-    @patch("q2_annotate.metabat2._sort_bams")
-    @patch("q2_annotate.metabat2._estimate_depth")
-    @patch("q2_annotate.metabat2._run_metabat2")
+    @patch("q2_annotate.metabat2.metabat2.uuid4")
+    @patch("q2_annotate.metabat2.metabat2._sort_bams")
+    @patch("q2_annotate.metabat2.metabat2._estimate_depth")
+    @patch("q2_annotate.metabat2.metabat2._run_metabat2")
     def test_process_sample(self, p1, p2, p3, p4, p5):
         fake_props = {
             "map": "some/where/samp1_alignment.bam",
@@ -241,9 +241,9 @@ class TestMetabat2(TestPluginBase):
                 "samp1", fake_props_mod, ANY, "some/where/samp1_depth.txt", fake_args
             )
 
-    @patch("q2_annotate.metabat2.ContigSequencesDirFmt")
-    @patch("q2_annotate.metabat2.MultiFASTADirectoryFormat")
-    @patch("q2_annotate.metabat2._process_sample")
+    @patch("q2_annotate.metabat2.metabat2.ContigSequencesDirFmt")
+    @patch("q2_annotate.metabat2.metabat2.MultiFASTADirectoryFormat")
+    @patch("q2_annotate.metabat2.metabat2._process_sample")
     def test_bin_contigs_metabat(self, p1, p2, p3):
         input_contigs = self.get_data_path("contigs")
         input_maps = self.get_data_path("maps")
@@ -314,8 +314,8 @@ class TestMetabat2(TestPluginBase):
         ]
         self.assertListEqual(exp_bins, obs_bins)
 
-    @patch("q2_annotate.metabat2.MultiFASTADirectoryFormat")
-    @patch("q2_annotate.metabat2._process_sample")
+    @patch("q2_annotate.metabat2.metabat2.MultiFASTADirectoryFormat")
+    @patch("q2_annotate.metabat2.metabat2._process_sample")
     def test_bin_contigs_metabat_no_mags(self, p1, p2):
         input_contigs = self.get_data_path("contigs")
         input_maps = self.get_data_path("maps")

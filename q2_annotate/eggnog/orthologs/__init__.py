@@ -14,7 +14,6 @@ from .common import (
 from .diamond import _eggnog_diamond_search, search_orthologs_diamond
 from .hmmer import _eggnog_hmmer_search, search_orthologs_hmmer
 
-
 __all__ = [
     "_run_eggnog_search_pipeline",
     "_eggnog_search",
