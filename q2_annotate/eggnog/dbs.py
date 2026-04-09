@@ -40,23 +40,67 @@ from q2_types.reference_db import (
 
 def fetch_eggnog_db() -> EggnogRefDirFmt:
     """
-    Downloads eggnog reference database using the
-    `download_eggnog_data.py` script from eggNOG. Here, this
-    script downloads 3 files amounting to 47Gb in total.
+    Downloads and prepares the eggNOG reference database (eggnog.db and taxa files)
+    directly from the EMBL server.
     """
-
-    # Initialize output objects
+    # Initialize output object
     eggnog_db = EggnogRefDirFmt()
+    data_dir = str(eggnog_db)
 
-    # Define command.
-    # Meaning of flags:
-    # y: Answer yes to all prompts thrown by download_eggnog_data.py
-    # D: Do not download the Diamond database
-    # data_dir: location where to save downloads
-    cmd = ["download_eggnog_data.py", "-y", "-D", "--data_dir", str(eggnog_db.path)]
-    run_command(cmd)
+    eggnog_db_gz = os.path.join(data_dir, "eggnog.db.gz")
+    taxa_tar_gz = os.path.join(data_dir, "eggnog.taxa.tar.gz")
 
-    # Return objects
+    base_url = "http://eggnog5.embl.de/download/emapperdb-5.0.2"
+
+    # Download eggnog.db.gz
+    print(colorify("Downloading eggnog.db.gz..."))
+    run_command(
+        cmd=[
+            "wget",
+            "-O",
+            eggnog_db_gz,
+            f"{base_url}/eggnog.db.gz",
+        ]
+    )
+
+    # Decompress eggnog.db.gz
+    print(colorify("Decompressing eggnog.db.gz..."))
+    run_command(cmd=["gunzip", eggnog_db_gz])
+
+    # Download eggnog.taxa.tar.gz
+    print(colorify("Downloading eggnog.taxa.tar.gz..."))
+    run_command(
+        cmd=[
+            "wget",
+            "-O",
+            taxa_tar_gz,
+            f"{base_url}/eggnog.taxa.tar.gz",
+        ]
+    )
+
+    # Extract taxa archive
+    print(colorify("Extracting eggnog.taxa.tar.gz..."))
+    run_command(
+        cmd=[
+            "tar",
+            "-zxf",
+            taxa_tar_gz,
+            "-C",
+            data_dir,
+        ]
+    )
+
+    # Remove archive after extraction
+    os.remove(taxa_tar_gz)
+
+    print(
+        colorify(
+            "Download and extraction completed.\n"
+            "Copying files from temporary directory to final location "
+            "(this may take a few minutes)..."
+        )
+    )
+
     return eggnog_db
 
 

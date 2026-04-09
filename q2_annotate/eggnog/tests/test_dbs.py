@@ -27,15 +27,57 @@ from q2_types.reference_db import NCBITaxonomyDirFmt, EggnogProteinSequencesDirF
 class TestFetchDB(TestPluginBase):
     package = "q2_annotate.eggnog.tests"
 
+    @patch("os.remove")
     @patch("subprocess.run")
-    def test_fetch_eggnog_db(self, subp_run):
-        # Call function. Patching will make sure nothing is
-        # actually ran
+    def test_fetch_eggnog_db(self, mock_run, mock_remove):
         eggnog_db = fetch_eggnog_db()
 
-        # Check that command was called in the expected way
-        cmd = ["download_eggnog_data.py", "-y", "-D", "--data_dir", str(eggnog_db)]
-        subp_run.assert_called_once_with(cmd, check=True)
+        data_dir = str(eggnog_db)
+        eggnog_db_gz = os.path.join(data_dir, "eggnog.db.gz")
+        taxa_tar_gz = os.path.join(data_dir, "eggnog.taxa.tar.gz")
+
+        base_url = "http://eggnog5.embl.de/download/emapperdb-5.0.2"
+
+        expected_calls = [
+            call(
+                [
+                    "wget",
+                    "-O",
+                    eggnog_db_gz,
+                    f"{base_url}/eggnog.db.gz",
+                ],
+                check=True,
+            ),
+            call(
+                [
+                    "gunzip",
+                    eggnog_db_gz,
+                ],
+                check=True,
+            ),
+            call(
+                [
+                    "wget",
+                    "-O",
+                    taxa_tar_gz,
+                    f"{base_url}/eggnog.taxa.tar.gz",
+                ],
+                check=True,
+            ),
+            call(
+                [
+                    "tar",
+                    "-zxf",
+                    taxa_tar_gz,
+                    "-C",
+                    data_dir,
+                ],
+                check=True,
+            ),
+        ]
+
+        mock_run.assert_has_calls(expected_calls, any_order=False)
+        mock_remove.assert_called_once_with(taxa_tar_gz)
 
     @patch("tempfile.TemporaryDirectory")
     @patch("q2_annotate.eggnog.dbs._download_and_build_hmm_db")
