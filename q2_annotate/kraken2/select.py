@@ -17,6 +17,12 @@ import pandas as pd
 import skbio
 
 RANKS = "dkpcofgs"
+_DOMAIN_LABELS = {
+    "bacteria": "Bacteria",
+    "archaea": "Archaea",
+    "eukaryota": "Eukaryota",
+    "viruses": "Viruses",
+}
 
 
 def _fill_unclassified(row):
@@ -321,12 +327,23 @@ def _pad_ranks(ranks):
     order = ["d", "k", "p", "c", "o", "f", "g", "s"]
     available = {}
     taxonomy = []
+    parsed = [rank.split("__", 1) for rank in ranks]
 
-    for rank in reversed(ranks):
-        r, label = rank.split("__", 1)
+    for r, label in reversed(parsed):
         available[r] = label
         if len(r) > 1 and r.startswith("s"):
-            taxonomy.append(rank)
+            taxonomy.append(f"{r}__{label}")
+
+    # Kraken2 can emit domain-like labels under rankless R* nodes
+    # without an explicit D rank (e.g. R2 -> Bacteria).
+    if "d" not in available:
+        for r, label in reversed(parsed):
+            if not r.startswith("r"):
+                continue
+            inferred = _DOMAIN_LABELS.get(label.strip().lower())
+            if inferred is not None:
+                available["d"] = inferred
+                break
 
     for r in reversed(order):
         label = available.get(r)
