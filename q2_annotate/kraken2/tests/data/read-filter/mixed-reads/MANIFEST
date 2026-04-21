@@ -1,0 +1,4 @@
+sample-id,filename,direction
+sample1,sample1_R1.fastq.gz,forward
+sample1,sample1_R2.fastq.gz,reverse
+sample2,sample2_R1.fastq.gz,forward

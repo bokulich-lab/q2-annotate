@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 import gzip
 import os
-import shutil
 from itertools import zip_longest
 from pathlib import Path
 
@@ -60,87 +59,6 @@ def _open_fastq_for_write(filepath: Path, gzip_output: bool):
     return open(filepath, mode="w")
 
 
-def _resolve_fastq_path(path_value, reads_dir: Path) -> Path:
-    filepath = Path(str(path_value))
-    if not filepath.is_absolute():
-        filepath = reads_dir / filepath
-    return filepath
-
-
-def _manifest_to_sample_fastqs(
-    manifest: pd.DataFrame, reads_dir: Path
-) -> dict[str, dict[str, Path]]:
-    if manifest.empty:
-        raise ValueError("Reads manifest is empty.")
-
-    sample_fastqs = {}
-    columns = set(manifest.columns)
-
-    if "forward" in columns:
-        for sample_id, row in manifest.iterrows():
-            sample_id = str(sample_id)
-            sample_entry = sample_fastqs.setdefault(sample_id, {})
-
-            if pd.notna(row["forward"]):
-                sample_entry["forward"] = _resolve_fastq_path(row["forward"], reads_dir)
-
-            if "reverse" in columns and pd.notna(row["reverse"]):
-                sample_entry["reverse"] = _resolve_fastq_path(row["reverse"], reads_dir)
-    else:
-        sample_column = "sample-id" if "sample-id" in columns else None
-        direction_column = "direction" if "direction" in columns else None
-        filepath_column = next(
-            (
-                col
-                for col in ["absolute-filepath", "filename", "filepath", "path"]
-                if col in columns
-            ),
-            None,
-        )
-
-        if direction_column is None or filepath_column is None:
-            raise ValueError(
-                "Reads manifest must have either 'forward' (and optionally 'reverse') "
-                "columns, or a long format with 'direction' and filename/path columns."
-            )
-
-        for idx, row in manifest.iterrows():
-            sample_id = str(row[sample_column]) if sample_column else str(idx)
-            direction = str(row[direction_column]).strip().lower()
-
-            if direction in {"forward", "r1", "1", "read1"}:
-                key = "forward"
-            elif direction in {"reverse", "r2", "2", "read2"}:
-                key = "reverse"
-            else:
-                raise ValueError(
-                    f"Unrecognized read direction '{row[direction_column]}' "
-                    f"for sample '{sample_id}'."
-                )
-
-            filepath = _resolve_fastq_path(row[filepath_column], reads_dir)
-            sample_entry = sample_fastqs.setdefault(sample_id, {})
-            sample_entry[key] = filepath
-
-    for sample_id, fastqs in sample_fastqs.items():
-        if "forward" not in fastqs:
-            raise ValueError(
-                f"Sample '{sample_id}' does not have a forward read file "
-                "in the manifest."
-            )
-
-    has_reverse = any("reverse" in fastqs for fastqs in sample_fastqs.values())
-    if has_reverse and not all(
-        "reverse" in fastqs for fastqs in sample_fastqs.values()
-    ):
-        raise ValueError(
-            "Reads manifest contains a mix of single-end and paired-end samples, "
-            "which is not supported for this action."
-        )
-
-    return sample_fastqs
-
-
 def _assert_distinct_input_output_paths(input_fp: Path, output_fp: Path):
     if input_fp.resolve() == output_fp.resolve():
         raise ValueError(
@@ -172,36 +90,6 @@ def _iter_fastq_records(fh):
         yield header, sequence, separator, quality
 
 
-def _extract_matching_read_ids(
-    output_df: pd.DataFrame, taxon_ids: set[str]
-) -> set[str]:
-    if not taxon_ids:
-        return set()
-
-    if output_df.empty:
-        return set()
-
-    taxon_column = (
-        "taxon_id" if "taxon_id" in output_df.columns else output_df.columns[2]
-    )
-    read_id_column = next(
-        (
-            col
-            for col in ["sequence_id", "read_id", "seq_id", "fragment_id"]
-            if col in output_df.columns
-        ),
-        output_df.columns[1],
-    )
-
-    selected_rows = output_df[
-        output_df[taxon_column].map(_normalize_taxon_id).isin(taxon_ids)
-    ]
-    return {
-        _normalize_read_id(read_id)
-        for read_id in selected_rows[read_id_column].dropna().tolist()
-    }
-
-
 def _extract_matching_read_ids_from_output(
     output_fp: Path, taxon_ids: set[str]
 ) -> set[str]:
@@ -223,22 +111,12 @@ def _extract_matching_read_ids_from_output(
 
 
 def _collect_matching_taxon_ids(
-    report_df: pd.DataFrame,
+    report: Path,
     taxonomy: str,
     include_descendants: bool = True,
     contains: bool = False,
 ) -> set[str]:
-    taxonomy = taxonomy.strip()
-    if not taxonomy:
-        raise ValueError("`taxonomy` cannot be an empty string.")
-
-    if "name" not in report_df.columns or "taxon_id" not in report_df.columns:
-        raise ValueError(
-            "Kraken 2 report is missing required columns ('name', 'taxon_id')."
-        )
-
-    report_df = report_df.reset_index(drop=True)
-
+    report_df = Kraken2ReportFormat(report, "r").view(pd.DataFrame)
     names = report_df["name"].astype(str)
     names_clean = names.str.strip()
     taxon_ids = report_df["taxon_id"].map(_normalize_taxon_id)
@@ -343,17 +221,6 @@ def _filter_paired_end_fastq(
                 rev_out.writelines(rev_record)
 
 
-def _flatten_file_dict(file_dict: dict, format_name: str) -> dict[str, Path]:
-    flattened = {}
-    for sample_id, filepath in file_dict.items():
-        if isinstance(filepath, dict):
-            raise ValueError(
-                f"Nested {format_name} entries are not supported for read filtering."
-            )
-        flattened[str(sample_id)] = Path(str(filepath))
-    return flattened
-
-
 def _validate_read_sample_ids(
     read_sample_ids: set[str],
     report_sample_ids: set[str],
@@ -373,6 +240,13 @@ def _validate_read_sample_ids(
         raise ValueError(
             "Some Kraken2 classification sample IDs are missing from reads. "
             f"Missing in reads: {missing_in_reads}. "
+        )
+
+    missing_in_classifications = sorted(read_sample_ids - report_sample_ids)
+    if missing_in_classifications:
+        raise ValueError(
+            "Some read sample IDs are missing from Kraken2 classifications. "
+            f"Missing in Kraken2 classifications: {missing_in_classifications}. "
         )
 
 
@@ -412,15 +286,10 @@ def filter_kraken2_reads(
     if not taxonomy:
         raise ValueError("`taxonomy` cannot be an empty string.")
 
-    manifest = reads.manifest.copy()
-    if not isinstance(manifest, pd.DataFrame):
-        manifest = pd.DataFrame(manifest)
-    manifest.index = manifest.index.map(str)
+    sample_fastqs = reads.manifest.to_dict(orient="index")
 
-    sample_fastqs = _manifest_to_sample_fastqs(manifest, reads.path)
-
-    report_map = _flatten_file_dict(reports.file_dict(), "Kraken2 reports")
-    output_map = _flatten_file_dict(outputs.file_dict(), "Kraken2 outputs")
+    report_map = reports.file_dict()
+    output_map = outputs.file_dict()
 
     read_sample_ids = set(sample_fastqs.keys())
     report_sample_ids = set(report_map.keys())
@@ -429,24 +298,15 @@ def filter_kraken2_reads(
 
     filtered_reads = CasavaOneEightSingleLanePerSampleDirFmt()
 
-    read_filenames = {
-        fp.name
-        for sample_fastq_paths in sample_fastqs.values()
-        for fp in sample_fastq_paths.values()
-    }
-
     taxonomy_found = False
-    paired = any("reverse" in fastqs for fastqs in sample_fastqs.values())
+    paired = all(fastqs.get("reverse") for fastqs in sample_fastqs.values())
 
-    for sample_id, sample_fastq_paths in sample_fastqs.items():
-        forward_input = sample_fastq_paths["forward"]
+    for sample_id, sample_fps in sample_fastqs.items():
+        forward_input = Path(sample_fps["forward"])
         forward_output = filtered_reads.path / forward_input.name
 
-        report_df = Kraken2ReportFormat(report_map[sample_id], mode="r").view(
-            pd.DataFrame
-        )
         matched_taxon_ids = _collect_matching_taxon_ids(
-            report_df,
+            report_map[sample_id],
             taxonomy=taxonomy,
             include_descendants=include_descendants,
             contains=contains,
@@ -459,7 +319,7 @@ def filter_kraken2_reads(
         )
 
         if paired:
-            reverse_input = sample_fastq_paths["reverse"]
+            reverse_input = Path(sample_fps["reverse"])
             reverse_output = filtered_reads.path / reverse_input.name
             _filter_paired_end_fastq(
                 forward_input_fp=forward_input,
