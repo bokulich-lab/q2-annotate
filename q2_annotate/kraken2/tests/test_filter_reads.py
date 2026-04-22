@@ -20,7 +20,7 @@ from q2_types.kraken2 import (
 )
 from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
 
-from q2_annotate.kraken2.read_filter import (
+from q2_annotate.kraken2.filter_reads import (
     _assert_distinct_input_output_paths,
     _collect_matching_taxon_ids,
     _extract_matching_read_ids_from_output,
@@ -28,7 +28,7 @@ from q2_annotate.kraken2.read_filter import (
     _filter_single_end_fastq,
     _normalize_read_id,
     _validate_read_sample_ids,
-    filter_kraken2_reads,
+    filter_reads_kraken2,
 )
 
 
@@ -232,7 +232,7 @@ class TestFilterKraken2Reads(TestPluginBase):
             self.get_data_path("read-filter/paired-end-reads"), mode="r"
         )
 
-        observed = filter_kraken2_reads(
+        observed = filter_reads_kraken2(
             reads=reads,
             reports=self.reports,
             outputs=self.outputs,
@@ -258,7 +258,7 @@ class TestFilterKraken2Reads(TestPluginBase):
             self.get_data_path("read-filter/single-end-reads"), mode="r"
         )
 
-        observed = filter_kraken2_reads(
+        observed = filter_reads_kraken2(
             reads=reads,
             reports=self.reports,
             outputs=self.outputs,
@@ -279,7 +279,7 @@ class TestFilterKraken2Reads(TestPluginBase):
         )
 
         with self.assertRaisesRegex(ValueError, "was not found"):
-            filter_kraken2_reads(
+            filter_reads_kraken2(
                 reads=reads,
                 reports=self.reports,
                 outputs=self.outputs,

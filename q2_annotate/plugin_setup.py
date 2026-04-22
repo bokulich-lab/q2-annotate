@@ -2199,7 +2199,7 @@ plugin.pipelines.register_function(
 )
 
 plugin.methods.register_function(
-    function=q2_annotate.kraken2.filter_kraken2_reads,
+    function=q2_annotate.kraken2.filter_reads_kraken2,
     inputs={
         "reads": I_reads,
         "reports": SampleData[Kraken2Reports % Properties("reads")],

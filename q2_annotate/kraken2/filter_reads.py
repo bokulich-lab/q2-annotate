@@ -250,7 +250,7 @@ def _validate_read_sample_ids(
         )
 
 
-def filter_kraken2_reads(
+def filter_reads_kraken2(
     reads: CasavaOneEightSingleLanePerSampleDirFmt,
     reports: Kraken2ReportDirectoryFormat,
     outputs: Kraken2OutputDirectoryFormat,
