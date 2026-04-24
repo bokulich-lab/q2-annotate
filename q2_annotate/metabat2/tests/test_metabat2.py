@@ -140,10 +140,9 @@ class TestMetabat2(TestPluginBase):
 
     @patch("tempfile.TemporaryDirectory")
     @patch("q2_annotate.metabat2.metabat2.uuid4")
-    @patch("q2_annotate.metabat2.metabat2._sort_bams")
     @patch("q2_annotate.metabat2.metabat2._estimate_depth")
     @patch("q2_annotate.metabat2.metabat2._run_metabat2")
-    def test_process_sample(self, p1, p2, p3, p4, p5):
+    def test_process_sample(self, p1, p2, p3, p4):
         fake_props = {
             "map": "some/where/samp1_alignment.bam",
             "contigs": "some/where/samp1_contigs.fasta",
