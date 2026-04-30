@@ -11,6 +11,7 @@ from itertools import zip_longest
 from pathlib import Path
 
 import pandas as pd
+from q2_types.sample_data import SampleData
 
 from q2_annotate.kraken2.select import _get_indentation
 from q2_types.kraken2 import (
@@ -20,6 +21,9 @@ from q2_types.kraken2 import (
 )
 from q2_types.per_sample_sequences import (
     CasavaOneEightSingleLanePerSampleDirFmt,
+    SequencesWithQuality,
+    JoinedSequencesWithQuality,
+    PairedEndSequencesWithQuality,
 )
 
 
@@ -163,9 +167,10 @@ def _filter_single_end_fastq(
     _assert_distinct_input_output_paths(input_fp, output_fp)
 
     gzip_input = _is_gzip_file(input_fp)
-    with _open_fastq_for_read(input_fp) as in_fh, _open_fastq_for_write(
-        output_fp, gzip_output=gzip_input
-    ) as out_fh:
+    with (
+        _open_fastq_for_read(input_fp) as in_fh,
+        _open_fastq_for_write(output_fp, gzip_output=gzip_input) as out_fh,
+    ):
         for record in _iter_fastq_records(in_fh):
             read_id = _normalize_read_id(record[0])
             should_keep = read_id in matched_read_ids
@@ -250,7 +255,7 @@ def _validate_read_sample_ids(
         )
 
 
-def filter_reads_kraken2(
+def _filter_reads_kraken2(
     reads: CasavaOneEightSingleLanePerSampleDirFmt,
     reports: Kraken2ReportDirectoryFormat,
     outputs: Kraken2OutputDirectoryFormat,
@@ -343,3 +348,77 @@ def filter_reads_kraken2(
         )
 
     return filtered_reads
+
+
+def filter_reads_kraken2(
+    ctx,
+    reads,
+    reports,
+    outputs,
+    taxonomy,
+    include_descendants=True,
+    contains=False,
+    exclude=False,
+    num_partitions=1,
+):
+    """
+    Filter reads based on Kraken2 classifications that match a taxonomy query.
+
+    Parameters
+    ----------
+    reads : CasavaOneEightSingleLanePerSampleDirFmt
+        Reads used as input for Kraken2 classification.
+    reports : Kraken2ReportDirectoryFormat
+        Kraken2 reports generated for `reads`.
+    outputs : Kraken2OutputDirectoryFormat
+        Kraken2 output files generated for `reads`.
+    taxonomy : str
+        Taxonomy query. This can be a Kraken2 taxon name (e.g., "Bacteria")
+        or a taxon ID (e.g., "2").
+    include_descendants : bool, optional
+        If True, include all descendant taxa under each matching taxon.
+    contains : bool, optional
+        If True, perform case-insensitive substring matching on taxon names
+        instead of exact matching.
+    exclude : bool, optional
+        If False (default), retain only reads matching the taxonomy query.
+        If True, discard matching reads and retain everything else.
+    num_partitions : int, optional
+        Number of partitions to use by parsl.
+    """
+    kwargs = {
+        k: v
+        for k, v in locals().items()
+        if k not in ["ctx", "reads", "reports", "outputs", "num_partitions"]
+    }
+
+    if reads.type <= SampleData[SequencesWithQuality | JoinedSequencesWithQuality]:
+        _partition_reads = ctx.get_action("demux", "partition_samples_single")
+    elif reads.type <= SampleData[PairedEndSequencesWithQuality]:
+        _partition_reads = ctx.get_action("demux", "partition_samples_paired")
+    else:
+        raise NotImplementedError()
+
+    _partition_reports = ctx.get_action("types", "partition_kraken2_reports")
+    _partition_outputs = ctx.get_action("types", "partition_kraken2_outputs")
+    _filter_reads_kraken2 = ctx.get_action("annotate", "_filter_reads_kraken2")
+    _collate_reads = ctx.get_action("fondue", "combine_seqs")
+
+    (partitioned_reads,) = _partition_reads(reads, num_partitions)
+    (partitioned_reports,) = _partition_reports(reports, num_partitions)
+    (partitioned_outputs,) = _partition_outputs(outputs, num_partitions)
+
+    results = []
+    for _reads, _reports, _outputs in zip(
+        partitioned_reads.values(),
+        partitioned_reports.values(),
+        partitioned_outputs.values(),
+    ):
+        (result,) = _filter_reads_kraken2(
+            reads=_reads, reports=_reports, outputs=_outputs, **kwargs
+        )
+        results.append(result)
+
+    (combined_reads,) = _collate_reads(results)
+
+    return combined_reads

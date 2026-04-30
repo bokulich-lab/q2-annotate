@@ -16,7 +16,8 @@ import pandas as pd
 from qiime2.plugin.testing import TestPluginBase
 from q2_types.kraken2 import (
     Kraken2OutputDirectoryFormat,
-    Kraken2ReportDirectoryFormat, Kraken2ReportFormat,
+    Kraken2ReportDirectoryFormat,
+    Kraken2ReportFormat,
 )
 from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
 
@@ -67,9 +68,11 @@ class TestReadFilterHelpers(TestPluginBase):
         self.assertEqual(_normalize_read_id("abc"), "abc")
 
     def test_collect_matching_taxon_ids_exact(self):
-        report = Path(self.get_data_path(
+        report = Path(
+            self.get_data_path(
                 "filter/output-report-alignment/reports/sample-1.report.txt"
-            ))
+            )
+        )
 
         observed = _collect_matching_taxon_ids(
             report=report,
@@ -79,15 +82,27 @@ class TestReadFilterHelpers(TestPluginBase):
         )
 
         self.assertSetEqual(
-            {'1138383', '120793', '1760', '1762', '1763', '1767', '1783272', '2', '201174', '85007'},
-            observed
+            {
+                "1138383",
+                "120793",
+                "1760",
+                "1762",
+                "1763",
+                "1767",
+                "1783272",
+                "2",
+                "201174",
+                "85007",
+            },
+            observed,
         )
 
     def test_collect_matching_taxon_ids_no_descendants(self):
         report = Path(
             self.get_data_path(
                 "filter/output-report-alignment/reports/sample-1.report.txt"
-            ))
+            )
+        )
 
         observed = _collect_matching_taxon_ids(
             report=report,
@@ -96,7 +111,6 @@ class TestReadFilterHelpers(TestPluginBase):
             contains=False,
         )
         self.assertSetEqual({"2"}, observed)
-
 
     def test_extract_matching_read_ids_from_output(self):
         output_fp = Path(
