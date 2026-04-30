@@ -17,7 +17,6 @@ from qiime2.plugin.testing import TestPluginBase
 from q2_types.kraken2 import (
     Kraken2OutputDirectoryFormat,
     Kraken2ReportDirectoryFormat,
-    Kraken2ReportFormat,
 )
 from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
 
