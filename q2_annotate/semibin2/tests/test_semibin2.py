@@ -65,8 +65,8 @@ class TestSemibin2(TestPluginBase):
             p1.assert_called_once_with(exp_cmd, check=True)
 
     @patch("tempfile.TemporaryDirectory")
-    @patch("q2_annotate.semibin2.uuid4")
-    @patch("q2_annotate.semibin2._run_semibin2")
+    @patch("q2_annotate.semibin2.semibin2.uuid4")
+    @patch("q2_annotate.semibin2.semibin2._run_semibin2")
     def test_process_sample(self, p1, p2, p3):
         fake_props = {
             "map": "some/where/samp1_alignment.bam",
@@ -115,9 +115,9 @@ class TestSemibin2(TestPluginBase):
             }
             self.assertSetEqual(exp_bins, obs_bins)
 
-    @patch("q2_annotate.semibin2.ContigSequencesDirFmt")
-    @patch("q2_annotate.semibin2.MultiFASTADirectoryFormat")
-    @patch("q2_annotate.semibin2._process_sample")
+    @patch("q2_annotate.semibin2.semibin2.ContigSequencesDirFmt")
+    @patch("q2_annotate.semibin2.semibin2.MultiFASTADirectoryFormat")
+    @patch("q2_annotate.semibin2.semibin2._process_sample")
     def test_bin_contigs_semibin2(self, p1, p2, _):
         input_contigs = self.get_data_path("contigs")
         input_maps = self.get_data_path("maps")
@@ -193,8 +193,8 @@ class TestSemibin2(TestPluginBase):
         ]
         self.assertListEqual(exp_bins, obs_bins)
 
-    @patch("q2_annotate.semibin2.MultiFASTADirectoryFormat")
-    @patch("q2_annotate.semibin2._process_sample")
+    @patch("q2_annotate.semibin2.semibin2.MultiFASTADirectoryFormat")
+    @patch("q2_annotate.semibin2.semibin2._process_sample")
     def test_bin_contigs_metabat_no_mags(self, p1, p2):
         input_contigs = self.get_data_path("contigs")
         input_maps = self.get_data_path("maps")
@@ -217,8 +217,8 @@ class TestSemibin2(TestPluginBase):
         with self.assertRaisesRegex(ValueError, "No MAGs were formed"):
             _bin_contigs_semibin2(contigs, maps, "single_easy_bin", args)
 
-    @patch("q2_annotate.semibin2._bin_contigs_semibin2")
-    @patch("q2_annotate.semibin2._process_common_input_params")
+    @patch("q2_annotate.semibin2.semibin2._bin_contigs_semibin2")
+    @patch("q2_annotate.semibin2.semibin2._process_common_input_params")
     def test_bin_contigs_semibin2_wrapper(self, p1, p2):
         p1.return_value = ["--epochs", "16"]
         p2.return_value = ("bins", {"contigA": "bin1"})
@@ -229,7 +229,6 @@ class TestSemibin2(TestPluginBase):
         result = bin_contigs_semibin2(
             contigs=contigs,
             alignment_maps=bams,
-            mode="single",
             epochs=10,
             verbose=True,
         )
