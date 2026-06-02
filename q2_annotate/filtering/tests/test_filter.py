@@ -19,10 +19,10 @@ from q2_annotate.filtering.filter_pangenome import (
     _fetch_and_extract_grch38,
     _extract_fasta_from_gfa,
     _fetch_and_extract_pangenome,
-    filter_reads_pangenome,
+    filter_reads_human_pangenome,
     _combine_fasta_files,
     EBI_SERVER_URL,
-    construct_pangenome_index,
+    construct_human_pangenome_index,
 )
 from qiime2.plugin.testing import TestPluginBase
 
@@ -363,7 +363,7 @@ class TestMAGFiltering(TestPluginBase):
                 __exit__=lambda x, y, z, w: None,
             ),
         ):
-            generated_index = construct_pangenome_index(ctx=ctx, threads=1)
+            generated_index = construct_human_pangenome_index(ctx=ctx, threads=1)
 
             # Assertions
             ctx.get_action.assert_any_call("rescript", "get_ncbi_genomes")
@@ -414,7 +414,7 @@ class TestMAGFiltering(TestPluginBase):
 
         reads = MagicMock()
 
-        filtered_reads, generated_index = filter_reads_pangenome(
+        filtered_reads, generated_index = filter_reads_human_pangenome(
             ctx=ctx, reads=reads, index=None, threads=4
         )
 
