@@ -28,6 +28,15 @@ from q2_types.per_sample_sequences import (
 
 
 def _normalize_taxon_id(taxon_id) -> str:
+    """
+    Normalize a taxon ID to a string and remove any trailing '.0'.
+
+    Args:
+        taxon_id (any): The taxon ID to normalize.
+
+    Returns:
+        str: The normalized taxon ID.
+    """
     taxon_id = str(taxon_id).strip()
     if taxon_id.endswith(".0"):
         taxon_id = taxon_id[:-2]
@@ -35,6 +44,17 @@ def _normalize_taxon_id(taxon_id) -> str:
 
 
 def _normalize_read_id(read_id: str) -> str:
+    """
+    Normalize a read ID by stripping whitespace, removing leading '@',
+    taking the first part of a space-separated string, and removing
+    trailing '/1' or '/2'.
+
+    Args:
+        read_id (str): The read ID to normalize.
+
+    Returns:
+        str: The normalized read ID.
+    """
     read_id = str(read_id).strip()
     if read_id.startswith("@"):
         read_id = read_id[1:]
@@ -47,23 +67,62 @@ def _normalize_read_id(read_id: str) -> str:
 
 
 def _is_gzip_file(filepath: Path) -> bool:
+    """
+    Check if a file is GZIP compressed by inspecting its magic number.
+
+    Args:
+        filepath (Path): The path to the file to check.
+
+    Returns:
+        bool: True if the file is GZIP compressed, False otherwise.
+    """
     with open(filepath, "rb") as fh:
         return fh.read(2) == b"\x1f\x8b"
 
 
 def _open_fastq_for_read(filepath: Path):
+    """
+    Open a FASTQ file for reading, handling GZIP compression if necessary.
+
+    Args:
+        filepath (Path): The path to the FASTQ file.
+
+    Returns:
+        file object: A file object opened for reading in text mode.
+    """
     if _is_gzip_file(filepath):
         return gzip.open(filepath, mode="rt")
     return open(filepath, mode="r")
 
 
 def _open_fastq_for_write(filepath: Path, gzip_output: bool):
+    """
+    Open a FASTQ file for writing, optionally using GZIP compression.
+
+    Args:
+        filepath (Path): The path to the output FASTQ file.
+        gzip_output (bool): If True, the output will be GZIP compressed.
+
+    Returns:
+        file object: A file object opened for writing in text mode.
+    """
     if gzip_output:
         return gzip.open(filepath, mode="wt")
     return open(filepath, mode="w")
 
 
 def _assert_distinct_input_output_paths(input_fp: Path, output_fp: Path):
+    """
+    Ensure that the input and output paths do not refer to the same file.
+
+    Args:
+        input_fp (Path): The input file path.
+        output_fp (Path): The output file path.
+
+    Raises:
+        ValueError: If the input and output paths are identical or refer to
+            the same inode.
+    """
     if input_fp.resolve() == output_fp.resolve():
         raise ValueError(
             "Input and output FASTQ paths are identical. "
@@ -80,6 +139,18 @@ def _assert_distinct_input_output_paths(input_fp: Path, output_fp: Path):
 
 
 def _iter_fastq_records(fh):
+    """
+    Iterate over FASTQ records in a file handle.
+
+    Args:
+        fh (file object): An open file handle for a FASTQ file.
+
+    Yields:
+        tuple: A tuple containing (header, sequence, separator, quality).
+
+    Raises:
+        ValueError: If the FASTQ file is malformed.
+    """
     while True:
         header = fh.readline()
         if header == "":
@@ -97,6 +168,17 @@ def _iter_fastq_records(fh):
 def _extract_matching_read_ids_from_output(
     output_fp: Path, taxon_ids: set[str]
 ) -> set[str]:
+    """
+    Extract read IDs from a Kraken2 output file that match any of the
+    provided taxon IDs.
+
+    Args:
+        output_fp (Path): The path to the Kraken2 output file.
+        taxon_ids (set): The set of taxon IDs (as strings) to match against.
+
+    Returns:
+        set: The set of read IDs that matched the taxon IDs.
+    """
     if not taxon_ids:
         return set()
 
@@ -120,6 +202,20 @@ def _collect_matching_taxon_ids(
     include_descendants: bool = True,
     contains: bool = False,
 ) -> set[str]:
+    """
+    Collect taxon IDs from a Kraken2 report that match a taxonomy query.
+
+    Args:
+        report (Path): The path to the Kraken2 report file.
+        taxonomy (str): The taxonomy query (name or ID).
+        include_descendants (bool): If True, include all descendant taxon IDs.
+            Defaults to True.
+        contains (bool): If True, perform substring matching on taxon names.
+            Defaults to False.
+
+    Returns:
+        set: The set of matching taxon IDs (as strings).
+    """
     report_df = Kraken2ReportFormat(report, "r").view(pd.DataFrame)
     names = report_df["name"].astype(str)
     names_clean = names.str.strip()
@@ -164,6 +260,16 @@ def _filter_single_end_fastq(
     matched_read_ids: set[str],
     exclude: bool = False,
 ):
+    """
+    Filter a single-end FASTQ file based on a set of matched read IDs.
+
+    Args:
+        input_fp (Path): The input FASTQ file path.
+        output_fp (Path): The output FASTQ file path.
+        matched_read_ids (set): The set of read IDs to filter by.
+        exclude (bool): If True, exclude the matched read IDs instead of
+            retaining them. Defaults to False.
+    """
     _assert_distinct_input_output_paths(input_fp, output_fp)
 
     gzip_input = _is_gzip_file(input_fp)
@@ -189,6 +295,22 @@ def _filter_paired_end_fastq(
     matched_read_ids: set[str],
     exclude: bool = False,
 ):
+    """
+    Filter paired-end FASTQ files based on a set of matched read IDs.
+
+    Args:
+        forward_input_fp (Path): The forward input FASTQ file path.
+        reverse_input_fp (Path): The reverse input FASTQ file path.
+        forward_output_fp (Path): The forward output FASTQ file path.
+        reverse_output_fp (Path): The reverse output FASTQ file path.
+        matched_read_ids (set): The set of read IDs to filter by.
+        exclude (bool): If True, exclude the matched read IDs instead of
+            retaining them. Defaults to False.
+
+    Raises:
+        ValueError: If the forward and reverse files have different record
+            counts or are out of sync.
+    """
     _assert_distinct_input_output_paths(forward_input_fp, forward_output_fp)
     _assert_distinct_input_output_paths(reverse_input_fp, reverse_output_fp)
 
@@ -231,6 +353,17 @@ def _validate_read_sample_ids(
     report_sample_ids: set[str],
     output_sample_ids: set[str],
 ) -> None:
+    """
+    Validate that the sample IDs match across reads, reports, and outputs.
+
+    Args:
+        read_sample_ids (set): Sample IDs found in the input reads.
+        report_sample_ids (set): Sample IDs found in the Kraken2 reports.
+        output_sample_ids (set): Sample IDs found in the Kraken2 outputs.
+
+    Raises:
+        ValueError: If the sample IDs do not match across all inputs.
+    """
     if report_sample_ids != output_sample_ids:
         missing_in_reports = sorted(output_sample_ids - report_sample_ids)
         missing_in_outputs = sorted(report_sample_ids - output_sample_ids)
@@ -267,25 +400,25 @@ def _filter_reads_kraken2(
     """
     Filter reads based on Kraken2 classifications that match a taxonomy query.
 
-    Parameters
-    ----------
-    reads : CasavaOneEightSingleLanePerSampleDirFmt
-        Reads used as input for Kraken2 classification.
-    reports : Kraken2ReportDirectoryFormat
-        Kraken2 reports generated for `reads`.
-    outputs : Kraken2OutputDirectoryFormat
-        Kraken2 output files generated for `reads`.
-    taxonomy : str
-        Taxonomy query. This can be a Kraken2 taxon name (e.g., "Bacteria")
-        or a taxon ID (e.g., "2").
-    include_descendants : bool, optional
-        If True, include all descendant taxa under each matching taxon.
-    contains : bool, optional
-        If True, perform case-insensitive substring matching on taxon names
-        instead of exact matching.
-    exclude : bool, optional
-        If False (default), retain only reads matching the taxonomy query.
-        If True, discard matching reads and retain everything else.
+    Args:
+        reads (CasavaOneEightSingleLanePerSampleDirFmt): Reads used as input
+            for Kraken2 classification.
+        reports (Kraken2ReportDirectoryFormat): Kraken2 reports generated
+            for `reads`.
+        outputs (Kraken2OutputDirectoryFormat): Kraken2 output files generated
+            for `reads`.
+        taxonomy (str): Taxonomy query. This can be a Kraken2 taxon name
+            (e.g., "Bacteria") or a taxon ID (e.g., "2").
+        include_descendants (bool): If True, include all descendant taxa under
+            each matching taxon. Defaults to True.
+        contains (bool): If True, perform case-insensitive substring matching
+            on taxon names instead of exact matching. Defaults to False.
+        exclude (bool): If False (default), retain only reads matching the
+            taxonomy query. If True, discard matching reads and retain
+            everything else.
+
+    Returns:
+        CasavaOneEightSingleLanePerSampleDirFmt: The filtered reads.
     """
     taxonomy = taxonomy.strip()
     if not taxonomy:
@@ -364,27 +497,27 @@ def filter_reads_kraken2(
     """
     Filter reads based on Kraken2 classifications that match a taxonomy query.
 
-    Parameters
-    ----------
-    reads : CasavaOneEightSingleLanePerSampleDirFmt
-        Reads used as input for Kraken2 classification.
-    reports : Kraken2ReportDirectoryFormat
-        Kraken2 reports generated for `reads`.
-    outputs : Kraken2OutputDirectoryFormat
-        Kraken2 output files generated for `reads`.
-    taxonomy : str
-        Taxonomy query. This can be a Kraken2 taxon name (e.g., "Bacteria")
-        or a taxon ID (e.g., "2").
-    include_descendants : bool, optional
-        If True, include all descendant taxa under each matching taxon.
-    contains : bool, optional
-        If True, perform case-insensitive substring matching on taxon names
-        instead of exact matching.
-    exclude : bool, optional
-        If False (default), retain only reads matching the taxonomy query.
-        If True, discard matching reads and retain everything else.
-    num_partitions : int, optional
-        Number of partitions to use by parsl.
+    Args:
+        reads (CasavaOneEightSingleLanePerSampleDirFmt): Reads used as input
+            for Kraken2 classification.
+        reports (Kraken2ReportDirectoryFormat): Kraken2 reports generated
+            for `reads`.
+        outputs (Kraken2OutputDirectoryFormat): Kraken2 output files generated
+            for `reads`.
+        taxonomy (str): Taxonomy query. This can be a Kraken2 taxon name
+            (e.g., "Bacteria") or a taxon ID (e.g., "2").
+        include_descendants (bool): If True, include all descendant taxa under
+            each matching taxon. Defaults to True.
+        contains (bool): If True, perform case-insensitive substring matching
+            on taxon names instead of exact matching. Defaults to False.
+        exclude (bool): If False (default), retain only reads matching the
+            taxonomy query. If True, discard matching reads and retain
+            everything else.
+        num_partitions (int): Number of partitions to use by parsl.
+            Defaults to 1.
+
+    Returns:
+        CasavaOneEightSingleLanePerSampleDirFmt: The filtered reads.
     """
     kwargs = {
         k: v
