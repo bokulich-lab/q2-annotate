@@ -147,9 +147,6 @@ def _iter_fastq_records(fh):
 
     Yields:
         tuple: A tuple containing (header, sequence, separator, quality).
-
-    Raises:
-        ValueError: If the FASTQ file is malformed.
     """
     while True:
         header = fh.readline()
@@ -159,8 +156,6 @@ def _iter_fastq_records(fh):
         sequence = fh.readline()
         separator = fh.readline()
         quality = fh.readline()
-        if sequence == "" or separator == "" or quality == "":
-            raise ValueError("Malformed FASTQ file: unexpected end-of-file.")
 
         yield header, sequence, separator, quality
 

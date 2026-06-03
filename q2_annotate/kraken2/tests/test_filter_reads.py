@@ -29,6 +29,7 @@ from q2_annotate.kraken2.filter_reads import (
     _filter_paired_end_fastq,
     _filter_single_end_fastq,
     _normalize_read_id,
+    _normalize_taxon_id,
     _validate_read_sample_ids,
     _filter_reads_kraken2,
 )
@@ -67,6 +68,11 @@ class TestReadFilterHelpers(TestPluginBase):
         self.assertEqual(_normalize_read_id("@abc/2"), "abc")
         self.assertEqual(_normalize_read_id("@abc 1:N:0:1"), "abc")
         self.assertEqual(_normalize_read_id("abc"), "abc")
+    
+    def test_normalize_taxon_id(self):
+        self.assertEqual(_normalize_taxon_id("2"), "2")
+        self.assertEqual(_normalize_taxon_id(" Bacteria "), "Bacteria")
+        self.assertEqual(_normalize_taxon_id("2.0"), "2")
 
     def test_collect_matching_taxon_ids_exact(self):
         report = Path(
