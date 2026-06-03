@@ -267,16 +267,20 @@ class TestFilterKraken2Reads(TestPluginBase):
             ),
             "@record-1/2\nTTTT\n+\n!!!!\n@record-3/2\nCCCC\n+\n$$$$\n",
         )
-    
+
     def test_filter_paired_end_reads_by_taxonomy_pipeline(self):
         reads = CasavaOneEightSingleLanePerSampleDirFmt(
             self.get_data_path("read-filter/paired-end-reads"), mode="r"
         )
         reads = Artifact.import_data("SampleData[PairedEndSequencesWithQuality]", reads)
-        reports = Artifact.import_data("SampleData[Kraken2Report % Properties('reads')]", self.reports)
-        outputs = Artifact.import_data("SampleData[Kraken2Output % Properties('reads')]", self.outputs)
+        reports = Artifact.import_data(
+            "SampleData[Kraken2Report % Properties('reads')]", self.reports
+        )
+        outputs = Artifact.import_data(
+            "SampleData[Kraken2Output % Properties('reads')]", self.outputs
+        )
 
-        observed, = annotate.pipelines.filter_reads_kraken2(
+        (observed,) = annotate.pipelines.filter_reads_kraken2(
             reads=reads,
             reports=reports,
             outputs=outputs,
