@@ -222,6 +222,14 @@ class TestReadFilterHelpers(TestPluginBase):
                 report_sample_ids={"sample1", "sample2"},
                 output_sample_ids={"sample1", "sample2"},
             )
+    
+    def test_validate_read_sample_ids_mismatch_reports_outputs(self):
+        with self.assertRaisesRegex(ValueError, "do not match"):
+            _validate_read_sample_ids(
+                read_sample_ids={"sample1"},
+                report_sample_ids={"sample1", "sample2"},
+                output_sample_ids={"sample1", "sample3"},
+            )
 
 
 class TestFilterKraken2Reads(TestPluginBase):
