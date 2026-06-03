@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from qiime2 import Artifact
+from qiime2.plugins import annotate
 from qiime2.plugin.testing import TestPluginBase
 from q2_types.kraken2 import (
     Kraken2OutputDirectoryFormat,
@@ -253,6 +255,35 @@ class TestFilterKraken2Reads(TestPluginBase):
         )
 
         self.assertIsInstance(observed, CasavaOneEightSingleLanePerSampleDirFmt)
+        self.assertEqual(
+            self._read_gzip_text(
+                Path(observed.path) / "sample1_0_L001_R1_001.fastq.gz"
+            ),
+            "@record-1/1\nAAAA\n+\n!!!!\n@record-3/1\nGGGG\n+\n$$$$\n",
+        )
+        self.assertEqual(
+            self._read_gzip_text(
+                Path(observed.path) / "sample1_0_L001_R2_001.fastq.gz"
+            ),
+            "@record-1/2\nTTTT\n+\n!!!!\n@record-3/2\nCCCC\n+\n$$$$\n",
+        )
+    
+    def test_filter_paired_end_reads_by_taxonomy_pipeline(self):
+        reads = CasavaOneEightSingleLanePerSampleDirFmt(
+            self.get_data_path("read-filter/paired-end-reads"), mode="r"
+        )
+        reads = Artifact.import_data("SampleData[PairedEndSequencesWithQuality]", reads)
+        reports = Artifact.import_data("SampleData[Kraken2Report % Properties('reads')]", self.reports)
+        outputs = Artifact.import_data("SampleData[Kraken2Output % Properties('reads')]", self.outputs)
+
+        observed, = annotate.pipelines.filter_reads_kraken2(
+            reads=reads,
+            reports=reports,
+            outputs=outputs,
+            taxonomy="2",
+        )
+        observed = observed.view(CasavaOneEightSingleLanePerSampleDirFmt)
+
         self.assertEqual(
             self._read_gzip_text(
                 Path(observed.path) / "sample1_0_L001_R1_001.fastq.gz"

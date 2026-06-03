@@ -12,7 +12,7 @@ test: all
 	py.test
 
 test-cov: all
-	python -m pytest --cov=q2_annotate -n 4 && coverage xml -o coverage.xml
+	python -m pytest --cov=q2_annotate --junitxml=junit.xml -o junit_family=legacy -n 4 && coverage xml -o coverage.xml
 
 test-docker: all
 	qiime info
