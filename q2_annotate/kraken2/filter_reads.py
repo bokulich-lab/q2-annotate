@@ -326,11 +326,6 @@ def _filter_paired_end_fastq(
         for fwd_record, rev_record in zip_longest(
             _iter_fastq_records(fwd_in), _iter_fastq_records(rev_in)
         ):
-            if fwd_record is None or rev_record is None:
-                raise ValueError(
-                    "Forward and reverse FASTQ files have different record counts."
-                )
-
             fwd_id = _normalize_read_id(fwd_record[0])
             rev_id = _normalize_read_id(rev_record[0])
             if fwd_id != rev_id:
