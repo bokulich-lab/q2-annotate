@@ -68,7 +68,7 @@ class TestReadFilterHelpers(TestPluginBase):
         self.assertEqual(_normalize_read_id("@abc/2"), "abc")
         self.assertEqual(_normalize_read_id("@abc 1:N:0:1"), "abc")
         self.assertEqual(_normalize_read_id("abc"), "abc")
-    
+
     def test_normalize_taxon_id(self):
         self.assertEqual(_normalize_taxon_id("2"), "2")
         self.assertEqual(_normalize_taxon_id(" Bacteria "), "Bacteria")
@@ -228,7 +228,7 @@ class TestReadFilterHelpers(TestPluginBase):
                 report_sample_ids={"sample1", "sample2"},
                 output_sample_ids={"sample1", "sample2"},
             )
-    
+
     def test_validate_read_sample_ids_mismatch_reports_outputs(self):
         with self.assertRaisesRegex(ValueError, "do not match"):
             _validate_read_sample_ids(
