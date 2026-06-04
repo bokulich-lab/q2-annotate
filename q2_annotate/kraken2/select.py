@@ -262,7 +262,8 @@ def _kraken_to_ncbi_tree(df):
     while stack and parent_node.length == 0:
         _, parent_node = stack.pop()
 
-    if parent_node.children:
+    # Make sure we are not labeling infra-clades as actual tips
+    if parent_node.length == 1:
         parent_node.children[0].is_actual_tip = True
 
     return tree

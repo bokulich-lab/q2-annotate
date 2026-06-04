@@ -11,19 +11,19 @@ import unittest
 
 import pandas as pd
 import pandas.testing
-from pandas._testing import assert_frame_equal
 import skbio
-from q2_annotate.kraken2 import kraken2_to_features
-from q2_annotate.kraken2.select import (
-    _kraken_to_ncbi_tree,
-    _find_lcas,
-    kraken2_to_mag_features,
+from pandas._testing import assert_frame_equal
+from q2_types.kraken2 import (
+    Kraken2OutputDirectoryFormat,
+    Kraken2ReportDirectoryFormat,
 )
 from qiime2.plugin.testing import TestPluginBase
 
-from q2_types.kraken2 import (
-    Kraken2ReportDirectoryFormat,
-    Kraken2OutputDirectoryFormat,
+from q2_annotate.kraken2 import kraken2_to_features
+from q2_annotate.kraken2.select import (
+    _find_lcas,
+    _kraken_to_ncbi_tree,
+    kraken2_to_mag_features,
 )
 
 
@@ -159,8 +159,7 @@ class TestKrakenSelect(TestPluginBase):
         hits = Kraken2OutputDirectoryFormat(self.get_data_path("outputs-mags"), "r")
         with self.assertRaisesRegex(
             ValueError,
-            "fraction for MAG '8894435a-c836-4c18-b475-8b38a9ab6c6b' "
-            "is not .* 99.01%",
+            "fraction for MAG '8894435a-c836-4c18-b475-8b38a9ab6c6b' is not .* 99.01%",
         ):
             kraken2_to_mag_features(reports, hits, 0.0)
 
@@ -245,7 +244,7 @@ class TestKrakenSelect(TestPluginBase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "fraction for MAG '8894435a-c836-4c18-b475-8b38a9ab6c6b' " "is not 100.0",
+            "fraction for MAG '8894435a-c836-4c18-b475-8b38a9ab6c6b' is not 100.0",
         ):
             kraken2_to_mag_features(reports, hits, 0.1)
 
@@ -380,7 +379,8 @@ class TestKrakenSelect(TestPluginBase):
     #     pandas.testing.assert_frame_equal(obs, exp)
 
 
-class TestKrakenSelectEdgeCases(unittest.TestCase):
+class TestKrakenSelectEdgeCases(TestPluginBase):
+    package = "q2_annotate.kraken2.tests"
 
     def make_dirfmt(self, string, coverage=False):
         """
@@ -468,7 +468,6 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
         )
 
         table, taxonomy = kraken2_to_features(dirfmt)
-
         pandas.testing.assert_frame_equal(exp_table, table)
         pandas.testing.assert_frame_equal(exp_tax, taxonomy)
 
@@ -622,3 +621,13 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
 
         pandas.testing.assert_frame_equal(exp_table, table)
         pandas.testing.assert_frame_equal(exp_tax, taxonomy)
+
+    def test_kraken2_to_features_root_infraclades(self):
+        '''
+        Tests that root infra-clades are not treated as actual tips leading
+        to mismatch between feature table and taxonomy.
+        '''
+        reports = Kraken2ReportDirectoryFormat(
+            self.get_data_path("root-infraclade-report"), "r"
+        )
+        kraken2_to_features(reports)
