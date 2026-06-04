@@ -6,6 +6,8 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import filecmp
+import shutil
+from pathlib import Path
 
 import pandas as pd
 import pandas.testing as pdt
@@ -13,7 +15,15 @@ import qiime2
 from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.eggnog import _eggnog_annotate, extract_annotations
-from q2_annotate.eggnog.annotation import _extract_generic, _filter, extraction_methods
+from q2_annotate.eggnog.annotation import (
+    _extract_generic,
+    _filter,
+    extraction_methods,
+    transfer_eggnog_annotations,
+    _annotate_mags_from_contigs,
+)
+from q2_types.feature_data_mag import MAGSequencesDirFmt
+from q2_types.feature_map import MAGtoContigsDirFmt
 from q2_types.genome_data import (
     OrthologAnnotationDirFmt,
     SeedOrthologDirFmt,
@@ -235,3 +245,141 @@ class TestAnnotationExtraction(TestPluginBase):
     def test_filter_empty(self):
         with self.assertRaisesRegex(ValueError, " resulted in an empty table"):
             _filter(self.df, 0.1, 500.0)
+
+
+class TestTransferAnnotations(TestPluginBase):
+    package = "q2_annotate.eggnog.tests"
+
+    def setUp(self):
+        super().setUp()
+        self.annotations = OrthologAnnotationDirFmt(
+            self.get_data_path("annotations/"), mode="r"
+        )
+        self.feature_data_mags = MAGSequencesDirFmt(
+            self.get_data_path("mag-sequences/"), mode="r"
+        )
+
+    def _build_expected(self, exp_ids):
+        """Build an OrthologAnnotationDirFmt containing only exp_ids files."""
+        expected = OrthologAnnotationDirFmt()
+        for uuid in exp_ids:
+            fname = f"{uuid}.emapper.annotations"
+            shutil.copy2(
+                str(self.annotations.path / fname),
+                str(expected.path / fname),
+            )
+        return expected
+
+    def _assert_annotation_fmt_equal(self, result, expected):
+        """Assert two OrthologAnnotationDirFmt have same IDs and file contents."""
+        self.assertEqual(
+            set(result.annotation_dict().keys()),
+            set(expected.annotation_dict().keys()),
+        )
+        for uuid, exp_path in expected.annotation_dict().items():
+            self.assertTrue(
+                filecmp.cmp(exp_path, result.annotation_dict()[uuid], shallow=False)
+            )
+
+    def test_transfer_to_feature_data(self):
+        with self.assertWarns(UserWarning):
+            result = transfer_eggnog_annotations(
+                self.annotations, self.feature_data_mags
+            )
+        expected = self._build_expected(
+            {
+                "1e9ffc02-0847-4f2c-b1e2-3965a4a78b15",
+                "62e07985-2556-435c-9e02-e7f94b8df07d",
+            }
+        )
+        self._assert_annotation_fmt_equal(result, expected)
+
+    def test_transfer_raises_on_no_match(self):
+        import os
+        import tempfile
+
+        # Create a MAGSequencesDirFmt with only non-matching UUIDs
+        with tempfile.TemporaryDirectory() as tmp:
+            uuid = "00000000-0000-4000-8000-000000000000"
+            open(os.path.join(tmp, f"{uuid}.fasta"), "w").close()
+            empty_mags = MAGSequencesDirFmt(tmp, mode="r")
+            with self.assertRaisesRegex(ValueError, "No annotation files matched"):
+                transfer_eggnog_annotations(self.annotations, empty_mags)
+
+
+class TestAnnotateMagsFromContigs(TestPluginBase):
+    package = "q2_annotate.eggnog.tests"
+
+    MAG1 = "11111111-1111-4111-8111-111111111111"
+    MAG2 = "22222222-2222-4222-8222-222222222222"
+
+    def setUp(self):
+        super().setUp()
+        self.contig_annotations = OrthologAnnotationDirFmt(
+            self.get_data_path("contig-annotations/"), mode="r"
+        )
+        self.contig_map = MAGtoContigsDirFmt(
+            self.get_data_path("mag-to-contigs/"), mode="r"
+        )
+        self.contig_map_partial = MAGtoContigsDirFmt(
+            self.get_data_path("mag-to-contigs-partial/"), mode="r"
+        )
+        self.contig_map_nomatch = MAGtoContigsDirFmt(
+            self.get_data_path("mag-to-contigs-nomatch/"), mode="r"
+        )
+
+    @staticmethod
+    def _query_ids(result, mag_uuid):
+        """Return the list of #query values written for a given MAG."""
+        fp = result.annotation_dict()[mag_uuid]
+        df = pd.read_csv(fp, sep="\t", skiprows=4)
+        return df[df.columns[0]].tolist()
+
+    @staticmethod
+    def _read_lines(result, mag_uuid):
+        # OrthologAnnotationDirFmt only exposes annotation_dict() (path
+        # lookup); the registered DataFrame transformers strip the ## header
+        # and footer, so to inspect those comments we read the file directly.
+        return Path(result.annotation_dict()[mag_uuid]).read_text().splitlines()
+
+    def test_aggregate_groups_contigs_into_mags(self):
+        result = _annotate_mags_from_contigs(self.contig_annotations, self.contig_map)
+        # one output file per MAG
+        self.assertEqual(set(result.annotation_dict().keys()), {self.MAG1, self.MAG2})
+        # rows are grouped by the MAG their contig belongs to
+        self.assertEqual(
+            sorted(self._query_ids(result, self.MAG1)),
+            ["k141_100_0", "k141_100_1", "k141_200_0"],
+        )
+        self.assertEqual(self._query_ids(result, self.MAG2), ["k141_300_0"])
+
+    def test_aggregate_preserves_header_and_drops_footer(self):
+        result = _annotate_mags_from_contigs(self.contig_annotations, self.contig_map)
+        lines = self._read_lines(result, self.MAG1)
+        # the eggNOG column header line is preserved
+        self.assertIn("#query\tseed_ortholog\tevalue", lines[4])
+        # no eggNOG footer ("## N queries scanned") is written
+        self.assertFalse(
+            any(line.startswith("## ") and "queries scanned" in line for line in lines)
+        )
+        # last line is a data row, not a comment
+        self.assertFalse(lines[-1].startswith("##"))
+
+    def test_aggregate_via_dispatch(self):
+        # transfer_eggnog_annotations should route MAGtoContigsDirFmt here
+        result = transfer_eggnog_annotations(self.contig_annotations, self.contig_map)
+        self.assertEqual(set(result.annotation_dict().keys()), {self.MAG1, self.MAG2})
+
+    def test_aggregate_warns_on_unmatched_rows(self):
+        with self.assertWarns(UserWarning):
+            result = _annotate_mags_from_contigs(
+                self.contig_annotations, self.contig_map_partial
+            )
+        # only the mapped MAG is produced; the unmatched contig is dropped
+        self.assertEqual(set(result.annotation_dict().keys()), {self.MAG1})
+
+    def test_aggregate_raises_when_nothing_matches(self):
+        with self.assertRaisesRegex(ValueError, "No annotation rows could be"):
+            _annotate_mags_from_contigs(
+                self.contig_annotations, self.contig_map_nomatch
+            )

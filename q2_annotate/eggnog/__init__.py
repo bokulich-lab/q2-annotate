@@ -16,7 +16,7 @@ from .annotation import (
     map_eggnog,
     _eggnog_annotate,
     extract_annotations,
-    transfer_annotations,
+    transfer_eggnog_annotations,
 )
 from .dbs import (
     fetch_eggnog_db,
@@ -44,5 +44,6 @@ __all__ = [
     "search_orthologs_hmmer",
     "_eggnog_hmmer_search",
     "extract_annotations",
-    "transfer_annotations",
+    "transfer_eggnog_annotations",
+    "annotate_mags_from_contigs",
 ]

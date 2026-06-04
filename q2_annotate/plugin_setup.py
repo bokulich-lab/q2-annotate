@@ -1814,6 +1814,35 @@ plugin.methods.register_function(
     citations=[],
 )
 
+plugin.methods.register_function(
+    function=q2_annotate.eggnog.transfer_eggnog_annotations,
+    inputs={
+        "ortholog_annotations": GenomeData[NOG],
+        "destination": FeatureData[MAG] | FeatureMap[MAGtoContigs],
+    },
+    parameters={},
+    outputs=[("transferred_annotations", GenomeData[NOG])],
+    input_descriptions={
+        "ortholog_annotations": "Ortholog annotations to transfer or aggregate.",
+        "destination": (
+            "FeatureData[MAG] to subset annotations, or "
+            "FeatureMap[MAGtoContigs] to aggregate contig-level annotations."
+        ),
+    },
+    parameter_descriptions={},
+    output_descriptions={
+        "transferred_annotations": "Transferred or aggregated annotations.",
+    },
+    name="Transfer or aggregate eggNOG annotations.",
+    description=(
+        "Transfers eggNOG ortholog annotations based on the destination "
+        "type. A FeatureData[MAG] copies annotations for matching MAGs "
+        "(e.g., after dereplication); a FeatureMap[MAGtoContigs] "
+        "aggregates contig-level annotations into per-MAG files."
+    ),
+    citations=[],
+)
+
 multiply_input_descriptions = {
     "table1": "First feature table.",
     "table2": "Second feature table with matching dimension.",
