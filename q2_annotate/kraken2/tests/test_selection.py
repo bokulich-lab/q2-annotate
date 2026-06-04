@@ -600,3 +600,25 @@ class TestKrakenSelectEdgeCases(unittest.TestCase):
 
         pandas.testing.assert_frame_equal(exp_table, table)
         pandas.testing.assert_frame_equal(exp_tax, taxonomy)
+
+    def test_kraken_to_ncbi_tree_rankless_domain_inference(self):
+        dirfmt = self.make_dirfmt(
+            """
+        R;root
+        R1;  cellular organisms
+        R2;    Bacteria
+        K;      Bacillati
+        P;        Bacillota
+        C;          Bacilli
+        """
+        )
+        exp_tax, exp_table = self.make_exp(
+            [
+                (6, "d__Bacteria;k__Bacillati;p__Bacillota;c__Bacilli"),
+            ]
+        )
+
+        table, taxonomy = kraken2_to_features(dirfmt)
+
+        pandas.testing.assert_frame_equal(exp_table, table)
+        pandas.testing.assert_frame_equal(exp_tax, taxonomy)
