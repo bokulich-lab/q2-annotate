@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 import shutil
 import tempfile
-import unittest
 
 import pandas as pd
 import pandas.testing
