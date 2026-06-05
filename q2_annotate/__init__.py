@@ -19,13 +19,7 @@ from .kraken2 import (
     helpers as kraken_helpers,
 )
 from .metabat2 import metabat2
-from ._utils import (
-    get_feature_lengths,
-    multiply_tables,
-    _multiply_tables,
-    _multiply_tables_pa,
-    _multiply_tables_relative,
-)
+from ._utils import get_feature_lengths
 
 try:
     from ._version import __version__
@@ -47,10 +41,6 @@ __all__ = [
     "filter_derep_mags",
     "filter_mags",
     "get_feature_lengths",
-    "multiply_tables",
-    "_multiply_tables",
-    "_multiply_tables_pa",
-    "_multiply_tables_relative",
     "abundance",
     "filter_reads_pangenome",
 ]
