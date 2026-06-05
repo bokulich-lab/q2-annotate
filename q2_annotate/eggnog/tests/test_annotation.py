@@ -337,9 +337,6 @@ class TestAnnotateMagsFromContigs(TestPluginBase):
 
     @staticmethod
     def _read_lines(result, mag_uuid):
-        # OrthologAnnotationDirFmt only exposes annotation_dict() (path
-        # lookup); the registered DataFrame transformers strip the ## header
-        # and footer, so to inspect those comments we read the file directly.
         return Path(result.annotation_dict()[mag_uuid]).read_text().splitlines()
 
     def test_aggregate_groups_contigs_into_mags(self):
