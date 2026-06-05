@@ -150,7 +150,10 @@ extraction_methods = {
 def _filter(data: pd.DataFrame, max_evalue: float, min_score: float) -> pd.DataFrame:
     data = data[(data["evalue"] <= max_evalue) & (data["score"] >= min_score)]
     if len(data) == 0:
-        raise ValueError("E-value/score filtering resulted in an empty table.")
+        raise ValueError(
+            "E-value/score filtering resulted in an empty table - "
+            "please adjust your thresholds and try again."
+        )
     return data
 
 
@@ -196,11 +199,10 @@ def _copy_annotation_files(
 ):
     """Copy annotation files from source to result for the given MAG IDs."""
     annotation_dict = source_annotations.annotation_dict()
-    matched = 0
-    for mag_id, src_path in annotation_dict.items():
-        if mag_id in mag_ids:
-            shutil.copy2(src_path, str(result.path / Path(src_path).name))
-            matched += 1
+
+    matched_ids = mag_ids & set(annotation_dict.keys())
+    if not matched_ids:
+        raise ValueError("No annotation files matched the destination MAG IDs.")
 
     missing = mag_ids - set(annotation_dict.keys())
     if missing:
@@ -210,8 +212,10 @@ def _copy_annotation_files(
             f"{', '.join(sorted(missing))}",
             UserWarning,
         )
-    if matched == 0:
-        raise ValueError("No annotation files matched the destination MAG IDs.")
+
+    for mag_id in matched_ids:
+        src_path = annotation_dict[mag_id]
+        shutil.copy2(src_path, str(result.path / Path(src_path).name))
 
 
 def _annotate_mags_from_contigs(
@@ -229,8 +233,8 @@ def _annotate_mags_from_contigs(
         for contig_id in contig_ids
     }
 
-    # Read all annotation files into one DataFrame. skiprows=4 drops the
-    # leading comment lines so that the "#query" line becomes the header.
+    # Read all annotation files into a DataFrame
+
     frames = []
     for _id, fp in ortholog_annotations.annotation_dict().items():
         df = pd.read_csv(fp, sep="\t", skiprows=4)
@@ -252,17 +256,20 @@ def _annotate_mags_from_contigs(
         .map(contig_to_mag)
     )
 
-    unmatched = all_annotations["mag_uuid"].isna().sum()
-    if unmatched > 0:
-        warnings.warn(
-            f"{unmatched} annotation row(s) could not be matched to any "
-            "MAG in the contig map and were skipped.",
-            UserWarning,
-        )
-
     matched = all_annotations.dropna(subset=["mag_uuid"])
     if matched.empty:
         raise ValueError("No annotation rows could be matched to any MAG.")
+
+    unmatched = all_annotations["mag_uuid"].isna().sum()
+    if unmatched > 0:
+        total = len(all_annotations)
+        pct = unmatched / total * 100
+        warnings.warn(
+            f"{unmatched} of {total} annotation row(s) ({pct:.1f}%) were on "
+            "contigs not present in the contig map (e.g. unbinned contigs) "
+            "and were skipped.",
+            UserWarning,
+        )
 
     result = OrthologAnnotationDirFmt()
     for mag_uuid, group in matched.groupby("mag_uuid"):
@@ -275,9 +282,16 @@ def _annotate_mags_from_contigs(
             fh.write(f"## MAG: {mag_uuid} | contigs: {n_contigs} | rows: {n_rows}\n")
             fh.write("##\n")
             fh.write(col_header)
-        group.drop(columns=["mag_uuid"]).to_csv(
-            out_fp, sep="\t", index=False, header=False, mode="a"
-        )
+            group.drop(columns=["mag_uuid"]).to_csv(
+                fh, sep="\t", index=False, header=False
+            )
+
+    # Verbose-only summary
+    print(
+        f"Aggregated {len(matched)} of {len(all_annotations)} annotation "
+        f"row(s) into {matched['mag_uuid'].nunique()} MAG(s); "
+        f"{unmatched} row(s) skipped."
+    )
 
     return result
 

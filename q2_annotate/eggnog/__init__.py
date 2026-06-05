@@ -45,5 +45,4 @@ __all__ = [
     "_eggnog_hmmer_search",
     "extract_annotations",
     "transfer_eggnog_annotations",
-    "annotate_mags_from_contigs",
 ]
