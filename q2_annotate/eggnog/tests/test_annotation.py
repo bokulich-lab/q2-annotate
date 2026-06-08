@@ -75,6 +75,8 @@ class TestAnnotate(TestPluginBase):
         compare_dir = filecmp.dircmp(parallel.path, single.path)
         self.assertEqual(len(compare_dir.common), 1)
 
+        # TODO: add exact file comparison
+
 
 class TestAnnotationExtraction(TestPluginBase):
     package = "q2_annotate.eggnog.tests"
@@ -252,14 +254,13 @@ class TestTransferAnnotations(TestPluginBase):
             self.get_data_path("annotations/"), mode="r"
         )
         self.feature_data_mags = MAGSequencesDirFmt(
-            self.get_data_path("mag-sequences/"), mode="r"
+            self.get_data_path("mag-sequences-for-transfer/"), mode="r"
         )
 
     def test_transfer_to_feature_data(self):
-        with self.assertWarns(UserWarning):
-            result = transfer_eggnog_annotations(
-                self.annotations, self.feature_data_mags
-            )
+        result = transfer_eggnog_annotations(
+            self.annotations, self.feature_data_mags
+        )
         src = self.annotations.annotation_dict()
         self.assertEqual(
             set(result.annotation_dict().keys()),
