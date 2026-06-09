@@ -129,8 +129,10 @@ def _assert_distinct_input_output_paths(input_fp: Path, output_fp: Path):
             "Refusing in-place overwrite to prevent data loss."
         )
 
-    # `duplicate` may create hardlinks. Writing to a hardlinked destination
-    # would also mutate/truncate the input file.
+    # Hard links look like distinct paths to resolve(), but share an inode.
+    # Opening output for write truncates that inode, which would destroy the
+    # input we are still reading. Unlikely in _filter_reads_kraken2 (fresh
+    # output artifact), but required for these stream-and-write helpers.
     if output_fp.exists() and os.path.samefile(str(input_fp), str(output_fp)):
         raise ValueError(
             "Input and output FASTQ paths refer to the same inode (hardlink). "
