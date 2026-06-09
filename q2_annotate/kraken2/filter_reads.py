@@ -80,35 +80,21 @@ def _is_gzip_file(filepath: Path) -> bool:
         return fh.read(2) == b"\x1f\x8b"
 
 
-def _open_fastq_for_read(filepath: Path):
+def _open_fastq(filepath: Path, mode: str, compress: bool = False):
     """
-    Open a FASTQ file for reading, handling GZIP compression if necessary.
-
-    Args:
-        filepath (Path): The path to the FASTQ file.
-
-    Returns:
-        file object: A file object opened for reading in text mode.
-    """
-    if _is_gzip_file(filepath):
-        return gzip.open(filepath, mode="rt")
-    return open(filepath, mode="r")
-
-
-def _open_fastq_for_write(filepath: Path, gzip_output: bool):
-    """
-    Open a FASTQ file for writing, optionally using GZIP compression.
+    Open a FASTQ file in the desired mode, optionally using GZIP compression.
 
     Args:
         filepath (Path): The path to the output FASTQ file.
-        gzip_output (bool): If True, the output will be GZIP compressed.
+        mode (str): The mode to open the file in (e.g., "w", "a").
+        compress (bool): If True, the output will be GZIP compressed.
 
     Returns:
         file object: A file object opened for writing in text mode.
     """
-    if gzip_output:
-        return gzip.open(filepath, mode="wt")
-    return open(filepath, mode="w")
+    if compress:
+        return gzip.open(filepath, mode=f"{mode}t")
+    return open(filepath, mode=mode)
 
 
 def _assert_distinct_input_output_paths(input_fp: Path, output_fp: Path):
@@ -271,8 +257,8 @@ def _filter_single_end_fastq(
 
     gzip_input = _is_gzip_file(input_fp)
     with (
-        _open_fastq_for_read(input_fp) as in_fh,
-        _open_fastq_for_write(output_fp, gzip_output=gzip_input) as out_fh,
+        _open_fastq(input_fp, mode="r", compress=gzip_input) as in_fh,
+        _open_fastq(output_fp, mode="w", compress=gzip_input) as out_fh,
     ):
         for record in _iter_fastq_records(in_fh):
             read_id = _normalize_read_id(record[0])
@@ -315,10 +301,10 @@ def _filter_paired_end_fastq(
     gzip_reverse = _is_gzip_file(reverse_input_fp)
 
     with (
-        _open_fastq_for_read(forward_input_fp) as fwd_in,
-        _open_fastq_for_read(reverse_input_fp) as rev_in,
-        _open_fastq_for_write(forward_output_fp, gzip_output=gzip_forward) as fwd_out,
-        _open_fastq_for_write(reverse_output_fp, gzip_output=gzip_reverse) as rev_out,
+        _open_fastq(forward_input_fp, mode="r", compress=gzip_forward) as fwd_in,
+        _open_fastq(reverse_input_fp, mode="r", compress=gzip_reverse) as rev_in,
+        _open_fastq(forward_output_fp, mode="w", compress=gzip_forward) as fwd_out,
+        _open_fastq(reverse_output_fp, mode="w", compress=gzip_reverse) as rev_out,
     ):
         for fwd_record, rev_record in zip_longest(
             _iter_fastq_records(fwd_in), _iter_fastq_records(rev_in)
