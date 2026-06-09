@@ -102,7 +102,7 @@ def bin_contigs_semibin2(
     min_len: int | None = None,
     ml_threshold: int | None = None,
     threads: int | None = None,
-    seed: int | None = None,
+    random_seed: int | None = None,
     debug: bool | None = None,
     verbose: bool | None = None,
 ) -> (MultiFASTADirectoryFormat, dict):

@@ -251,7 +251,7 @@ plugin.methods.register_function(
         "min_len": Int % Range(1, None),
         "ml_threshold": Int % Range(1, None),
         "threads": Int % Range(0, None),
-        "seed": Int % Range(0, None),
+        "random_seed": Int % Range(0, None),
         "debug": Bool,
         "verbose": Bool,
     },
@@ -298,7 +298,7 @@ plugin.methods.register_function(
             "4,000 bp)."
         ),
         "threads": "Number of threads to use (0: use all cores).",
-        "seed": "For exact reproducibility. (0: use random seed)",
+        "random_seed": "For exact reproducibility. (0: use random seed)",
         "debug": "Debug output.",
         "verbose": "Verbose output.",
     },
