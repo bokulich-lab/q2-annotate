@@ -22,7 +22,7 @@ requirements:
   - kaiju
   - kraken2
   - metabat2
-  - semibin
+  - semibin {{ semibin }}
   - pandas
   - qiime2 >={{ qiime2 }}
   - q2-types >={{ q2_types }}
