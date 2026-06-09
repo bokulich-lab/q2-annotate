@@ -104,12 +104,11 @@ def bin_contigs_semibin2(
     threads: int | None = None,
     random_seed: int | None = None,
     debug: bool | None = None,
-    verbose: bool | None = None,
 ) -> (MultiFASTADirectoryFormat, dict):
     kwargs = {
         k: v
         for k, v in locals().items()
-        if k not in ["contigs", "alignment_maps", "mode", "training_type", "verbose"]
+        if k not in ["contigs", "alignment_maps", "mode", "training_type"]
     }
 
     # mode = "single_easy_bin" if mode == "single" else "multi_easy_bin"

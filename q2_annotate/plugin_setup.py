@@ -253,7 +253,6 @@ plugin.methods.register_function(
         "threads": Int % Range(0, None),
         "random_seed": Int % Range(0, None),
         "debug": Bool,
-        "verbose": Bool,
     },
     outputs=[
         ("mags", SampleData[MAGs]),
@@ -300,7 +299,6 @@ plugin.methods.register_function(
         "threads": "Number of threads to use (0: use all cores).",
         "random_seed": "For exact reproducibility. (0: use random seed)",
         "debug": "Debug output.",
-        "verbose": "Verbose output.",
     },
     output_descriptions={
         "mags": "The resulting MAGs.",

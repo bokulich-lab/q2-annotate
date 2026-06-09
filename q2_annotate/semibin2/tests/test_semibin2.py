@@ -75,7 +75,6 @@ class TestSemibin2(TestPluginBase):
         fake_args = [
             "--compression",
             "none",
-            "--verbose",
             "--epochs",
             "16",
             "--min-len",
@@ -127,7 +126,6 @@ class TestSemibin2(TestPluginBase):
         args = [
             "--compression",
             "none",
-            "--verbose",
             "--epochs",
             "16",
             "--min-len",
@@ -204,7 +202,6 @@ class TestSemibin2(TestPluginBase):
         args = [
             "--compression",
             "none",
-            "--verbose",
             "--epochs",
             "16",
             "--min-len",
@@ -230,7 +227,6 @@ class TestSemibin2(TestPluginBase):
             contigs=contigs,
             alignment_maps=bams,
             epochs=10,
-            verbose=True,
         )
 
         p1.assert_called_once()
