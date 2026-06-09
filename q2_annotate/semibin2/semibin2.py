@@ -101,7 +101,7 @@ def bin_contigs_semibin2(
     ratio: float | None = None,
     min_len: int | None = None,
     ml_threshold: int | None = None,
-    num_threads: int | None = None,
+    threads: int | None = None,
     seed: int | None = None,
     debug: bool | None = None,
     verbose: bool | None = None,

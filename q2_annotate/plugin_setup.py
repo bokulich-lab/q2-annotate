@@ -250,7 +250,7 @@ plugin.methods.register_function(
         "ratio": Float % Range(0.0, None),
         "min_len": Int % Range(1, None),
         "ml_threshold": Int % Range(1, None),
-        "num_threads": Int % Range(0, None),
+        "threads": Int % Range(0, None),
         "seed": Int % Range(0, None),
         "debug": Bool,
         "verbose": Bool,
@@ -297,7 +297,7 @@ plugin.methods.register_function(
             "threshold is calculated from the contig, and the default minimum value is "
             "4,000 bp)."
         ),
-        "num_threads": "Number of threads to use (0: use all cores).",
+        "threads": "Number of threads to use (0: use all cores).",
         "seed": "For exact reproducibility. (0: use random seed)",
         "debug": "Debug output.",
         "verbose": "Verbose output.",
