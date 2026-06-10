@@ -99,9 +99,9 @@ def bin_contigs_semibin2(
     max_node: int = 1,
     max_edges: int = 200,
     ratio: float = 0.05,
+    threads: int | None = 1,
     min_len: int | None = None,
     ml_threshold: int | None = None,
-    threads: int | None = None,
     random_seed: int | None = None,
     debug: bool = False,
 ) -> (MultiFASTADirectoryFormat, dict):
