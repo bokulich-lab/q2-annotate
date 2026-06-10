@@ -1199,7 +1199,7 @@ class TestGetFilterActions(TestPluginBase):
         )
         mock_ctx = MagicMock(get_action=mock_action)
         classify_kraken2(ctx=mock_ctx, seqs=[self.mags], db=self.db)
-        mock_ctx.get_action.assert_any_call("annotate", "filter_mags")
+        mock_ctx.get_action.assert_any_call("mag", "filter_mags")
 
     @patch(
         "q2_annotate.kraken2.classification._classify_single_artifact",
@@ -1214,7 +1214,7 @@ class TestGetFilterActions(TestPluginBase):
         )
         mock_ctx = MagicMock(get_action=mock_action)
         classify_kraken2(ctx=mock_ctx, seqs=[self.derep_mags], db=self.db)
-        mock_ctx.get_action.assert_any_call("annotate", "filter_derep_mags")
+        mock_ctx.get_action.assert_any_call("mag", "filter_derep_mags")
 
     @patch(
         "q2_annotate.kraken2.classification._classify_single_artifact",
