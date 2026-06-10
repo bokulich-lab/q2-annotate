@@ -19,6 +19,7 @@ from .kraken2 import (
     helpers as kraken_helpers,
 )
 from .metabat2 import metabat2
+from .semibin2 import semibin2
 from ._utils import get_feature_lengths
 
 try:
@@ -43,4 +44,5 @@ __all__ = [
     "get_feature_lengths",
     "abundance",
     "filter_reads_pangenome",
+    "semibin2",
 ]

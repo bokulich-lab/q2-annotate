@@ -213,6 +213,110 @@ plugin.methods.register_function(
     ],
 )
 
+plugin.methods.register_function(
+    function=q2_annotate.semibin2.bin_contigs_semibin2,
+    inputs={
+        "contigs": SampleData[Contigs],
+        "alignment_maps": SampleData[AlignmentMap % Properties("sorted")],
+    },
+    parameters={
+        # "mode": Str % Choices("single", "multi"),
+        "training_type": Str % Choices("semi", "self"),
+        "orf_finder": Str % Choices("fast-naive", "prodigal", "fraggenescan"),
+        "environment": Str
+        % Choices(
+            "human_gut",
+            "dog_gut",
+            "ocean",
+            "soil",
+            "cat_gut",
+            "human_oral",
+            "mouse_gut",
+            "pig_gut",
+            "built_environment",
+            "wastewater",
+            "chicken_caecum",
+            "global",
+        ),
+        "engine": Str % Choices("auto", "gpu", "cpu"),
+        "sequencing_type": Str % Choices("short_read", "long_read"),
+        "minfasta_kbs": Int % Range(1, None),
+        "no_recluster": Bool,
+        "epochs": Int % Range(1, None),
+        "batch_size": Int % Range(1, None),
+        "max_node": Int % Range(1, None),
+        "max_edges": Int % Range(1, None),
+        "ratio": Float % Range(0.0, None),
+        "min_len": Int % Range(1, None),
+        "ml_threshold": Int % Range(1, None),
+        "threads": Int % Range(0, None),
+        "random_seed": Int % Range(0, None),
+        "debug": Bool,
+    },
+    outputs=[
+        ("mags", SampleData[MAGs]),
+        ("contig_map", FeatureMap[MAGtoContigs]),
+    ],
+    input_descriptions={
+        "contigs": "Contigs to be binned.",
+        "alignment_maps": "Reads-to-contig alignment maps.",
+    },
+    parameter_descriptions={
+        # "mode": "Binning mode controlling how coverage is used for embedding.",
+        "training_type": "Training algorithm used to train the model.",
+        "orf_finder": "Gene predictor used to estimate the number of bins.",
+        "environment": "Which pre-trained model to use.",
+        "engine": "Device used to train the model.",
+        "sequencing_type": (
+            "Specify whether your data consists of short- or long-reads. For hybrid "
+            "data (long- and short-reads), it is recommended to use the long-reads "
+            "pipeline."
+        ),
+        "minfasta_kbs": "Minimum bin size in kilo-basepairs.",
+        "no_recluster": (
+            "Do not recluster bins. This saves a small amount of time, but "
+            "pre-reclustering bins are always output."
+        ),
+        "epochs": "Number of epochs used in the training process.",
+        "batch_size": "Number of epochs used in the training process.",
+        "max_node": "Percentage of contigs that considered to be binned.",
+        "max_edges": "The maximum number of edges that can be connected to one contig.",
+        "ratio": (
+            "If the ratio of the number of base pairs of contigs between 1000-2500 bp "
+            "smaller than this value, the minimal length will be set as 1000 bp, "
+            "otherwise 2500 bp. Setting --p-min-length overrules this parameter."
+        ),
+        "min_len": (
+            "Minimal contig length (bp) to include in binning. Contigs shorter than "
+            "this length are excluded. This parameter overrules --p-ratio."
+        ),
+        "ml_threshold": (
+            "Length threshold for generating must-link constraints. (By default, the "
+            "threshold is calculated from the contig, and the default minimum value is "
+            "4,000 bp)."
+        ),
+        "threads": "Number of threads to use (0: use all cores).",
+        "random_seed": "For exact reproducibility. (0: use random seed)",
+        "debug": "Debug output.",
+    },
+    output_descriptions={
+        "mags": "The resulting MAGs.",
+        "contig_map": (
+            "Mapping of MAG identifiers to the contig identifiers "
+            "contained in each MAG."
+        ),
+    },
+    name="Bin contigs into MAGs using SemiBin2.",
+    description=(
+        "This method uses SemiBin2 to bin provided contigs into MAGs. Note that "
+        "SemiBin2 does not output what it considers ‘unbinned’ contigs"
+    ),
+    citations=[
+        citations["pan_deep_2022"],
+        citations["pan_semibin2_2023"],
+    ],
+)
+
 T_kraken_in_list, T_kraken_out_rep, T_kraken_out_hits = TypeMap(
     {
         List[
@@ -2028,6 +2132,90 @@ plugin.pipelines.register_function(
     description=(
         "Filter kraken2 reports and outputs by sample metadata, and/or filter "
         "classified taxa by relative abundance."
+    ),
+)
+
+filter_reads_kraken2_params = {
+    "taxonomy": Str,
+    "include_descendants": Bool,
+    "contains": Bool,
+    "exclude": Bool,
+}
+filter_reads_kraken2_param_desc = {
+    "taxonomy": (
+        "Taxonomy query used for read filtering. Can be a Kraken2 taxon name "
+        '(for example, "Bacteria") or a taxon ID (for example, "2").'
+    ),
+    "include_descendants": (
+        "If True, include all descendant taxa of each matching taxon."
+    ),
+    "contains": (
+        "If True, match taxon names using case-insensitive substring matching. "
+        "If False, use exact case-insensitive matching."
+    ),
+    "exclude": (
+        "If False, retain reads that match the taxonomy query. "
+        "If True, discard matching reads and retain the rest."
+    ),
+}
+filter_reads_kraken2_input_desc = {
+    "reads": (
+        "The original reads that were classified by Kraken2. "
+        "The sample IDs and read headers must match those used to "
+        "generate `reports` and `outputs`."
+    ),
+    "reports": (
+        "Kraken2 reports generated from `reads`. Used to identify matching "
+        "taxa and (optionally) all descendant taxa."
+    ),
+    "outputs": (
+        "Kraken2 per-read outputs generated from `reads`. Used to map matched "
+        "taxa to read IDs that will be filtered."
+    ),
+}
+
+plugin.methods.register_function(
+    function=q2_annotate.kraken2._filter_reads_kraken2,
+    inputs={
+        "reads": I_reads,
+        "reports": SampleData[Kraken2Reports % Properties("reads")],
+        "outputs": SampleData[Kraken2Outputs % Properties("reads")],
+    },
+    parameters=filter_reads_kraken2_params,
+    outputs=[("filtered_reads", O_reads)],
+    input_descriptions=filter_reads_kraken2_input_desc,
+    parameter_descriptions=filter_reads_kraken2_param_desc,
+    output_descriptions={
+        "filtered_reads": "Reads filtered according to Kraken2 taxonomy matches."
+    },
+    name="Filter Kraken2-classified reads by taxonomy.",
+    description=(
+        "Filter single-end or paired-end reads by matching Kraken2-assigned "
+        "taxonomy, with optional descendant expansion and inverse filtering."
+    ),
+)
+
+plugin.pipelines.register_function(
+    function=q2_annotate.kraken2.filter_reads_kraken2,
+    inputs={
+        "reads": I_reads,
+        "reports": SampleData[Kraken2Reports % Properties("reads")],
+        "outputs": SampleData[Kraken2Outputs % Properties("reads")],
+    },
+    parameters={**filter_reads_kraken2_params, **partition_params},
+    outputs=[("filtered_reads", O_reads)],
+    input_descriptions=filter_reads_kraken2_input_desc,
+    parameter_descriptions={
+        **filter_reads_kraken2_param_desc,
+        **partition_param_descriptions,
+    },
+    output_descriptions={
+        "filtered_reads": "Reads filtered according to Kraken2 taxonomy matches."
+    },
+    name="Filter Kraken2-classified reads by taxonomy.",
+    description=(
+        "Filter single-end or paired-end reads by matching Kraken2-assigned "
+        "taxonomy, with optional descendant expansion and inverse filtering."
     ),
 )
 
