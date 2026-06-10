@@ -43,6 +43,6 @@ __all__ = [
     "filter_mags",
     "get_feature_lengths",
     "abundance",
-    "filter_reads_pangenome",
+    "filter_reads_human_pangenome",
     "semibin2",
 ]
