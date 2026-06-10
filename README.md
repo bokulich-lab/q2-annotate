@@ -33,6 +33,7 @@ This QIIME 2 plugin contains actions used to annotate and classify (meta)genomes
 | fetch-kaiju-db            | Fetch Kaiju database.                                                                  | [Kaiju](https://bioinformatics-centre.github.io/kaiju/) |
 | fetch-ncbi-taxonomy       | Fetch NCBI reference taxonomy.                                                         | [EggNOG mapper](https://github.com/eggnogdb/eggnog-mapper) |
 | filter-derep-mags         | Filter dereplicated MAGs.                                                              | - |
+| filter-kraken2-reads      | Filter Kraken 2-classified reads by taxonomy (for example, retain only bacterial reads). | - |
 | filter-kraken2-results    | Filter Kraken 2 reports and outputs by metadata and/or abundance                       | - |
 | filter-mags               | Filter MAGs.                                                                           | - |
 | filter-reads-pangenome    | Remove contaminating human reads.                                                      | [Bowtie 2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml) |
