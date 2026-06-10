@@ -1,0 +1,4 @@
+100.00	3	0	R	1	root
+66.67	2	1	D	2	  Bacteria
+33.33	1	1	S	1767	    Mycobacterium intracellulare
+33.33	1	1	S	9606	  Homo sapiens

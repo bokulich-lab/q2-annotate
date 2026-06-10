@@ -118,7 +118,7 @@ def _combine_fasta_files(*fasta_in_fp, fasta_out_fp):
             os.remove(f_in)
 
 
-def construct_pangenome_index(ctx, threads=1):
+def construct_human_pangenome_index(ctx, threads=1):
     """Constructs the pangenome index.
 
     This action will fetch the human pangenome and GRCh38 reference genome,
@@ -153,7 +153,7 @@ def construct_pangenome_index(ctx, threads=1):
     return index
 
 
-def filter_reads_pangenome(
+def filter_reads_human_pangenome(
     ctx,
     reads,
     index=None,
@@ -164,8 +164,8 @@ def filter_reads_pangenome(
     ref_gap_ext_penalty=3,
 ):
     """
-    Filters reads against a pangenome index, optionally generating the index
-    if not provided.
+    Filters reads against a human pangenome index, optionally generating
+    the index if not provided.
 
     This function fetches and processes the human pangenome and GRCh38
     reference genome, combines them into a single FASTA file, and then
@@ -174,7 +174,7 @@ def filter_reads_pangenome(
     """
 
     filter_reads = ctx.get_action("quality_control", "filter_reads")
-    construct_index = ctx.get_action("annotate", "construct_pangenome_index")
+    construct_index = ctx.get_action("annotate", "construct_human_pangenome_index")
 
     if index is None:
         print("Reference index was not provided - it will be generated.")
