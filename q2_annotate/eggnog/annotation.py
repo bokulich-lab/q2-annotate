@@ -5,10 +5,16 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import shutil
 import subprocess
+import warnings
+from pathlib import Path
+from typing import Union
 
 import pandas as pd
 
+from q2_types.feature_data_mag import MAGSequencesDirFmt
+from q2_types.feature_map import MAGtoContigsDirFmt
 from q2_types.genome_data import (
     OrthologAnnotationDirFmt,
     Orthologs,
@@ -168,7 +174,9 @@ def extract_annotations(
         annot_df = pd.read_csv(
             fp, sep="\t", skiprows=4, index_col=0
         )  # skip the first 4 rows as they contain comments
-        annot_df = annot_df.iloc[:-3, :]  # remove the last 3 comment rows
+        # strip trailing comment rows (footer) only if present
+        if annot_df.index[-3:].astype(str).str.startswith("##").all():
+            annot_df = annot_df.iloc[:-3, :]
         annot_df = _filter(annot_df, max_evalue, min_score)
         annot_df = _extract_generic(annot_df, col, func)
         annot_df.name = _id
@@ -177,3 +185,126 @@ def extract_annotations(
     result = pd.concat(annotations, axis=1).fillna(0).T
     result.index.name = "id"
     return result
+
+
+def _get_mag_ids_from_feature_data(mags: MAGSequencesDirFmt) -> set:
+    """Extract MAG UUIDs from a FeatureData[MAG] artifact."""
+    return set(mags.feature_dict().keys())
+
+
+def _copy_annotation_files(
+    source_annotations: OrthologAnnotationDirFmt,
+    mag_ids: set,
+    result: OrthologAnnotationDirFmt,
+):
+    """Copy annotation files from source to result for the given MAG IDs."""
+    annotation_dict = source_annotations.annotation_dict()
+
+    matched_ids = mag_ids & set(annotation_dict.keys())
+    if not matched_ids:
+        raise ValueError("No annotation files matched the destination MAG IDs.")
+
+    missing = mag_ids - set(annotation_dict.keys())
+    if missing:
+        warnings.warn(
+            f"{len(missing)} MAG(s) in the destination had no matching "
+            f"annotation file in the source and will be skipped: "
+            f"{', '.join(sorted(missing))}",
+            UserWarning,
+        )
+
+    for mag_id in matched_ids:
+        src_path = annotation_dict[mag_id]
+        shutil.copy2(src_path, str(result.path / Path(src_path).name))
+
+
+def _annotate_mags_from_contigs(
+    ortholog_annotations: OrthologAnnotationDirFmt,
+    contig_map: MAGtoContigsDirFmt,
+) -> OrthologAnnotationDirFmt:
+    """Aggregate contig-level eggNOG annotations -> MAG-level annotations."""
+    # contig_map: {mag_uuid: [contig_id, ...]}
+    contig_map_dict = contig_map.file.view(dict)
+
+    # reverse map: contig_id -> mag_uuid
+    contig_to_mag = {
+        contig_id: mag_uuid
+        for mag_uuid, contig_ids in contig_map_dict.items()
+        for contig_id in contig_ids
+    }
+
+    # Read all annotation files into a DataFrame
+
+    frames = []
+    for _id, fp in ortholog_annotations.annotation_dict().items():
+        df = pd.read_csv(fp, sep="\t", skiprows=4)
+        # drop trailing comment only if present
+        first_col = df.columns[0]
+        df = df[~df[first_col].astype(str).str.startswith("##")]
+        frames.append(df)
+
+    all_annotations = pd.concat(frames, ignore_index=True)
+
+    # Rebuild the eggNOG column header line.
+    col_header = "\t".join(all_annotations.columns) + "\n"
+
+    # Strip ORF suffix (contig_id_1 -> contig_id)
+    query_col = all_annotations.columns[0]
+    all_annotations["mag_uuid"] = (
+        all_annotations[query_col]
+        .str.replace(r"_\d+$", "", regex=True)
+        .map(contig_to_mag)
+    )
+
+    matched = all_annotations.dropna(subset=["mag_uuid"])
+    if matched.empty:
+        raise ValueError("No annotation rows could be matched to any MAG.")
+
+    unmatched = all_annotations["mag_uuid"].isna().sum()
+    if unmatched > 0:
+        total = len(all_annotations)
+        pct = unmatched / total * 100
+        warnings.warn(
+            f"{unmatched} of {total} annotation row(s) ({pct:.1f}%) were on "
+            "contigs not present in the contig map (e.g. unbinned contigs) "
+            "and were skipped.",
+            UserWarning,
+        )
+
+    result = OrthologAnnotationDirFmt()
+    for mag_uuid, group in matched.groupby("mag_uuid"):
+        out_fp = result.path / f"{mag_uuid}.emapper.annotations"
+        n_contigs = len(contig_map_dict.get(mag_uuid, []))
+        n_rows = len(group)
+        with open(out_fp, "w") as fh:
+            fh.write("## Transferred using transfer_eggnog_annotations (q2-annotate)\n")
+            fh.write("## Source: contig-level annotations\n")
+            fh.write(f"## MAG: {mag_uuid} | contigs: {n_contigs} | rows: {n_rows}\n")
+            fh.write("##\n")
+            fh.write(col_header)
+            group.drop(columns=["mag_uuid"]).to_csv(
+                fh, sep="\t", index=False, header=False
+            )
+
+    # Verbose-only summary
+    print(
+        f"Aggregated {len(matched)} of {len(all_annotations)} annotation "
+        f"row(s) into {matched['mag_uuid'].nunique()} MAG(s); "
+        f"{unmatched} row(s) skipped."
+    )
+
+    return result
+
+
+def transfer_eggnog_annotations(
+    ortholog_annotations: OrthologAnnotationDirFmt,
+    destination: Union[MAGSequencesDirFmt, MAGtoContigsDirFmt],
+) -> OrthologAnnotationDirFmt:
+    """Transfer or aggregate eggNOG annotations based on the destination type."""
+    if isinstance(destination, MAGSequencesDirFmt):
+        result = OrthologAnnotationDirFmt()
+        mag_ids = _get_mag_ids_from_feature_data(destination)
+        _copy_annotation_files(ortholog_annotations, mag_ids, result)
+        return result
+    else:
+        return _annotate_mags_from_contigs(ortholog_annotations, destination)

@@ -1,0 +1,12 @@
+## Fri May 24 23:19:02 2024
+## emapper-2.1.12
+## emapper.py -m no_search --annotate_hits_table input --cpu 1
+##
+#query	seed_ortholog	evalue	score	eggNOG_OGs	max_annot_lvl	COG_category	Description	Preferred_name	GOs	EC	KEGG_ko	KEGG_Pathway	KEGG_Module	KEGG_Reaction	KEGG_rclass	BRITE	KEGG_TC	CAZy	BiGG_Reaction	PFAMs
+k141_100_0	ortholog1	0.0	100.0	COG0001@1|root	1|root	L	some description	geneA	-	1.1.1.1	ko:K00001	-	-	-	-	ko00000	-	-	-	PF00001
+k141_100_1	ortholog1	0.0	100.0	COG0001@1|root	1|root	F	some description	geneA	-	2.2.2.2	ko:K00002	-	-	-	-	ko00000	-	-	-	PF00001
+k141_200_0	ortholog1	0.0	100.0	COG0001@1|root	1|root	A	some description	geneA	-	3.3.3.3	ko:K00003	-	-	-	-	ko00000	-	-	-	PF00001
+k141_300_0	ortholog1	0.0	100.0	COG0001@1|root	1|root	L	some description	geneA	-	4.4.4.4	ko:K00004	-	-	-	-	ko00000	-	-	-	PF00001
+## 4 queries scanned
+## Total time (seconds): 1.0
+## Rate: 4.00 q/s

@@ -6,6 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import filecmp
+from pathlib import Path
 
 import pandas as pd
 import pandas.testing as pdt
@@ -13,7 +14,14 @@ import qiime2
 from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.eggnog import _eggnog_annotate, extract_annotations
-from q2_annotate.eggnog.annotation import _extract_generic, _filter, extraction_methods
+from q2_annotate.eggnog.annotation import (
+    _extract_generic,
+    _filter,
+    extraction_methods,
+    transfer_eggnog_annotations,
+)
+from q2_types.feature_data_mag import MAGSequencesDirFmt
+from q2_types.feature_map import MAGtoContigsDirFmt
 from q2_types.genome_data import (
     OrthologAnnotationDirFmt,
     SeedOrthologDirFmt,
@@ -235,3 +243,92 @@ class TestAnnotationExtraction(TestPluginBase):
     def test_filter_empty(self):
         with self.assertRaisesRegex(ValueError, " resulted in an empty table"):
             _filter(self.df, 0.1, 500.0)
+
+
+class TestTransferAnnotations(TestPluginBase):
+    package = "q2_annotate.eggnog.tests"
+
+    def setUp(self):
+        super().setUp()
+        self.annotations = OrthologAnnotationDirFmt(
+            self.get_data_path("annotations/"), mode="r"
+        )
+        self.feature_data_mags = MAGSequencesDirFmt(
+            self.get_data_path("mag-sequences-for-transfer/"), mode="r"
+        )
+
+    def test_transfer_to_feature_data(self):
+        result = transfer_eggnog_annotations(
+            self.annotations, self.feature_data_mags
+        )
+        src = self.annotations.annotation_dict()
+        self.assertEqual(
+            set(result.annotation_dict().keys()),
+            {
+                "1e9ffc02-0847-4f2c-b1e2-3965a4a78b15",
+                "62e07985-2556-435c-9e02-e7f94b8df07d",
+            },
+        )
+        for uuid, path in result.annotation_dict().items():
+            self.assertTrue(filecmp.cmp(src[uuid], path, shallow=False))
+
+    def test_transfer_raises_on_no_match(self):
+        uuid = "00000000-0000-4000-8000-000000000000"
+        Path(self.temp_dir.name, f"{uuid}.fasta").touch()
+        empty_mags = MAGSequencesDirFmt(self.temp_dir.name, mode="r")
+        with self.assertRaisesRegex(ValueError, "No annotation files matched"):
+            transfer_eggnog_annotations(self.annotations, empty_mags)
+
+
+class TestAnnotateMagsFromContigs(TestPluginBase):
+    package = "q2_annotate.eggnog.tests"
+
+    MAG1 = "11111111-1111-4111-8111-111111111111"
+    MAG2 = "22222222-2222-4222-8222-222222222222"
+
+    def setUp(self):
+        super().setUp()
+        self.contig_annotations = OrthologAnnotationDirFmt(
+            self.get_data_path("contig-annotations/"), mode="r"
+        )
+        self.contig_map = MAGtoContigsDirFmt(
+            self.get_data_path("mag-to-contigs/"), mode="r"
+        )
+        self.contig_map_partial = MAGtoContigsDirFmt(
+            self.get_data_path("mag-to-contigs-partial/"), mode="r"
+        )
+        self.contig_map_nomatch = MAGtoContigsDirFmt(
+            self.get_data_path("mag-to-contigs-nomatch/"), mode="r"
+        )
+
+    def _query_ids(self, result, mag_uuid):
+        df = pd.read_csv(result.annotation_dict()[mag_uuid], sep="\t", skiprows=4)
+        return df[df.columns[0]].tolist()
+
+    def test_aggregate_groups_contigs_into_mags(self):
+        result = transfer_eggnog_annotations(self.contig_annotations, self.contig_map)
+        self.assertEqual(set(result.annotation_dict().keys()), {self.MAG1, self.MAG2})
+        self.assertEqual(
+            sorted(self._query_ids(result, self.MAG1)),
+            ["k141_100_0", "k141_100_1", "k141_200_0"],
+        )
+        self.assertEqual(self._query_ids(result, self.MAG2), ["k141_300_0"])
+
+    def test_aggregate_preserves_header_and_drops_footer(self):
+        result = transfer_eggnog_annotations(self.contig_annotations, self.contig_map)
+        lines = Path(result.annotation_dict()[self.MAG1]).read_text().splitlines()
+        self.assertIn("#query\tseed_ortholog\tevalue", lines[4])
+        self.assertFalse(lines[-1].startswith("##"))
+
+    def test_aggregate_warns_on_unmatched_rows(self):
+        with self.assertWarns(UserWarning):
+            result = transfer_eggnog_annotations(
+                self.contig_annotations, self.contig_map_partial
+            )
+        self.assertEqual(set(result.annotation_dict().keys()), {self.MAG1})
+
+    def test_aggregate_raises_when_nothing_matches(self):
+        with self.assertRaisesRegex(ValueError, "No annotation rows could be"):
+            transfer_eggnog_annotations(
+                self.contig_annotations, self.contig_map_nomatch
+            )
