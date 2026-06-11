@@ -10,7 +10,7 @@ from . import busco
 from . import eggnog
 from . import prodigal
 from .dereplication import dereplicate_mags
-from .filtering import filter_derep_mags, filter_mags, filter_reads_pangenome
+from .filtering import filter_derep_mags, filter_mags, filter_reads_human_pangenome
 from .kaiju import classification as kaiju_class, database as kaiju_db
 from .kraken2 import (
     classification as kraken_class,
@@ -43,6 +43,6 @@ __all__ = [
     "filter_mags",
     "get_feature_lengths",
     "abundance",
-    "filter_reads_pangenome",
+    "filter_reads_human_pangenome",
     "semibin2",
 ]
