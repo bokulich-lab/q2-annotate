@@ -18,7 +18,6 @@ requirements:
   - busco {{ busco }}
   - diamond
   - eggnog-mapper {{ eggnog_mapper }}
-  - gfatools
   - kaiju
   - kraken2
   - metabat2
@@ -30,7 +29,6 @@ requirements:
   - q2-assembly >={{ q2_assembly }}
   - q2-quality-control >={{ q2_quality_control }}
   - samtools
-  - seqtk
   - tqdm
   - xmltodict
   - pyhmmer

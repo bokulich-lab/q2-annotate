@@ -7,14 +7,8 @@
 # ----------------------------------------------------------------------------
 
 from .filter_mags import filter_derep_mags, filter_mags
-from .filter_pangenome import (
-    filter_reads_human_pangenome,
-    construct_human_pangenome_index,
-)
 
 __all__ = [
     "filter_derep_mags",
     "filter_mags",
-    "filter_reads_human_pangenome",
-    "construct_human_pangenome_index",
 ]

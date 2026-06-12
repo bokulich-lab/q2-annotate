@@ -8,10 +8,6 @@
 import importlib
 import platform
 
-from q2_quality_control.plugin_setup import (
-    filter_parameters,
-    filter_parameter_descriptions,
-)
 from qiime2.plugin import Metadata
 from q2_annotate.eggnog.types import (
     EggnogHmmerIdmapDirectoryFmt,
@@ -25,7 +21,6 @@ from q2_annotate.busco.types import (
     BUSCOResults,
     BUSCO,
 )
-from q2_types.bowtie2 import Bowtie2Index
 from q2_types.profile_hmms import ProfileHMM, MultipleProtein, PressedProtein
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.feature_data import (
@@ -66,7 +61,6 @@ from qiime2.core.type import (
     Properties,
     TypeMap,
     TypeMatch,
-    Threads,
 )
 from qiime2.plugin import Plugin, Citations
 import q2_annotate._examples as ex
@@ -1771,70 +1765,6 @@ I_reads, O_reads = TypeMap(
             PairedEndSequencesWithQuality
         ],
     }
-)
-
-plugin.pipelines.register_function(
-    function=q2_annotate.filtering.construct_human_pangenome_index,
-    inputs={},
-    parameters={"threads": Threads},
-    outputs=[("index", Bowtie2Index)],
-    input_descriptions={},
-    parameter_descriptions={
-        "threads": "Number of threads to use when building the index."
-    },
-    output_descriptions={"index": "Generated combined human reference index."},
-    name="Construct the human pangenome index.",
-    description=(
-        "This method generates a Bowtie2 index for the combined human "
-        "GRCh38 reference genome and the draft human pangenome."
-    ),
-    citations=[],
-)
-
-plugin.pipelines.register_function(
-    function=q2_annotate.filtering.filter_reads_human_pangenome,
-    inputs={"reads": I_reads, "index": Bowtie2Index},
-    parameters={
-        "threads": Threads,
-        **{
-            k: v
-            for (k, v) in filter_parameters.items()
-            if k not in ["exclude_seqs", "n_threads"]
-        },
-    },
-    outputs=[("filtered_reads", O_reads), ("reference_index", Bowtie2Index)],
-    input_descriptions={
-        "reads": "Reads to be filtered against the human genome.",
-        "index": (
-            "Bowtie2 index of the reference human genome. If not "
-            "provided, an index combined from the reference GRCh38 "
-            "human genome and the human pangenome will be generated."
-        ),
-    },
-    parameter_descriptions={
-        "threads": "Number of threads to use for indexing and read filtering.",
-        **{
-            k: v
-            for (k, v) in filter_parameter_descriptions.items()
-            if k not in ["exclude_seqs", "n_threads"]
-        },
-    },
-    output_descriptions={
-        "filtered_reads": ("Original reads without the contaminating human reads."),
-        "reference_index": (
-            "Generated combined human reference index. If an "
-            "index was provided as an input, it will be "
-            "returned here instead."
-        ),
-    },
-    name="Remove contaminating human reads.",
-    description=(
-        "Generates a Bowtie2 index fo the combined human "
-        "GRCh38 reference genome and the draft human pangenome, and"
-        "uses that index to remove the contaminating human reads from "
-        "the reads provided as input."
-    ),
-    citations=[],
 )
 
 M_abundance_in, P_abundance_out = TypeMap(
