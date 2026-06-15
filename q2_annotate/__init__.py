@@ -10,7 +10,7 @@ from . import busco
 from . import eggnog
 from . import prodigal
 from .dereplication import dereplicate_mags
-from .filtering import filter_derep_mags, filter_mags, filter_reads_pangenome
+from .filtering import filter_derep_mags, filter_mags, filter_reads_human_pangenome
 from .kaiju import classification as kaiju_class, database as kaiju_db
 from .kraken2 import (
     classification as kraken_class,
@@ -19,13 +19,8 @@ from .kraken2 import (
     helpers as kraken_helpers,
 )
 from .metabat2 import metabat2
-from ._utils import (
-    get_feature_lengths,
-    multiply_tables,
-    _multiply_tables,
-    _multiply_tables_pa,
-    _multiply_tables_relative,
-)
+from .semibin2 import semibin2
+from ._utils import get_feature_lengths
 
 try:
     from ._version import __version__
@@ -47,10 +42,7 @@ __all__ = [
     "filter_derep_mags",
     "filter_mags",
     "get_feature_lengths",
-    "multiply_tables",
-    "_multiply_tables",
-    "_multiply_tables_pa",
-    "_multiply_tables_relative",
     "abundance",
-    "filter_reads_pangenome",
+    "filter_reads_human_pangenome",
+    "semibin2",
 ]
