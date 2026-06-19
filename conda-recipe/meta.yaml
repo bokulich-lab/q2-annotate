@@ -25,7 +25,7 @@ requirements:
   - q2-types >={{ q2_types }}
   - q2templates >={{ q2templates }}
   - q2-assembly >={{ q2_assembly }}
-  - q2-mag >={{ q2_mag }}
+  # - q2-mag >={{ q2_mag }}
   - q2-quality-control >={{ q2_quality_control }}
   - seqtk
   - tqdm
