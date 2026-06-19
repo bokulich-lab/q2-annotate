@@ -175,7 +175,7 @@ def _build_bracken_database(
         )
 
 
-def _find_latest_db(collection: str, response: requests.Response) -> str:
+def _find_latest_db(s3_objects: list, collection: str) -> str:
     collection_id = COLLECTIONS[collection]
 
     if collection in S16_DBS:
@@ -183,16 +183,7 @@ def _find_latest_db(collection: str, response: requests.Response) -> str:
     else:
         pattern = rf"kraken\/k2_{collection_id}_\d{{8}}.tar.gz"
 
-    s3_objects = xmltodict.parse(response.content)
-    s3_objects = s3_objects.get("ListBucketResult")
-    if not s3_objects:
-        raise ValueError(
-            "No databases were found in the response returned by S3. "
-            "Please try again."
-        )
-    s3_objects = [
-        obj for obj in s3_objects["Contents"] if re.match(pattern, obj["Key"])
-    ]
+    s3_objects = [obj for obj in s3_objects if re.match(pattern, obj["Key"])]
     s3_objects = sorted(s3_objects, key=lambda x: x["LastModified"], reverse=True)
 
     latest_db = s3_objects[0]["Key"]
@@ -211,20 +202,41 @@ def _fetch_db_collection(collection: str, tmp_dir: str):
         "Could not connect to the server. Please check your internet "
         "connection and try again. The error was: {}."
     )
-    try:
-        response = requests.get(S3_COLLECTIONS_URL)
-    except requests.exceptions.ConnectionError as e:
-        raise ValueError(err_msg.format(e))
+    continuation_token = None
+    s3_objects = []
 
-    if response.status_code == 200:
-        latest_db = _find_latest_db(collection, response)
-        print(f'Found the latest "{collection}" database: {latest_db}.')
-    else:
+    while True:
+        params = {"list-type": "2"}
+        if continuation_token:
+            params["continuation-token"] = continuation_token
+
+        try:
+            response = requests.get(S3_COLLECTIONS_URL, params=params)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise ValueError(f"Could not fetch the list of available databases: {e}")
+
+        data = xmltodict.parse(response.content).get("ListBucketResult", {})
+
+        # Safely extract contents (handles single-item dict vs list edge cases)
+        contents = data.get("Contents", [])
+        if isinstance(contents, dict):
+            contents = [contents]
+        s3_objects.extend(contents)
+
+        # Clean pagination check: if a token exists and it's truncated, keep going
+        if data.get("IsTruncated") == "true" and "NextContinuationToken" in data:
+            continuation_token = data["NextContinuationToken"]
+        else:
+            break
+
+    if not s3_objects:
         raise ValueError(
-            "Could not fetch the list of available databases. "
-            f"Status code was: {response.status_code}. "
-            "Please try again later."
+            "No databases were found in the response returned by S3. Please try again."
         )
+
+    latest_db = _find_latest_db(s3_objects, collection)
+    print(f'Found the latest "{collection}" database: {latest_db}.')
 
     db_uri = f"{S3_COLLECTIONS_URL}/{latest_db}"
     try:
