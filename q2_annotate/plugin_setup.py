@@ -8,17 +8,12 @@
 import importlib
 import platform
 
-from q2_quality_control.plugin_setup import (
-    filter_parameters,
-    filter_parameter_descriptions,
-)
 from qiime2.plugin import Metadata
 from q2_annotate.eggnog.types import (
     EggnogHmmerIdmapDirectoryFmt,
     EggnogHmmerIdmapFileFmt,
     EggnogHmmerIdmap,
 )
-from q2_types.bowtie2 import Bowtie2Index
 from q2_types.profile_hmms import ProfileHMM, MultipleProtein, PressedProtein
 from q2_types.feature_data import (
     FeatureData,
@@ -56,7 +51,6 @@ from qiime2.core.type import (
     Properties,
     TypeMap,
     TypeMatch,
-    Threads,
 )
 from qiime2.plugin import Plugin, Citations
 import q2_annotate._examples as ex
