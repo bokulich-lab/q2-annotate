@@ -12,26 +12,22 @@ requirements:
   - versioningit
   - wheel
   run:
-  - altair
   - beautifulsoup4
   - bracken
-  - busco {{ busco }}
   - diamond
   - eggnog-mapper {{ eggnog_mapper }}
   - kaiju
   - kraken2
-  - metabat2
   - semibin {{ semibin }}
   - pandas
   - qiime2 >={{ qiime2 }}
   - q2-types >={{ q2_types }}
   - q2templates >={{ q2templates }}
   - q2-assembly >={{ q2_assembly }}
+  - q2-mag >={{ q2_mag }}
   - q2-quality-control >={{ q2_quality_control }}
-  - samtools
   - tqdm
   - xmltodict
-  - pyhmmer
   build:
   - python {{ python }}
   - setuptools
