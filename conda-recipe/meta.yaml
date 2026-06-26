@@ -16,7 +16,6 @@ requirements:
   - bracken
   - diamond
   - eggnog-mapper {{ eggnog_mapper }}
-  - gfatools
   - kaiju
   - kraken2
   - semibin {{ semibin }}
@@ -27,7 +26,6 @@ requirements:
   - q2-assembly >={{ q2_assembly }}
   - q2-mag >={{ q2_mag }}
   - q2-quality-control >={{ q2_quality_control }}
-  - seqtk
   - tqdm
   - xmltodict
   build:
