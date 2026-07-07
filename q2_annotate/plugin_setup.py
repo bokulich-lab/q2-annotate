@@ -53,7 +53,6 @@ from qiime2.core.type import (
     TypeMatch,
 )
 from qiime2.plugin import Plugin, Citations
-import q2_annotate._examples as ex
 import q2_annotate
 from q2_types.feature_data_mag import MAG
 from q2_types.genome_data import NOG, Orthologs, GenomeData, Loci, Genes, Proteins
@@ -650,7 +649,6 @@ plugin.methods.register_function(
         "file in FASTA format."
     ),
     citations=[citations["buchfink_sensitive_2021"]],
-    examples={"Minimum working example": ex.diamond_makedb},
 )
 
 plugin.methods.register_function(
