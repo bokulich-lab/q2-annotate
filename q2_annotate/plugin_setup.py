@@ -960,18 +960,19 @@ plugin.methods.register_function(
     description="Create an eggnog table.",
 )
 
-P_orthologs_in, P_eggnog_out = TypeMap(
+I_orthologs, O_eggnog = TypeMap(
     {
-        Properties("contigs", "mags"): Properties("contigs", "mags"),
-        Properties("contigs"): Properties("contigs"),
-        Properties("mags"): Properties("mags"),
+        Orthologs % Properties("contigs", "mags"): NOG % Properties("contigs", "mags"),
+        Orthologs % Properties("contigs"): NOG % Properties("contigs"),
+        Orthologs % Properties("mags"): NOG % Properties("mags"),
+        Orthologs: NOG
     }
 )
 
 plugin.pipelines.register_function(
     function=q2_annotate.eggnog.map_eggnog,
     inputs={
-        "eggnog_hits": SampleData[Orthologs % P_orthologs_in],
+        "eggnog_hits": SampleData[I_orthologs],
         "db": ReferenceDB[Eggnog],
     },
     input_descriptions={
@@ -992,7 +993,7 @@ plugin.pipelines.register_function(
         "num_cpus": ("Number of CPUs to utilize. '0' will use all available."),
         **partition_param_descriptions,
     },
-    outputs=[("ortholog_annotations", GenomeData[NOG % P_eggnog_out])],
+    outputs=[("ortholog_annotations", GenomeData[O_eggnog])],
     output_descriptions={"ortholog_annotations": "Annotated hits."},
     name="Annotate orthologs against eggNOG database.",
     description="Apply eggnog mapper to annotate seed orthologs.",
@@ -1002,7 +1003,7 @@ plugin.pipelines.register_function(
 plugin.methods.register_function(
     function=q2_annotate.eggnog._eggnog_annotate,
     inputs={
-        "eggnog_hits": SampleData[Orthologs % P_orthologs_in],
+        "eggnog_hits": SampleData[I_orthologs],
         "db": ReferenceDB[Eggnog],
     },
     parameters={"db_in_memory": Bool, "num_cpus": Int % Range(0, None)},
@@ -1014,7 +1015,7 @@ plugin.methods.register_function(
         ),
         "num_cpus": ("Number of CPUs to utilize. '0' will use all available."),
     },
-    outputs=[("ortholog_annotations", GenomeData[NOG % P_eggnog_out])],
+    outputs=[("ortholog_annotations", GenomeData[O_eggnog])],
     name="Annotate orthologs against eggNOG database.",
     description="Apply eggnog mapper to annotate seed orthologs.",
     citations=[citations["huerta_cepas_eggnog_2019"]],
