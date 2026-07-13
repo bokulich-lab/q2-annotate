@@ -965,7 +965,7 @@ I_orthologs, O_eggnog = TypeMap(
         Orthologs % Properties("contigs", "mags"): NOG % Properties("contigs", "mags"),
         Orthologs % Properties("contigs"): NOG % Properties("contigs"),
         Orthologs % Properties("mags"): NOG % Properties("mags"),
-        Orthologs: NOG
+        Orthologs: NOG,
     }
 )
 
