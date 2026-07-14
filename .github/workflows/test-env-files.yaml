@@ -1,4 +1,4 @@
-name: CI
+name: Test env files
 on:
   pull_request:
     branches: ["main"]
