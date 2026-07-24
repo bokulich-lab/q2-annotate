@@ -1,0 +1,18 @@
+100.00	180	0	R	1	root
+100.00	180	0	R1	131567	  cellular organisms
+100.00	180	0	R2	2	    Bacteria
+100.00	180	0	K	1783272	      Bacillati
+100.00	180	0	P	201174	        Actinomycetota
+100.00	180	0	C	84998	          Coriobacteriia
+ 99.44	179	0	O	84999	            Coriobacteriales
+ 99.44	179	0	F	84107	              Coriobacteriaceae
+ 99.44	179	0	G	102106	                Collinsella
+ 97.78	176	10	S	74426	                  Collinsella aerofaciens
+ 92.22	166	166	S1	411903	                    Collinsella aerofaciens ATCC 25986
+  1.67	3	0	G1	2637548	                  unclassified Collinsella
+  1.67	3	3	S	3132705	                    Collinsella sp. i05-0019-G5
+  0.56	1	0	O	1643822	            Eggerthellales
+  0.56	1	0	F	1643826	              Eggerthellaceae
+  0.56	1	0	G	644652	                Gordonibacter
+  0.56	1	0	S	471189	                  Gordonibacter pamelaeae
+  0.56	1	1	S1	657308	                    Gordonibacter pamelaeae 7-10-1-b

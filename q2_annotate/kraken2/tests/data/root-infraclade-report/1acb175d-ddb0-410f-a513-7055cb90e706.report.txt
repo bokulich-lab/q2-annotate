@@ -1,0 +1,4 @@
+ 50.00	1	1	U	0	unclassified
+ 50.00	1	0	R	1	root
+ 50.00	1	0	R1	131567	  cellular organisms
+ 50.00	1	1	R2	2	    Bacteria

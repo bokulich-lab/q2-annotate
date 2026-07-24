@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2025, QIIME 2 development team.
+# Copyright (c) 2026, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -117,11 +117,11 @@ def classify_kraken2(
                 )
 
             elif seqs_artifact.type <= SampleData[MAGs]:
-                filter_mags = ctx.get_action("annotate", "filter_mags")
+                filter_mags = ctx.get_action("mag", "filter_mags")
                 (seqs_artifact,) = filter_mags(mags=seqs_artifact, remove_empty=True)
 
             elif seqs_artifact.type <= FeatureData[MAG]:
-                filter_derep_mags = ctx.get_action("annotate", "filter_derep_mags")
+                filter_derep_mags = ctx.get_action("mag", "filter_derep_mags")
                 (seqs_artifact,) = filter_derep_mags(
                     mags=seqs_artifact, remove_empty=True
                 )
