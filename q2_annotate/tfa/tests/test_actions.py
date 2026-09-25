@@ -20,7 +20,8 @@ class TestTFAAction(TestPluginBase):
 
     def test_action_registration(self):
         self.assertTrue(
-            {"estimate_tfa", "tfa_by_taxon", "tfa_by_function"} <= set(plugin.methods)
+            {"estimate_tfa", "tfa_by_taxon", "tfa_by_function", "tfa_collapse_samples"}
+            <= set(plugin.methods)
         )
         self.assertNotIn("_estimate_tfa_table", plugin.methods)
         self.assertNotIn("_tfa_by_taxon", plugin.methods)
@@ -95,6 +96,23 @@ class TestTFAAction(TestPluginBase):
     def test_empty_table_when_no_contigs_overlap(self):
         result = plugin.methods["estimate_tfa"](**self._inputs(("C4",)))
         self.assertEqual(result.feature_load.view(biom.Table).shape, (0, 2))
+
+    def test_collapse_samples_returns_taxon_by_function_artifact(self):
+        (feature_load,) = plugin.methods["estimate_tfa"](**self._inputs())
+        result = plugin.methods["tfa_collapse_samples"](feature_load=feature_load)
+        self.assertEqual(str(result.table.type), "FeatureTable[Unconstrained]")
+        table = result.table.view(biom.Table)
+        self.assertEqual(list(table.ids(axis="observation")), ["T1", "T2"])
+        self.assertEqual(list(table.ids(axis="sample")), ["geneA", "gene B"])
+        np.testing.assert_array_equal(table.matrix_data.toarray(), [[8, 4], [0, 12]])
+        mean = plugin.methods["tfa_collapse_samples"](
+            feature_load=feature_load, aggregation="mean"
+        ).table.view(biom.Table)
+        np.testing.assert_array_equal(mean.matrix_data.toarray(), [[4, 2], [0, 6]])
+        median = plugin.methods["tfa_collapse_samples"](
+            feature_load=feature_load, aggregation="median"
+        ).table.view(biom.Table)
+        np.testing.assert_array_equal(median.matrix_data.toarray(), [[4, 2], [0, 6]])
 
     def test_collection_keys_are_safe_and_distinct(self):
         self.assertEqual(_collection_key("T1"), "T1")

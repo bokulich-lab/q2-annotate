@@ -14,6 +14,7 @@ from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.tfa import (
     estimate_tfa,
+    tfa_collapse_samples,
     tfa_by_function,
     tfa_by_taxon,
 )
@@ -112,6 +113,49 @@ class TestTFA(TestPluginBase):
         self.assertTrue(sp.issparse(by_taxon.matrix_data))
         with self.assertRaisesRegex(ValueError, "No TFA rows"):
             tfa_by_taxon(observed, ["unknown"])
+
+    def test_collapse_samples_sum_mean_median(self):
+        observed = self.estimate()
+        expected = np.array([[620, 310, 0], [150, 0, 450]])
+        for aggregation, values in (
+            ("sum", expected),
+            ("mean", expected / 3),
+            ("median", np.array([[200, 100, 0], [50, 0, 150]])),
+        ):
+            collapsed = tfa_collapse_samples(observed, aggregation)
+            self.assertTrue(sp.issparse(collapsed.matrix_data))
+            self.assertEqual(list(collapsed.ids(axis="observation")), ["T1", "T2"])
+            self.assertEqual(
+                list(collapsed.ids(axis="sample")), ["bla_TEM", "vanA", "mecA"]
+            )
+            np.testing.assert_allclose(collapsed.matrix_data.toarray(), values)
+        np.testing.assert_array_equal(
+            tfa_collapse_samples(observed).matrix_data.toarray(), expected
+        )
+
+    def test_collapse_median_includes_implicit_zeros(self):
+        abundance = self.abundance.copy()
+        abundance.loc[["S2", "S3"], :] = 0
+        observed = self.estimate(abundance=abundance)
+        collapsed = tfa_collapse_samples(observed, "median")
+        self.assertEqual(collapsed.matrix_data.nnz, 0)
+        self.assertEqual(collapsed.shape, (2, 3))
+        with self.assertRaisesRegex(ValueError, "Unsupported sample aggregation"):
+            tfa_collapse_samples(observed, "maximum")
+
+    def test_collapse_empty_tfa(self):
+        empty = self.estimate(mapping={"T1": ["not-a-contig"]})
+        self.assertEqual(tfa_collapse_samples(empty).shape, (0, 0))
+        self.assertEqual(tfa_collapse_samples(empty, "median").shape, (0, 0))
+
+    def test_collapse_mean_requires_samples(self):
+        empty_samples = biom.Table(
+            sp.csr_matrix((1, 0)),
+            observation_ids=['["T1","geneA"]'],
+            sample_ids=[],
+        )
+        with self.assertRaisesRegex(ValueError, "without samples"):
+            tfa_collapse_samples(empty_samples, "mean")
 
     def test_multiple_selections_only_return_requested_ids(self):
         observed = self.estimate()

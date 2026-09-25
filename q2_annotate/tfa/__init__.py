@@ -9,6 +9,7 @@
 from .types import TFA, TFAFeatureTableDirFmt, TFAFeatureTableFormat
 from .tfa import (
     estimate_tfa,
+    tfa_collapse_samples,
     tfa_by_function,
     tfa_by_taxon,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "TFAFeatureTableDirFmt",
     "TFAFeatureTableFormat",
     "estimate_tfa",
+    "tfa_collapse_samples",
     "tfa_by_function",
     "tfa_by_taxon",
 ]

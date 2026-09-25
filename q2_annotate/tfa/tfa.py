@@ -166,3 +166,62 @@ def tfa_by_taxon(feature_load: biom.Table, taxon_ids: list[str]) -> biom.Table:
 def tfa_by_function(feature_load: biom.Table, function_ids: list[str]) -> biom.Table:
     """Return taxon-by-sample tables for the requested function IDs."""
     return _select_tfa(feature_load, function_ids, 1)
+
+
+def tfa_collapse_samples(
+    feature_load: biom.Table, aggregation: str = "sum"
+) -> biom.Table:
+    """Collapse samples into one sparse taxon-by-function table."""
+    if aggregation not in {"sum", "mean", "median"}:
+        raise ValueError(f"Unsupported sample aggregation: {aggregation!r}.")
+
+    matrix = feature_load.matrix_data.tocsr()
+    sample_count = matrix.shape[1]
+    if sample_count == 0 and aggregation != "sum":
+        raise ValueError(f"Cannot calculate {aggregation} without samples.")
+
+    pairs = [
+        _split_pair_id(observation_id)
+        for observation_id in feature_load.ids(axis="observation")
+    ]
+    taxon_ids = list(dict.fromkeys(taxon_id for taxon_id, _ in pairs))
+    function_ids = list(dict.fromkeys(function_id for _, function_id in pairs))
+    taxon_indices = {taxon_id: index for index, taxon_id in enumerate(taxon_ids)}
+    function_indices = {
+        function_id: index for index, function_id in enumerate(function_ids)
+    }
+
+    if aggregation == "median":
+        collapsed = np.zeros(len(pairs), dtype=float)
+        for row in range(len(pairs)):
+            data = matrix.data[matrix.indptr[row] : matrix.indptr[row + 1]]
+            nonzero = np.sort(data[data != 0])
+            zero_count = sample_count - len(nonzero)
+
+            def at_rank(rank):
+                return 0.0 if rank < zero_count else nonzero[rank - zero_count]
+
+            collapsed[row] = (
+                at_rank((sample_count - 1) // 2) + at_rank(sample_count // 2)
+            ) / 2
+    else:
+        collapsed = np.asarray(matrix.sum(axis=1)).ravel()
+        if aggregation == "mean":
+            collapsed = collapsed / sample_count
+
+    present = np.flatnonzero(collapsed)
+    result = sp.coo_matrix(
+        (
+            collapsed[present],
+            (
+                [taxon_indices[pairs[row][0]] for row in present],
+                [function_indices[pairs[row][1]] for row in present],
+            ),
+        ),
+        shape=(len(taxon_ids), len(function_ids)),
+    ).tocsr()
+    return biom.Table(
+        result,
+        observation_ids=taxon_ids,
+        sample_ids=function_ids,
+    )

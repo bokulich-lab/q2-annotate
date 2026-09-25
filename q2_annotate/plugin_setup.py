@@ -1794,6 +1794,29 @@ plugin.methods.register_function(
 )
 
 plugin.methods.register_function(
+    function=q2_annotate.tfa.tfa_collapse_samples,
+    inputs={"feature_load": FeatureTable[TFA]},
+    parameters={"aggregation": Str % Choices(["sum", "mean", "median"])},
+    outputs=[("table", FeatureTable[Unconstrained])],
+    input_descriptions={"feature_load": "Sample-resolved TFA table."},
+    parameter_descriptions={
+        "aggregation": (
+            "How to collapse sample loads for each taxon/function pair. "
+            "Mean and median include zero-valued samples."
+        )
+    },
+    output_descriptions={
+        "table": "Sparse taxon-by-function table with samples collapsed."
+    },
+    name="Collapse TFA samples.",
+    description=(
+        "Collapse sample values for every taxon/function pair into a sparse "
+        "taxon-by-function table. Sum reproduces the original TFA layout."
+    ),
+    citations=[],
+)
+
+plugin.methods.register_function(
     function=estimate_tfa,
     inputs=tfa_inputs,
     parameters={},

@@ -34,6 +34,19 @@ fractional. Collection keys use the original ID when it is a safe filename.
 Other IDs use URL-safe base64 with an `id_` prefix; very long IDs use a
 `hash_` prefix. The original IDs remain in `feature_load`.
 
+Run `tfa-collapse-samples` to make one sparse `FeatureTable[Unconstrained]`
+with taxon IDs as rows and functional feature IDs as columns. The
+`aggregation` parameter accepts `sum` (the default), `mean`, or `median`.
+All samples count toward the mean and median, including those with zero load.
+`sum` recreates the earlier taxon-by-function values for pairs present in
+`feature_load`; functions with no TFA pair cannot be recovered from it. For
+the example above, the summed table is:
+
+| taxon ID | geneA | gene B |
+|----------|------:|-------:|
+| T1       | 8     | 4      |
+| T2       | 0     | 12     |
+
 The sample-resolved output replaces the older `estimate-tfa` layout, which
 summed abundances across samples and used functional feature IDs as sample IDs.
 Run `estimate-tfa` again from the original inputs to obtain per-sample loads;
@@ -68,6 +81,7 @@ This QIIME 2 plugin contains actions used to annotate and classify (meta)genomes
 | inspect-kraken2-db        | Inspect a Kraken 2 database.                                                           | - |
 | tfa-by-function           | Extract sparse taxon-by-sample tables for selected functions.                          | - |
 | tfa-by-taxon              | Extract sparse function-by-sample tables for selected taxa.                            | - |
+| tfa-collapse-samples      | Collapse TFA samples into a sparse taxon-by-function table.                            | - |
 | kraken2-to-features       | Select downstream features from Kraken 2.                                              | - |
 | kraken2-to-mag-features   | Select downstream MAG features from Kraken 2.                                          | - |
 | map-eggnog                | Annotate orthologs against eggNOG database.                                            | [EggNOG mapper](https://github.com/eggnogdb/eggnog-mapper) |
