@@ -46,6 +46,7 @@ from qiime2.core.type import (
     Str,
     Float,
     List,
+    Collection,
     Choices,
     Visualization,
     Properties,
@@ -1761,6 +1762,36 @@ tfa_input_descriptions = {
         "Mapping of taxon IDs to the contig IDs assigned to each taxon."
     ),
 }
+
+plugin.methods.register_function(
+    function=q2_annotate.tfa.tfa_by_taxon,
+    inputs={"feature_load": FeatureTable[TFA]},
+    parameters={"taxon_ids": List[Str]},
+    outputs=[("tables", Collection[FeatureTable[Unconstrained]])],
+    input_descriptions={"feature_load": "Sample-resolved TFA table."},
+    parameter_descriptions={"taxon_ids": "Taxon IDs to select."},
+    output_descriptions={
+        "tables": "One function-by-sample table for each selected taxon ID."
+    },
+    name="Select TFA loads by taxon.",
+    description="Extract sparse function-by-sample tables for selected taxa.",
+    citations=[],
+)
+
+plugin.methods.register_function(
+    function=q2_annotate.tfa.tfa_by_function,
+    inputs={"feature_load": FeatureTable[TFA]},
+    parameters={"function_ids": List[Str]},
+    outputs=[("tables", Collection[FeatureTable[Unconstrained]])],
+    input_descriptions={"feature_load": "Sample-resolved TFA table."},
+    parameter_descriptions={"function_ids": "Functional feature IDs to select."},
+    output_descriptions={
+        "tables": "One taxon-by-sample table for each selected function ID."
+    },
+    name="Select TFA loads by function.",
+    description="Extract sparse taxon-by-sample tables for selected functions.",
+    citations=[],
+)
 
 plugin.methods.register_function(
     function=estimate_tfa,
