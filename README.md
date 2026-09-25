@@ -19,8 +19,7 @@ feature inventory are stored as rows; zero sample values remain sparse.
 
 This example uses the same small inputs and values as the action tests. The
 shaded headers show which identifiers belong to each axis. `estimate-tfa`
-returns only `feature_load`; the two selection actions can be run later for
-specific taxa or functions.
+returns only `feature_load`; the three downstream actions can be run later.
 
 ![Example input tables, TFA output, and selected tables with rows, columns, and values](tfa-data-flow.svg)
 
@@ -39,13 +38,8 @@ with taxon IDs as rows and functional feature IDs as columns. The
 `aggregation` parameter accepts `sum` (the default), `mean`, or `median`.
 All samples count toward the mean and median, including those with zero load.
 `sum` recreates the earlier taxon-by-function values for pairs present in
-`feature_load`; functions with no TFA pair cannot be recovered from it. For
-the example above, the summed table is:
-
-| taxon ID | geneA | gene B |
-|----------|------:|-------:|
-| T1       | 8     | 4      |
-| T2       | 0     | 12     |
+`feature_load`; functions with no TFA pair cannot be recovered from it. The
+figure shows the summed table for the same example.
 
 The sample-resolved output replaces the older `estimate-tfa` layout, which
 summed abundances across samples and used functional feature IDs as sample IDs.
