@@ -17,38 +17,12 @@ and sample *s* is the sum, over contigs assigned to *t*, of the contig's
 abundance in *s* multiplied by its count of *f*. Only pairs present in the
 feature inventory are stored as rows; zero sample values remain sparse.
 
-The schematic shows the axes of each table and how the three public actions
-relate. Here, *C* is the number of shared, taxon-assigned contigs, *S* the
-number of samples, *F* the number of functions, and *P* the number of stored
-taxon/function pairs. The two selection actions run separately when requested;
-`estimate-tfa` returns only `feature_load`.
+This example uses the same small inputs and values as the action tests. The
+shaded headers show which identifiers belong to each axis. `estimate-tfa`
+returns only `feature_load`; the two selection actions can be run later for
+specific taxa or functions.
 
-```mermaid
-flowchart TB
-    abundance["abundance_matrix<br/>FeatureTable[Frequency / RelativeFrequency / Unconstrained]<br/>rows: contigs · columns: samples<br/>value: contig abundance"]
-    inventory["feature_inventory<br/>FeatureTable[Frequency]<br/>rows: functions · columns: contigs<br/>value: function count on contig"]
-    taxonomy["taxonomy<br/>FeatureData[Taxonomy]<br/>rows: taxon IDs · field: Taxon name"]
-    mapping["taxon_to_contig_map<br/>FeatureMap[TaxonomyToContigs]<br/>taxon ID → contig IDs"]
-    estimate{{"estimate-tfa"}}
-    aligned["Internal sparse calculation<br/>shared contigs × samples (C × S)<br/>shared contigs × functions (C × F)<br/>group contigs by taxon; multiply and sum"]
-    tfa["feature_load · FeatureTable[TFA]<br/>rows: observed (taxon ID, function ID) pairs (P)<br/>columns: original samples (S)<br/>value: abundance-weighted function load"]
-    taxa["taxon_ids<br/>list of requested taxon IDs"]
-    functions["function_ids<br/>list of requested function IDs"]
-    bytaxon{{"tfa-by-taxon"}}
-    byfunction{{"tfa-by-function"}}
-    taxonout["tables · collection, one per selected taxon<br/>FeatureTable[Unconstrained]<br/>rows: functions · columns: samples"]
-    functionout["tables · collection, one per selected function<br/>FeatureTable[Unconstrained]<br/>rows: taxa · columns: samples"]
-
-    abundance --> estimate
-    inventory --> estimate
-    taxonomy --> estimate
-    mapping --> estimate
-    estimate --> aligned --> tfa
-    tfa --> bytaxon --> taxonout
-    taxa --> bytaxon
-    tfa --> byfunction --> functionout
-    functions --> byfunction
-```
+![Example input tables, TFA output, and selected tables with rows, columns, and values](tfa-data-flow.svg)
 
 Run `tfa-by-taxon` with a list of taxon IDs to obtain a collection containing
 one function-by-sample table for each selected taxon. Run `tfa-by-function`

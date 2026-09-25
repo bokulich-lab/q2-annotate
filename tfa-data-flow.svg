@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1330" viewBox="0 0 1500 1330" role="img" aria-labelledby="title desc">
+<title id="title">TFA actions and table axes</title>
+<desc id="desc">Four inputs feed estimate-tfa: contig by sample abundance, function by contig inventory, taxon names, and taxon to contig mapping. The sparse TFA output has taxon-function pair rows and sample columns. Selecting a taxon yields function by sample tables; selecting a function yields taxon by sample tables. Example numbers match the action tests.</desc>
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#4d6b83"/></marker></defs>
+<rect x="0" y="0" width="1500" height="1330" rx="0" fill="#f8fbfd" stroke="none" stroke-width="1"/>
+<text x="60" y="55" font-size="32" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">How TFA reshapes the data</text>
+<text x="60" y="84" font-size="16" font-weight="400" fill="#547088" text-anchor="start" font-family="Arial, Helvetica, sans-serif">Concrete example from the action tests · each number is a table value</text>
+<rect x="45" y="105" width="1410" height="480" rx="18" fill="#f0f7fb" stroke="#d6e7f1" stroke-width="2"/>
+<text x="70" y="137" font-size="15" font-weight="700" fill="#3b6b86" text-anchor="start" font-family="Arial, Helvetica, sans-serif">INPUT ARTIFACTS</text>
+<rect x="70" y="155" width="510" height="231" rx="12" fill="#ffffff" stroke="#cedce6" stroke-width="2"/>
+<rect x="70" y="155" width="510" height="42" rx="12" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<rect x="70" y="185" width="510" height="12" rx="0" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<text x="86" y="182" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">abundance_matrix</text>
+<text x="86" y="223" font-size="14" font-weight="400" fill="#547088" text-anchor="start" font-family="Arial, Helvetica, sans-serif">FeatureTable[Frequency] · rows = contigs · columns = samples</text>
+<rect x="71" y="236" width="508" height="35" rx="0" fill="#d8e9f5" stroke="none" stroke-width="1"/>
+<text x="175.0" y="260" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">contig</text>
+<text x="355.0" y="260" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">S1</text>
+<text x="505.0" y="260" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">S2</text>
+<rect x="71" y="271" width="208" height="35" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="175.0" y="295" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">C1</text>
+<text x="355.0" y="295" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">2</text>
+<text x="505.0" y="295" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">0</text>
+<rect x="71" y="306" width="508" height="35" rx="0" fill="#f5f9fc" stroke="none" stroke-width="1"/>
+<rect x="71" y="306" width="208" height="35" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="175.0" y="330" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">C2</text>
+<text x="355.0" y="330" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">1</text>
+<text x="505.0" y="330" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">3</text>
+<rect x="71" y="341" width="208" height="35" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="175.0" y="365" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">C3</text>
+<text x="355.0" y="365" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">0</text>
+<text x="505.0" y="365" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">4</text>
+<line x1="280" y1="236" x2="280" y2="376" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="430" y1="236" x2="430" y2="376" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="70" y1="271" x2="580" y2="271" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="70" y1="306" x2="580" y2="306" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="70" y1="341" x2="580" y2="341" stroke="#b9c8d4" stroke-width="1"/>
+<rect x="770" y="155" width="630" height="196" rx="12" fill="#ffffff" stroke="#cedce6" stroke-width="2"/>
+<rect x="770" y="155" width="630" height="42" rx="12" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<rect x="770" y="185" width="630" height="12" rx="0" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<text x="786" y="182" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">feature_inventory</text>
+<text x="786" y="223" font-size="14" font-weight="400" fill="#547088" text-anchor="start" font-family="Arial, Helvetica, sans-serif">FeatureTable[Frequency] · rows = functions · columns = contigs</text>
+<rect x="771" y="236" width="628" height="35" rx="0" fill="#d8e9f5" stroke="none" stroke-width="1"/>
+<text x="875.0" y="260" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">function</text>
+<text x="1050.0" y="260" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">C1</text>
+<text x="1190.0" y="260" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">C2</text>
+<text x="1330.0" y="260" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">C3</text>
+<rect x="771" y="271" width="208" height="35" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="875.0" y="295" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">geneA</text>
+<text x="1050.0" y="295" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">2</text>
+<text x="1190.0" y="295" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">1</text>
+<text x="1330.0" y="295" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">0</text>
+<rect x="771" y="306" width="628" height="35" rx="0" fill="#f5f9fc" stroke="none" stroke-width="1"/>
+<rect x="771" y="306" width="208" height="35" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="875.0" y="330" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">gene B</text>
+<text x="1050.0" y="330" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">0</text>
+<text x="1190.0" y="330" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">1</text>
+<text x="1330.0" y="330" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">3</text>
+<line x1="980" y1="236" x2="980" y2="341" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="1120" y1="236" x2="1120" y2="341" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="1260" y1="236" x2="1260" y2="341" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="770" y1="271" x2="1400" y2="271" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="770" y1="306" x2="1400" y2="306" stroke="#b9c8d4" stroke-width="1"/>
+<rect x="70" y="392" width="510" height="181" rx="12" fill="#ffffff" stroke="#cedce6" stroke-width="2"/>
+<rect x="70" y="392" width="510" height="42" rx="12" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<rect x="70" y="422" width="510" height="12" rx="0" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<text x="86" y="419" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">taxonomy</text>
+<text x="86" y="460" font-size="14" font-weight="400" fill="#547088" text-anchor="start" font-family="Arial, Helvetica, sans-serif">FeatureData[Taxonomy] · taxon ID → name</text>
+<rect x="71" y="473" width="508" height="30" rx="0" fill="#d8e9f5" stroke="none" stroke-width="1"/>
+<text x="175.0" y="497" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">taxon ID</text>
+<text x="430.0" y="497" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Taxon</text>
+<rect x="71" y="503" width="208" height="30" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="175.0" y="527" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">T1</text>
+<text x="430.0" y="527" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">p__A</text>
+<rect x="71" y="533" width="508" height="30" rx="0" fill="#f5f9fc" stroke="none" stroke-width="1"/>
+<rect x="71" y="533" width="208" height="30" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="175.0" y="557" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">T2</text>
+<text x="430.0" y="557" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">p__B</text>
+<line x1="280" y1="473" x2="280" y2="563" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="70" y1="503" x2="580" y2="503" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="70" y1="533" x2="580" y2="533" stroke="#b9c8d4" stroke-width="1"/>
+<rect x="770" y="392" width="630" height="181" rx="12" fill="#ffffff" stroke="#cedce6" stroke-width="2"/>
+<rect x="770" y="392" width="630" height="42" rx="12" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<rect x="770" y="422" width="630" height="12" rx="0" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<text x="786" y="419" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">taxon_to_contig_map</text>
+<text x="786" y="460" font-size="14" font-weight="400" fill="#547088" text-anchor="start" font-family="Arial, Helvetica, sans-serif">FeatureMap[TaxonomyToContigs] · taxon ID → contigs</text>
+<rect x="771" y="473" width="628" height="30" rx="0" fill="#d8e9f5" stroke="none" stroke-width="1"/>
+<text x="875.0" y="497" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">taxon ID</text>
+<text x="1190.0" y="497" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">contig IDs</text>
+<rect x="771" y="503" width="208" height="30" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="875.0" y="527" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">T1</text>
+<text x="1190.0" y="527" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">C1, C2</text>
+<rect x="771" y="533" width="628" height="30" rx="0" fill="#f5f9fc" stroke="none" stroke-width="1"/>
+<rect x="771" y="533" width="208" height="30" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="875.0" y="557" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">T2</text>
+<text x="1190.0" y="557" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">C3</text>
+<line x1="980" y1="473" x2="980" y2="563" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="770" y1="503" x2="1400" y2="503" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="770" y1="533" x2="1400" y2="533" stroke="#b9c8d4" stroke-width="1"/>
+<path d="M750 587 L750 609" stroke="#4d6b83" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<rect x="555" y="611" width="390" height="53" rx="26" fill="#246b91" stroke="none" stroke-width="1"/>
+<text x="750" y="645" font-size="23" font-weight="700" fill="#ffffff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">estimate-tfa</text>
+<path d="M750 665 L750 701" stroke="#4d6b83" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<rect x="365" y="706" width="770" height="239" rx="12" fill="#ffffff" stroke="#cedce6" stroke-width="2"/>
+<rect x="365" y="706" width="770" height="42" rx="12" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<rect x="365" y="736" width="770" height="12" rx="0" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<text x="381" y="733" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">feature_load · FeatureTable[TFA]</text>
+<text x="381" y="774" font-size="14" font-weight="400" fill="#547088" text-anchor="start" font-family="Arial, Helvetica, sans-serif">Sparse rows = (taxon, function) pairs · columns = original samples</text>
+<rect x="366" y="787" width="768" height="37" rx="0" fill="#d8e9f5" stroke="none" stroke-width="1"/>
+<text x="575.0" y="811" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">(taxon ID, function ID)</text>
+<text x="872.5" y="811" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">S1</text>
+<text x="1047.5" y="811" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">S2</text>
+<rect x="366" y="824" width="418" height="37" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="575.0" y="848" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">[&quot;T1&quot;,&quot;geneA&quot;]</text>
+<text x="872.5" y="848" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">5</text>
+<text x="1047.5" y="848" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">3</text>
+<rect x="366" y="861" width="768" height="37" rx="0" fill="#f5f9fc" stroke="none" stroke-width="1"/>
+<rect x="366" y="861" width="418" height="37" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="575.0" y="885" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">[&quot;T1&quot;,&quot;gene B&quot;]</text>
+<text x="872.5" y="885" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">1</text>
+<text x="1047.5" y="885" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">3</text>
+<rect x="366" y="898" width="418" height="37" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="575.0" y="922" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">[&quot;T2&quot;,&quot;gene B&quot;]</text>
+<text x="872.5" y="922" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">0</text>
+<text x="1047.5" y="922" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">12</text>
+<line x1="785" y1="787" x2="785" y2="935" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="960" y1="787" x2="960" y2="935" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="365" y1="824" x2="1135" y2="824" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="365" y1="861" x2="1135" y2="861" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="365" y1="898" x2="1135" y2="898" stroke="#b9c8d4" stroke-width="1"/>
+<text x="750" y="1000" font-size="16" font-weight="400" fill="#547088" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Load = sum of (contig abundance × function count) for contigs in that taxon</text>
+<path d="M580 967 L365 1025" stroke="#4d6b83" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<path d="M920 967 L1135 1025" stroke="#4d6b83" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<rect x="160" y="1027" width="410" height="42" rx="21" fill="#ddefe9" stroke="none" stroke-width="1"/>
+<text x="365" y="1054" font-size="17" font-weight="700" fill="#235b50" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">tfa-by-taxon · taxon_ids = [T1]</text>
+<rect x="930" y="1027" width="410" height="42" rx="21" fill="#f9ebd9" stroke="none" stroke-width="1"/>
+<text x="1135" y="1054" font-size="17" font-weight="700" fill="#815a22" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">tfa-by-function · function_ids = [gene B]</text>
+<rect x="80" y="1080" width="540" height="190" rx="12" fill="#ffffff" stroke="#cedce6" stroke-width="2"/>
+<rect x="80" y="1080" width="540" height="42" rx="12" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<rect x="80" y="1110" width="540" height="12" rx="0" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<text x="96" y="1107" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">tables[T1]</text>
+<text x="96" y="1148" font-size="14" font-weight="400" fill="#547088" text-anchor="start" font-family="Arial, Helvetica, sans-serif">FeatureTable[Unconstrained] · function × sample</text>
+<rect x="81" y="1161" width="538" height="33" rx="0" fill="#d8e9f5" stroke="none" stroke-width="1"/>
+<text x="185.0" y="1185" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">function</text>
+<text x="372.5" y="1185" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">S1</text>
+<text x="537.5" y="1185" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">S2</text>
+<rect x="81" y="1194" width="208" height="33" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="185.0" y="1218" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">geneA</text>
+<text x="372.5" y="1218" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">5</text>
+<text x="537.5" y="1218" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">3</text>
+<rect x="81" y="1227" width="538" height="33" rx="0" fill="#f5f9fc" stroke="none" stroke-width="1"/>
+<rect x="81" y="1227" width="208" height="33" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="185.0" y="1251" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">gene B</text>
+<text x="372.5" y="1251" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">1</text>
+<text x="537.5" y="1251" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">3</text>
+<line x1="290" y1="1161" x2="290" y2="1260" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="455" y1="1161" x2="455" y2="1260" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="80" y1="1194" x2="620" y2="1194" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="80" y1="1227" x2="620" y2="1227" stroke="#b9c8d4" stroke-width="1"/>
+<rect x="880" y="1080" width="540" height="190" rx="12" fill="#ffffff" stroke="#cedce6" stroke-width="2"/>
+<rect x="880" y="1080" width="540" height="42" rx="12" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<rect x="880" y="1110" width="540" height="12" rx="0" fill="#eaf3fa" stroke="none" stroke-width="1"/>
+<text x="896" y="1107" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">tables[id_Z2VuZSBC]</text>
+<text x="896" y="1148" font-size="14" font-weight="400" fill="#547088" text-anchor="start" font-family="Arial, Helvetica, sans-serif">FeatureTable[Unconstrained] · taxon × sample</text>
+<rect x="881" y="1161" width="538" height="33" rx="0" fill="#d8e9f5" stroke="none" stroke-width="1"/>
+<text x="985.0" y="1185" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">taxon</text>
+<text x="1172.5" y="1185" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">S1</text>
+<text x="1337.5" y="1185" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">S2</text>
+<rect x="881" y="1194" width="208" height="33" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="985.0" y="1218" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">T1</text>
+<text x="1172.5" y="1218" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">1</text>
+<text x="1337.5" y="1218" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">3</text>
+<rect x="881" y="1227" width="538" height="33" rx="0" fill="#f5f9fc" stroke="none" stroke-width="1"/>
+<rect x="881" y="1227" width="208" height="33" rx="0" fill="#eef5fa" stroke="none" stroke-width="1"/>
+<text x="985.0" y="1251" font-size="15" font-weight="600" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">T2</text>
+<text x="1172.5" y="1251" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">0</text>
+<text x="1337.5" y="1251" font-size="15" font-weight="400" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">12</text>
+<line x1="1090" y1="1161" x2="1090" y2="1260" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="1255" y1="1161" x2="1255" y2="1260" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="880" y1="1194" x2="1420" y2="1194" stroke="#b9c8d4" stroke-width="1"/>
+<line x1="880" y1="1227" x2="1420" y2="1227" stroke="#b9c8d4" stroke-width="1"/>
+<text x="750" y="1302" font-size="15" font-weight="400" fill="#547088" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">Selection actions are optional and produce only the requested collection members.</text>
+</svg>
