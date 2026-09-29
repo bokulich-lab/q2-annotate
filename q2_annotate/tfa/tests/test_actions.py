@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import qiime2
 from qiime2.plugin.testing import TestPluginBase
+from q2_types.feature_table import FeatureTable, Frequency
 
 from q2_annotate.plugin_setup import plugin
 from q2_annotate.tfa.tfa import _collection_key
@@ -19,15 +20,13 @@ class TestTFAAction(TestPluginBase):
     package = "q2_annotate.tfa.tests"
 
     def test_action_registration(self):
-        self.assertTrue(
-            {"estimate_tfa", "tfa_by_taxon", "tfa_by_function", "tfa_collapse_samples"}
-            <= set(plugin.methods)
-        )
+        self.assertIn("estimate_tfa", plugin.methods)
         self.assertNotIn("_estimate_tfa_table", plugin.methods)
-        self.assertNotIn("_tfa_by_taxon", plugin.methods)
-        self.assertNotIn("_tfa_by_function", plugin.methods)
-        self.assertNotIn("group_tfa_samples", plugin.methods)
+        self.assertIn("tfa_by_taxon", plugin.methods)
+        self.assertIn("tfa_by_function", plugin.methods)
+        self.assertIn("tfa_collapse_samples", plugin.methods)
         self.assertNotIn("estimate_tfa", plugin.pipelines)
+        self.assertNotIn("TFA", plugin.type_fragments)
 
     def _inputs(self, inventory_contigs=("C1", "C2", "C3")):
         abundance = qiime2.Artifact.import_data(
@@ -58,32 +57,69 @@ class TestTFAAction(TestPluginBase):
             {"T1": ["C1", "C2"], "T2": ["C3"]},
         )
         return dict(
-            abundance_matrix=abundance,
+            contig_abundance=abundance,
             feature_inventory=inventory,
             taxonomy=taxonomy,
             taxon_to_contig_map=mapping,
         )
 
-    def test_estimate_returns_tfa_artifact(self):
+    def test_estimate_returns_frequency_and_gene_taxonomy(self):
         result = plugin.methods["estimate_tfa"](**self._inputs())
-        self.assertEqual(len(result), 1)
-        self.assertEqual(str(result.feature_load.type), "FeatureTable[TFA]")
+        self.assertEqual(len(result), 2)
         self.assertEqual(
-            list(result.feature_load.view(biom.Table).ids(axis="sample")),
+            str(result.tfa.type), "FeatureTable[Frequency % Properties('tfa')]"
+        )
+        self.assertLessEqual(result.tfa.type, FeatureTable[Frequency])
+        self.assertEqual(
+            str(result.gene_taxonomy.type),
+            "FeatureData[Taxonomy % Properties('tfa')]",
+        )
+        self.assertEqual(
+            list(result.tfa.view(biom.Table).ids(axis="sample")),
             ["S1", "S2"],
         )
+        self.assertEqual(
+            list(result.tfa.view(biom.Table).ids(axis="observation")),
+            list(result.gene_taxonomy.view(pd.DataFrame).index),
+        )
+
+    def test_no_contig_overlap_reports_empty_result(self):
+        """Reject estimation when no pair has a nonzero sample load."""
+        with self.assertRaisesRegex(
+            ValueError, "No taxon/gene pairs have nonzero loads"
+        ):
+            plugin.methods["estimate_tfa"](**self._inputs(("C4",)))
+
+    def test_tfa_actions_require_property(self):
+        feature_load, gene_taxonomy = plugin.methods["estimate_tfa"](**self._inputs())
+        unmarked = qiime2.Artifact.import_data(
+            "FeatureTable[Frequency]", feature_load.view(biom.Table)
+        )
+        for action, parameters in (
+            ("tfa_by_taxon", {"taxon_ids": ["T1"]}),
+            ("tfa_by_function", {"function_ids": ["geneA"]}),
+            ("tfa_collapse_samples", {}),
+        ):
+            with self.assertRaisesRegex(TypeError, "Properties.*tfa"):
+                plugin.methods[action](
+                    feature_load=unmarked, gene_taxonomy=gene_taxonomy, **parameters
+                )
 
     def test_public_selectors_return_requested_sparse_tables(self):
-        (feature_load,) = plugin.methods["estimate_tfa"](**self._inputs())
+        feature_load, gene_taxonomy = plugin.methods["estimate_tfa"](**self._inputs())
         by_taxon = plugin.methods["tfa_by_taxon"](
-            feature_load=feature_load, taxon_ids=["T2", "T1"]
+            feature_load=feature_load,
+            gene_taxonomy=gene_taxonomy,
+            taxon_ids=["T2", "T1"],
         ).tables
         self.assertEqual(set(by_taxon.keys()), {"T1", "T2"})
         by_taxon = by_taxon["T1"].view(biom.Table)
         self.assertEqual(list(by_taxon.ids(axis="observation")), ["geneA", "gene B"])
         np.testing.assert_array_equal(by_taxon.matrix_data.toarray(), [[5, 3], [1, 3]])
         by_function = plugin.methods["tfa_by_function"](
-            feature_load=feature_load, function_ids=["gene B"]
+            feature_load=feature_load,
+            gene_taxonomy=gene_taxonomy,
+            function_ids=["gene B"],
         ).tables
         self.assertEqual(set(by_function.keys()), {_collection_key("gene B")})
         by_function = by_function[_collection_key("gene B")].view(biom.Table)
@@ -93,24 +129,22 @@ class TestTFAAction(TestPluginBase):
         )
         self.assertEqual(by_function.matrix_data.nnz, 3)
 
-    def test_empty_table_when_no_contigs_overlap(self):
-        result = plugin.methods["estimate_tfa"](**self._inputs(("C4",)))
-        self.assertEqual(result.feature_load.view(biom.Table).shape, (0, 2))
-
     def test_collapse_samples_returns_taxon_by_function_artifact(self):
-        (feature_load,) = plugin.methods["estimate_tfa"](**self._inputs())
-        result = plugin.methods["tfa_collapse_samples"](feature_load=feature_load)
-        self.assertEqual(str(result.table.type), "FeatureTable[Unconstrained]")
+        feature_load, gene_taxonomy = plugin.methods["estimate_tfa"](**self._inputs())
+        result = plugin.methods["tfa_collapse_samples"](
+            feature_load=feature_load, gene_taxonomy=gene_taxonomy
+        )
+        self.assertEqual(str(result.table.type), "FeatureTable[Frequency]")
         table = result.table.view(biom.Table)
         self.assertEqual(list(table.ids(axis="observation")), ["T1", "T2"])
         self.assertEqual(list(table.ids(axis="sample")), ["geneA", "gene B"])
         np.testing.assert_array_equal(table.matrix_data.toarray(), [[8, 4], [0, 12]])
         mean = plugin.methods["tfa_collapse_samples"](
-            feature_load=feature_load, aggregation="mean"
+            feature_load=feature_load, gene_taxonomy=gene_taxonomy, aggregation="mean"
         ).table.view(biom.Table)
         np.testing.assert_array_equal(mean.matrix_data.toarray(), [[4, 2], [0, 6]])
         median = plugin.methods["tfa_collapse_samples"](
-            feature_load=feature_load, aggregation="median"
+            feature_load=feature_load, gene_taxonomy=gene_taxonomy, aggregation="median"
         ).table.view(biom.Table)
         np.testing.assert_array_equal(median.matrix_data.toarray(), [[4, 2], [0, 6]])
 

@@ -40,13 +40,13 @@ from q2_types.feature_map import (
     MAGtoContigs,
 )
 from qiime2.core.type import (
+    Collection,
     Bool,
     Range,
     Int,
     Str,
     Float,
     List,
-    Collection,
     Choices,
     Visualization,
     Properties,
@@ -1765,10 +1765,16 @@ tfa_input_descriptions = {
 
 plugin.methods.register_function(
     function=q2_annotate.tfa.tfa_by_taxon,
-    inputs={"feature_load": FeatureTable[TFA]},
+    inputs={
+        "feature_load": FeatureTable[Frequency % Properties("tfa")],
+        "gene_taxonomy": FeatureData[Taxonomy % Properties("tfa")],
+    },
     parameters={"taxon_ids": List[Str]},
-    outputs=[("tables", Collection[FeatureTable[Unconstrained]])],
-    input_descriptions={"feature_load": "Sample-resolved TFA table."},
+    outputs=[("tables", Collection[FeatureTable[Frequency]])],
+    input_descriptions={
+        "feature_load": "Sample-resolved load table.",
+        "gene_taxonomy": "Mapping from table features to taxon and gene IDs.",
+    },
     parameter_descriptions={"taxon_ids": "Taxon IDs to select."},
     output_descriptions={
         "tables": "One function-by-sample table for each selected taxon ID."
@@ -1780,10 +1786,16 @@ plugin.methods.register_function(
 
 plugin.methods.register_function(
     function=q2_annotate.tfa.tfa_by_function,
-    inputs={"feature_load": FeatureTable[TFA]},
+    inputs={
+        "feature_load": FeatureTable[Frequency % Properties("tfa")],
+        "gene_taxonomy": FeatureData[Taxonomy % Properties("tfa")],
+    },
     parameters={"function_ids": List[Str]},
-    outputs=[("tables", Collection[FeatureTable[Unconstrained]])],
-    input_descriptions={"feature_load": "Sample-resolved TFA table."},
+    outputs=[("tables", Collection[FeatureTable[Frequency]])],
+    input_descriptions={
+        "feature_load": "Sample-resolved load table.",
+        "gene_taxonomy": "Mapping from table features to taxon and gene IDs.",
+    },
     parameter_descriptions={"function_ids": "Functional feature IDs to select."},
     output_descriptions={
         "tables": "One taxon-by-sample table for each selected function ID."
@@ -1795,10 +1807,16 @@ plugin.methods.register_function(
 
 plugin.methods.register_function(
     function=q2_annotate.tfa.tfa_collapse_samples,
-    inputs={"feature_load": FeatureTable[TFA]},
+    inputs={
+        "feature_load": FeatureTable[Frequency % Properties("tfa")],
+        "gene_taxonomy": FeatureData[Taxonomy % Properties("tfa")],
+    },
     parameters={"aggregation": Str % Choices(["sum", "mean", "median"])},
-    outputs=[("table", FeatureTable[Unconstrained])],
-    input_descriptions={"feature_load": "Sample-resolved TFA table."},
+    outputs=[("table", FeatureTable[Frequency])],
+    input_descriptions={
+        "feature_load": "Sample-resolved load table.",
+        "gene_taxonomy": "Mapping from table features to taxon and gene IDs.",
+    },
     parameter_descriptions={
         "aggregation": (
             "How to collapse sample loads for each taxon/function pair. "

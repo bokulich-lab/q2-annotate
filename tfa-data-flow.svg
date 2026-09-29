@@ -10,7 +10,7 @@
 <rect x="70" y="155" width="510" height="231" rx="12" fill="#ffffff" stroke="#cedce6" stroke-width="2"/>
 <rect x="70" y="155" width="510" height="42" rx="12" fill="#eaf3fa" stroke="none" stroke-width="1"/>
 <rect x="70" y="185" width="510" height="12" rx="0" fill="#eaf3fa" stroke="none" stroke-width="1"/>
-<text x="86" y="182" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">abundance_matrix</text>
+<text x="86" y="182" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">contig_abundance</text>
 <text x="86" y="223" font-size="14" font-weight="400" fill="#547088" text-anchor="start" font-family="Arial, Helvetica, sans-serif">FeatureTable[Frequency] · rows = contigs · columns = samples</text>
 <rect x="71" y="236" width="508" height="35" rx="0" fill="#d8e9f5" stroke="none" stroke-width="1"/>
 <text x="175.0" y="260" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">contig</text>
