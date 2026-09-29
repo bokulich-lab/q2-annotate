@@ -183,7 +183,7 @@
 <rect x="1035" y="1080" width="430" height="190" rx="12" fill="#ffffff" stroke="#cedce6" stroke-width="2"/>
 <rect x="1035" y="1080" width="430" height="42" rx="12" fill="#eaf3fa" stroke="none" stroke-width="1"/>
 <rect x="1035" y="1110" width="430" height="12" rx="0" fill="#eaf3fa" stroke="none" stroke-width="1"/>
-<text x="1051" y="1107" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">tables[id_Z2VuZSBC]</text>
+<text x="1051" y="1107" font-size="20" font-weight="700" fill="#17324d" text-anchor="start" font-family="Arial, Helvetica, sans-serif">tables[gene B]</text>
 <text x="1051" y="1148" font-size="14" font-weight="400" fill="#547088" text-anchor="start" font-family="Arial, Helvetica, sans-serif">Taxon × sample</text>
 <rect x="1036" y="1161" width="428" height="33" rx="0" fill="#d8e9f5" stroke="none" stroke-width="1"/>
 <text x="1120.0" y="1185" font-size="15" font-weight="700" fill="#17324d" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">taxon</text>
