@@ -1788,7 +1788,7 @@ plugin.methods.register_function(
         "contigs shared by both input tables and assigned to a taxon with "
         "taxonomy are included."
     ),
-    examples={"basic": estimate_tfa_example},
+    examples={"tfa_demo": estimate_tfa_example},
     citations=[],
 )
 
