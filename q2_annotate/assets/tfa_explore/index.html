@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Explore taxonomic functional attribution</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/vega@5/build/vega.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5/build/vega-lite.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6/build/vega-embed.min.js" defer></script>
+  <script src="taxonomy.js" defer></script>
+  <script src="explore.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">QIIME 2 · FeatureTable[Frequency % Properties('tfa')]</p>
+      <h1>Explore taxon–function links</h1>
+      <p>Choose a taxonomy level, then select a taxon, a function, or both. Choose sum, mean, or median to summarize each heatmap link across samples. The plots below compare loads across the original samples, including zero values.</p>
+    </header>
+
+    <section class="controls" aria-label="Explorer controls">
+      <label>Taxonomy level <select id="level"></select></label>
+      <label>Taxon <select id="taxon"></select></label>
+      <label>Function <select id="function"></select></label>
+      <label>Group samples by <select id="group"></select></label>
+      <label>Heatmap metric <select id="metric"><option value="sum">Sum</option><option value="mean">Mean</option><option value="median">Median</option></select></label>
+      <label>Heatmap links <select id="limit"><option value="20">Top 20</option><option value="50">Top 50</option><option value="100">Top 100</option></select></label>
+    </section>
+
+    <p id="status" role="status"></p>
+
+    <section class="card">
+      <h2>Taxon–function links</h2>
+      <p id="heatmap-caption"></p>
+      <div id="heatmap" class="plot"></div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Sample distributions by group</h2>
+        <p id="group-caption"></p>
+        <div id="boxplot" class="plot"></div>
+      </div>
+      <div class="card">
+        <h2>Individual samples</h2>
+        <p>The 100 samples with the highest loads are shown; the group comparison uses every sample.</p>
+        <div id="samples" class="plot"></div>
+      </div>
+    </section>
+    <footer>Loads are abundance-weighted function counts. The heatmap metric summarizes each pair across all samples, including zero loads. Taxa sharing a lineage at the selected level are summed within each sample before calculating the heatmap metric. Missing ranks are shown as Unclassified under their known lineage. Matching pairs are summed within each sample for the boxplots and sample bars. Metadata groups apply to those sample plots. Missing metadata is shown as its own group.</footer>
+  </main>
+  <script id="tfa-data" type="application/json">__TFA_DATA__</script>
+</body>
+</html>

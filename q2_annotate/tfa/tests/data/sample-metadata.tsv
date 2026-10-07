@@ -1,0 +1,5 @@
+#SampleID	group	batch	age
+#q2:types	categorical	categorical	numeric
+S1	case	B1	10
+S2	control	B2	12
+S3	case	B1	14

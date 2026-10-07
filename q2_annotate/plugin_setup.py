@@ -25,6 +25,7 @@ from q2_types.feature_table import FeatureTable, Frequency, PresenceAbsence
 
 from q2_annotate.examples import estimate_tfa_example
 from q2_annotate.tfa.tfa import estimate_tfa
+from q2_annotate.tfa.visualizer import explore_tfa
 from q2_types.per_sample_sequences import (
     SequencesWithQuality,
     PairedEndSequencesWithQuality,
@@ -1789,6 +1790,31 @@ plugin.methods.register_function(
         "taxonomy are included."
     ),
     examples={"tfa_demo": estimate_tfa_example},
+    citations=[],
+)
+
+plugin.visualizers.register_function(
+    function=explore_tfa,
+    inputs={
+        "feature_load": FeatureTable[Frequency % Properties("tfa")],
+        "gene_taxonomy": FeatureData[Taxonomy % Properties("tfa")],
+    },
+    parameters={"metadata": Metadata},
+    input_descriptions={
+        "feature_load": "Sample-resolved taxon/function loads to explore.",
+        "gene_taxonomy": "Map feature IDs to taxon IDs, gene IDs, and taxonomy labels.",
+    },
+    parameter_descriptions={
+        "metadata": (
+            "Optional sample metadata. Categorical columns can be used to "
+            "group samples in the boxplot."
+        )
+    },
+    name="Explore taxonomic functional attribution.",
+    description=(
+        "Interactively browse taxon/function links and compare their loads "
+        "across samples or categorical sample groups."
+    ),
     citations=[],
 )
 

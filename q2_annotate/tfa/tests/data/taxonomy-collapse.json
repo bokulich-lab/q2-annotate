@@ -1,0 +1,13 @@
+{
+  "samples": ["S1", "S2", "S3"],
+  "groups": {"treatment": ["A", "B", "A"]},
+  "pairs": [
+    {"taxon_id": "T1", "taxon": "d__Bacteria; p__A; g__Shared; s__one", "lineage": ["d__Bacteria", "p__A", "g__Shared", "s__one"], "function": "geneA"},
+    {"taxon_id": "T2", "taxon": "d__Bacteria; p__A; g__Shared; s__two", "lineage": ["d__Bacteria", "p__A", "g__Shared", "s__two"], "function": "geneA"},
+    {"taxon_id": "T3", "taxon": "d__Bacteria; p__B; g__Shared", "lineage": ["d__Bacteria", "p__B", "g__Shared"], "function": "geneA"},
+    {"taxon_id": "T1", "taxon": "d__Bacteria; p__A; g__Shared; s__one", "lineage": ["d__Bacteria", "p__A", "g__Shared", "s__one"], "function": "geneB"},
+    {"taxon_id": "T4", "taxon": "d__Bacteria; p__A", "lineage": ["d__Bacteria", "p__A"], "function": "geneA"},
+    {"taxon_id": "T5", "taxon": "d__Bacteria; p__B; g__", "lineage": ["d__Bacteria", "p__B", "g__"], "function": "geneA"}
+  ],
+  "loads": [[0, 0, 3], [1, 1, 5], [2, 0, 7], [3, 2, 2], [4, 0, 1], [5, 1, 4]]
+}

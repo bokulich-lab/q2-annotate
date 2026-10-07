@@ -1,0 +1,13 @@
+Feature ID	Taxon
+T001	d__Bacteria; p__Pseudomonadota; g__Escherichia; s__Escherichia coli
+T002	d__Bacteria; p__Pseudomonadota; g__Klebsiella; s__Klebsiella pneumoniae
+T003	d__Bacteria; p__Bacillota; g__Enterococcus; s__Enterococcus faecium
+T004	d__Bacteria; p__Bacteroidota; g__Bacteroides; s__Bacteroides fragilis
+T005	d__Bacteria; p__Bacteroidota; g__Bacteroides; s__Bacteroides vulgatus
+T006	d__Bacteria; p__Bacillota; g__Faecalibacterium; s__Faecalibacterium prausnitzii
+T007	d__Bacteria; p__Bacillota; g__Roseburia; s__Roseburia intestinalis
+T008	d__Bacteria; p__Verrucomicrobiota; g__Akkermansia; s__Akkermansia muciniphila
+T009	d__Bacteria; p__Actinomycetota; g__Bifidobacterium; s__Bifidobacterium longum
+T010	d__Bacteria; p__Bacteroidota; g__Prevotella; s__Prevotella copri
+T011	d__Bacteria; p__Bacillota; g__Clostridioides; s__Clostridioides difficile
+T012	d__Bacteria; p__Bacteroidota; g__Alistipes; s__Alistipes putredinis
