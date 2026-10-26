@@ -122,7 +122,8 @@ footer {
 
 }
 
-.controls .taxon-control {
+.controls .taxon-control,
+.controls .function-control {
   flex: 2;
   min-width: min(300px, 100%);
 }
@@ -132,13 +133,15 @@ footer {
   flex-basis: 180px;
 }
 
-#selected-taxonomy {
+#selected-taxonomy,
+#selected-function {
   overflow-wrap: anywhere;
   color: #36576b;
   margin: 0 0 12px;
 }
 
-#selected-taxonomy:empty {
+#selected-taxonomy:empty,
+#selected-function:empty {
   display: none;
 }
 

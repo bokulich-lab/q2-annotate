@@ -67,12 +67,13 @@ test("changing the level refreshes the dropdown and every plot, including heatma
   vm.runInContext(fs.readFileSync(path.join(__dirname, "../../assets/tfa_explore/explore.js"), "utf8"), context);
   await vm.runInContext("initialization", context);
   const viewState = () => plain({
-    controls: Object.fromEntries(["level", "taxon-search", "taxon", "function", "group", "metric", "limit"]
+    controls: Object.fromEntries(["level", "taxon-search", "taxon", "function-search", "function", "group", "metric", "limit"]
       .map(id => [id, element(id).value])),
     showUnclassified: element("show-unclassified").checked,
     resetDisabled: element("clear-selections").disabled,
     taxa: element("taxon").options,
-    text: Object.fromEntries(["selected-taxonomy", "status", "heatmap-caption", "group-caption"]
+    functions: element("function").options,
+    text: Object.fromEntries(["selected-taxonomy", "selected-function", "status", "heatmap-caption", "group-caption"]
       .map(id => [id, element(id).textContent])),
     plots: Object.fromEntries(specs)
   });
@@ -285,6 +286,63 @@ test("changing the level refreshes the dropdown and every plot, including heatma
   await vm.runInContext("renderQueue", context);
   assert.deepEqual(viewState(), initialView);
 
+  // Function search clears incompatible selections and ranks only matching links.
+  element("function").value = "geneA";
+  element("function").listeners.change();
+  element("function-search").value = "  GeNeB  ";
+  element("function-search").listeners.input();
+  element("limit").value = "1";
+  element("limit").listeners.change();
+  await vm.runInContext("renderQueue", context);
+  assert.equal(element("function").value, "");
+  assert.deepEqual(element("function").options.map(option => [option.value, option.textContent]), [
+    ["", "All matching functions"], ["geneB", "geneB"]
+  ]);
+  assert.deepEqual(originalPairs(specs.get("#heatmap-plot").data.values).map(pair => pair.function), ["geneB"]);
+  assert.deepEqual(plain(specs.get("#boxplot").data.values).map(sample => sample.load), [0, 0, 2]);
+  assert.deepEqual(plain(specs.get("#samples").data.values).map(sample => sample.load), [2, 0, 0]);
+  assert.deepEqual(element("taxon").options.map(option => option.value), ["", "d__Bacteria; p__A; g__Shared; s__one"]);
+
+  // Both search fields apply together, including when their intersection is empty.
+  element("taxon-search").value = "s__two";
+  element("taxon-search").listeners.input();
+  await vm.runInContext("renderQueue", context);
+  for (const id of ["heatmap-plot", "boxplot", "samples"]) {
+    assert.equal(element(id).textContent, "No values to plot for this selection.");
+  }
+  element("taxon-search").value = "s__one";
+  element("taxon-search").listeners.input();
+  await vm.runInContext("renderQueue", context);
+  const searchedPair = specs.get("#heatmap-plot").data.values.find(pair => pair.present);
+  clicks.get("#heatmap-plot")({}, {datum: searchedPair});
+  await vm.runInContext("renderQueue", context);
+  assert.equal(element("function-search").value, "");
+  assert.equal(element("taxon-search").value, "");
+  assert.equal(element("function").value, "geneB");
+  assert.equal(element("selected-function").textContent, "Selected function: geneB");
+
+  // Preserve valid selections, but clear one when its function no longer matches.
+  element("function-search").value = "gene";
+  element("function-search").listeners.input();
+  await vm.runInContext("renderQueue", context);
+  assert.equal(element("function").value, "geneB");
+  element("function-search").value = "no matching function";
+  element("function-search").listeners.input();
+  await vm.runInContext("renderQueue", context);
+  assert.equal(element("function").value, "");
+  assert.deepEqual(element("function").options.map(option => option.value), [""]);
+  assert.equal(element("heatmap-plot").textContent, "No values to plot for this selection.");
+  element("function-search").value = "gene";
+  element("function-search").listeners.input();
+  element("limit").value = "100";
+  element("limit").listeners.change();
+  await vm.runInContext("renderQueue", context);
+  assert.deepEqual(element("function").options.map(option => option.value), ["", "geneA", "geneB"]);
+  assert.equal(specs.get("#heatmap-plot").data.values.filter(pair => pair.present).length, 3);
+  element("clear-selections").listeners.click();
+  await vm.runInContext("renderQueue", context);
+  assert.deepEqual(viewState(), initialView);
+
   // A diagonal top two must retain the third (off-diagonal) positive pair.
   const matrix = plain(vm.runInContext(`(() => {
     const original = current, originalLoads = loadsByPair;
@@ -425,10 +483,10 @@ test("JSON loading failures show a message and keep controls disabled", async ()
     await vm.runInContext("initialization", context);
     assert.equal(getElementById("status").textContent, `Could not load TFA data: ${message}`);
     assert.deepEqual(Object.fromEntries([
-      "show-unclassified", "level", "taxon-search", "taxon", "function", "group", "metric", "limit", "clear-selections"
+      "show-unclassified", "level", "taxon-search", "taxon", "function-search", "function", "group", "metric", "limit", "clear-selections"
     ].map(id => [id, getElementById(id).disabled])), {
       "show-unclassified":true, level:true, "taxon-search":true, taxon:true,
-      function:true, group:true, metric:true, limit:true, "clear-selections":true
+      "function-search":true, function:true, group:true, metric:true, limit:true, "clear-selections":true
     });
   }
 });

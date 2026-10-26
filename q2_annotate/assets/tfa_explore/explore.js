@@ -10,6 +10,8 @@ const levelSelect = document.getElementById("level");
 const taxonSearch = document.getElementById("taxon-search");
 const selectedTaxonomy = document.getElementById("selected-taxonomy");
 const taxonSelect = document.getElementById("taxon");
+const functionSearch = document.getElementById("function-search");
+const selectedFunction = document.getElementById("selected-function");
 const functionSelect = document.getElementById("function");
 const groupSelect = document.getElementById("group");
 const metricSelect = document.getElementById("metric");
@@ -37,7 +39,7 @@ let current;
 let loadsByPair = [];
 let deepestLevel = 1;
 const controls = [showUnclassified, levelSelect, taxonSearch, taxonSelect,
-                  functionSelect, groupSelect, metricSelect, limitSelect, clearSelections];
+                  functionSearch, functionSelect, groupSelect, metricSelect, limitSelect, clearSelections];
 for (const control of controls) control.disabled = true;
 
 /** Load data and populate controls before drawing the first plots. */
@@ -50,12 +52,10 @@ async function initializeExplorer() {
   [tfa, plotTemplates] = await Promise.all([
     readJson("data.json"), readJson("plots.json")
   ]);
-  const functions = [...new Set(tfa.pairs.map(pair => pair.function))].sort();
   deepestLevel = tfa.pairs.reduce((depth, pair) => Math.max(depth, pair.lineage.length), 1);
   for (let level = 1; level <= deepestLevel; level++) {
     levelSelect.add(new Option(`Level ${level}`, String(level)));
   }
-  addOptions(functionSelect, functions, "All functions");
   addOptions(groupSelect, Object.keys(tfa.groups), "All samples");
   for (const control of controls) control.disabled = false;
   resetSelections();
@@ -66,11 +66,13 @@ async function initializeExplorer() {
 function resetSelections() {
   levelSelect.value = String(deepestLevel);
   taxonSearch.value = "";
+  functionSearch.value = "";
   functionSelect.value = "";
   groupSelect.value = "";
   metricSelect.value = "sum";
   limitSelect.value = "100";
   showUnclassified.checked = false;
+  refreshFunctions();
   changeLevel();
   update();
 }
@@ -87,12 +89,27 @@ function taxonMatchesSearch(taxon) {
   return taxon.toLocaleLowerCase().includes(taxonSearch.value.trim().toLocaleLowerCase());
 }
 
+function functionMatchesSearch(func) {
+  return func.toLocaleLowerCase().includes(functionSearch.value.trim().toLocaleLowerCase());
+}
+
+/** Rebuild the function list from search, keeping a valid selection. */
+function refreshFunctions() {
+  const previous = functionSelect.value;
+  const functions = [...new Set(tfa.pairs.map(pair => pair.function))]
+    .filter(functionMatchesSearch).sort();
+  functionSelect.replaceChildren();
+  addOptions(functionSelect, functions, functionSearch.value.trim() ? "All matching functions" : "All functions");
+  functionSelect.value = functions.includes(previous) ? previous : "";
+}
+
 /** Rebuild the taxon list from search and function filters, keeping valid selections. */
 function refreshTaxa() {
   const previous = taxonSelect.value;
   const query = taxonSearch.value.trim().toLocaleLowerCase();
   const taxa = [...new Set(current.pairs
     .filter(pairVisible)
+    .filter(pair => functionMatchesSearch(pair.function))
     .filter(pair => !functionSelect.value || pair.function === functionSelect.value)
     .map(pair => pair.taxon))]
     .filter(taxonMatchesSearch).sort();
@@ -120,6 +137,13 @@ function showSelectedTaxonomy() {
     : taxonSearch.value.trim() ? "Search filters the taxon list and plots. Select a taxon to narrow the results further." : "";
 }
 
+function showSelectedFunction() {
+  functionSelect.title = functionSelect.value || (functionSearch.value.trim() ? "All matching functions" : "All functions");
+  selectedFunction.textContent = functionSelect.value
+    ? `Selected function: ${functionSelect.value}`
+    : functionSearch.value.trim() ? "Search filters the function list and plots. Select a function to narrow the results further." : "";
+}
+
 /** Collapse to the chosen level and index sparse loads for repeated filtering. */
 function changeLevel() {
   current = collapseTaxonomy(tfa, Number(levelSelect.value));
@@ -133,7 +157,7 @@ function changeLevel() {
 function matchedPairs() {
   const indices = [];
   current.pairs.forEach((pair, index) => {
-    if (pairVisible(pair) && taxonMatchesSearch(pair.taxon) &&
+    if (pairVisible(pair) && taxonMatchesSearch(pair.taxon) && functionMatchesSearch(pair.function) &&
         (!taxonSelect.value || pair.taxon === taxonSelect.value) &&
         (!functionSelect.value || pair.function === functionSelect.value)) {
       indices.push(index);
@@ -292,6 +316,8 @@ async function draw() {
       const pair = item && item.datum;
       if (pair && pair.present && pair.taxon && pair.function) {
         taxonSearch.value = "";
+        functionSearch.value = "";
+        refreshFunctions();
         functionSelect.value = pair.function;
         refreshTaxa();
         taxonSelect.value = pair.taxon;
@@ -306,6 +332,7 @@ async function draw() {
 function update() {
   if (!tfa) return;
   showSelectedTaxonomy();
+  showSelectedFunction();
   // Serialize asynchronous redraws so an older render cannot overwrite a newer one.
   renderQueue = renderQueue.then(draw).catch(error => {
     status.textContent = `Could not draw the plots: ${error.message}`;
@@ -323,6 +350,11 @@ levelSelect.addEventListener("change", () => {
   update();
 });
 taxonSearch.addEventListener("input", () => {
+  refreshTaxa();
+  update();
+});
+functionSearch.addEventListener("input", () => {
+  refreshFunctions();
   refreshTaxa();
   update();
 });
