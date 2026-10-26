@@ -63,7 +63,7 @@ function resetSelections() {
   functionSelect.value = "";
   groupSelect.value = "";
   metricSelect.value = "sum";
-  limitSelect.value = "20";
+  limitSelect.value = "100";
   showUnclassified.checked = false;
   changeLevel();
   update();
