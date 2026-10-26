@@ -241,7 +241,7 @@ function heatmapSpec(indices) {
       }},
       {
         transform: [{filter: "datum.top_link"}],
-        mark: {type: "point", filled: true, color: "#444444", size: 12,
+        mark: {type: "point", filled: true, color: "#800000", size: 12,
                opacity: 1, strokeWidth: 0, cursor: "pointer", tooltip: mark.tooltip},
         encoding: {
           x: {...position.x, bandPosition: 0.87},
