@@ -196,7 +196,7 @@ function heatmapSpec(indices) {
     cell.tooltip = {
       "Taxon": cell.taxon,
       "Function": cell.function,
-      [`${label} load`]: cell.present ? cell.load.toFixed(2) : "No estimated load",
+      [`${label} load`]: cell.present ? cell.load.toExponential(2) : "No estimated load",
       "Top N link": cell.top_link ? "Yes" : "No"
     };
   }

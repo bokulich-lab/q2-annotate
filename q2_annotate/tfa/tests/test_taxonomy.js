@@ -266,18 +266,19 @@ test("changing the level refreshes the dropdown and every plot, including heatma
         {taxon: "A", taxon_label: "A", function: "X", total: 10, mean: 10/3, median: 0},
         {taxon: "B", taxon_label: "B", function: "Y", total: 9, mean: 3, median: 2},
         {taxon: "A", taxon_label: "A", function: "Y", total: 2, mean: 2/3, median: 0},
-        {taxon: "C", taxon_label: "C", function: "Z", total: 1, mean: 1/3, median: 0}
+        {taxon: "C", taxon_label: "C", function: "Z", total: 0.000123456, mean: 0.000123456/3, median: 0}
       ]};
-      loadsByPair = [[[0, 0, 10]], [[1, 0, 7], [1, 1, 2]], [[2, 0, 2]], [[3, 0, 1]]];
+      loadsByPair = [[[0, 0, 10]], [[1, 0, 7], [1, 1, 2]], [[2, 0, 2]], [[3, 0, 0.000123456]]];
       limitSelect.value = "2";
       metricSelect.value = "sum";
       const sum = heatmapSpec([0, 1, 2, 3]);
+      const small = heatmapSpec([3]);
       metricSelect.value = "median";
       const median = heatmapSpec([0, 1, 2, 3]);
       const filtered = heatmapSpec([2]);
       limitSelect.value = "1000";
       const all = heatmapSpec([0, 1, 2, 3]);
-      return {sum, median, filtered, all};
+      return {sum, small, median, filtered, all};
     } finally {
       current = original; loadsByPair = originalLoads;
       metricSelect.value = originalMetric; limitSelect.value = originalLimit;
@@ -287,6 +288,9 @@ test("changing the level refreshes the dropdown and every plot, including heatma
     pair => pair.taxon === taxon && pair.function === func
   );
   assert.equal(matrix.sum.data.values.length, 4);
+  assert.equal(cell(matrix.sum, "A", "X").tooltip["Sum load"], "1.00e+1");
+  assert.equal(cell(matrix.small, "C", "Z").tooltip["Sum load"], "1.23e-4");
+  assert.equal(cell(matrix.small, "C", "Z").load, 0.000123456);
   assert.equal(cell(matrix.sum, "A", "Y").total, 2);
   assert.equal(cell(matrix.sum, "A", "Y").top_link, false);
   assert.equal(cell(matrix.sum, "B", "X").present, false);
@@ -295,6 +299,7 @@ test("changing the level refreshes the dropdown and every plot, including heatma
   assert.deepEqual(matrix.sum.data.values.filter(pair => pair.top_link).map(
     pair => [pair.taxon, pair.function]), [["A", "X"], ["B", "Y"]]);
   assert.equal(cell(matrix.median, "A", "X").load, 0);
+  assert.equal(cell(matrix.median, "A", "X").tooltip["Median load"], "0.00e+0");
   assert.equal(cell(matrix.median, "A", "X").total, 10);
   assert.equal(matrix.filtered.data.values.length, 1);
   assert.equal(cell(matrix.filtered, "A", "Y").present, true);
