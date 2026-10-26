@@ -152,32 +152,6 @@ function plotWidth(id) {
   return Math.max(1, Math.floor(document.getElementById(id).clientWidth));
 }
 
-/** Assign each highlighted grid edge to exactly one cell. */
-function topLinkEdges(cells, taxaOrder, functionOrder) {
-  const rows = new Map(taxaOrder.map((taxon, index) => [taxon, index]));
-  const columns = new Map(functionOrder.map((func, index) => [func, index]));
-  const seen = new Set();
-  const sides = [
-    {horizontal: true, bandPosition: 0, values: []},
-    {horizontal: true, bandPosition: 1, values: []},
-    {horizontal: false, bandPosition: 0, values: []},
-    {horizontal: false, bandPosition: 1, values: []}
-  ];
-  for (const cell of cells) {
-    if (!cell.top_link) continue;
-    const row = rows.get(cell.taxon), column = columns.get(cell.function);
-    for (const side of sides) {
-      const key = side.horizontal
-        ? `h:${row + side.bandPosition}:${column}`
-        : `v:${row}:${column + side.bandPosition}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      side.values.push(cell);
-    }
-  }
-  return sides.filter(side => side.values.length);
-}
-
 /** Rank links by the chosen metric and build a Vega-Lite heatmap specification. */
 function heatmapSpec(indices) {
   const field = {sum: "total", mean: "mean", median: "median"}[metricSelect.value];
@@ -253,7 +227,7 @@ function heatmapSpec(indices) {
     },
     config: {view: {stroke: null}, legend: {orient: "bottom"}}
   };
-  // Cell fills and gray grid lines are separate from the unique maroon edges.
+  // Keep all cell borders identical; corner dots identify the top-ranked links.
   const {mark, encoding, ...frame} = spec;
   const {color, ...position} = encoding;
   return {
@@ -265,18 +239,15 @@ function heatmapSpec(indices) {
         stroke: {value: "#bdbdbd"},
         strokeWidth: {value: 0.5}
       }},
-      ...topLinkEdges(cells, taxaOrder, functionOrder).map(side => ({
-        data: {values: side.values},
-        mark: {type: "rule", stroke: "#800000", strokeWidth: 1,
-               cursor: "pointer", tooltip: mark.tooltip},
+      {
+        transform: [{filter: "datum.top_link"}],
+        mark: {type: "point", filled: true, color: "#444444", size: 12,
+               opacity: 1, strokeWidth: 0, cursor: "pointer", tooltip: mark.tooltip},
         encoding: {
-          x: {...position.x, bandPosition: side.horizontal ? 0 : side.bandPosition},
-          y: {...position.y, bandPosition: side.horizontal ? side.bandPosition : 0},
-          ...(side.horizontal
-            ? {x2: {field: "function", bandPosition: 1}}
-            : {y2: {field: "taxon", bandPosition: 1}})
+          x: {...position.x, bandPosition: 0.85},
+          y: {...position.y, bandPosition: 0.15}
         }
-      }))
+      }
     ]
   };
 }
@@ -338,7 +309,7 @@ async function draw() {
   const method = metricSelect.value;
   status.textContent = `${indices.length} matching taxon–function pairs · ${samples.length} samples`;
   document.getElementById("heatmap-caption").textContent =
-    `Each square is one pair at the selected taxonomy level; color shows its ${{sum: "sum", mean: "mean", median: "median"}[method]} load across all samples, including zeros. The top links by this metric select the axes; all intersections are shown. Dark borders mark the top links, white cells have a zero summary, and gray cells have no estimated load in the TFA table. Taxa are summed within each sample before this summary. Click a square to inspect that pair.`;
+    `Each square is one pair at the selected taxonomy level; color shows its ${{sum: "sum", mean: "mean", median: "median"}[method]} load across all samples, including zeros. The top links by this metric select the axes; all intersections are shown. Dots in the upper-right corners mark the top links, white cells have a zero summary, and gray cells have no estimated load in the TFA table. Taxa are summed within each sample before this summary. Click a square to inspect that pair.`;
   document.getElementById("group-caption").textContent = groupSelect.value
     ? `Each box compares sample loads for one ${groupSelect.value} category. Zeros are included.`
     : "One box summarizes all samples. Add categorical metadata to compare groups.";
