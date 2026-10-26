@@ -197,13 +197,14 @@ function heatmapSpec(indices) {
     mark: {
       type: "rect", cursor: "pointer", invalid: null,
       tooltip: {
-        expr: `{
-          'Taxon': datum.taxon,
-          'Function': datum.function,
-          ${JSON.stringify(`${label} load`)}:
-            datum.present ? format(datum.${field}, '.2f') : 'No estimated load'
-        }`
-      }
+      expr: `{
+        'Taxon': datum.taxon,
+        'Function': datum.function,
+        ${JSON.stringify(`${label} load`)}:
+          datum.present ? format(datum.${field}, '.2f') : 'No estimated load',
+        'Top N link': datum.top_link ? 'Yes' : 'No'
+      }`
+}
     },
     encoding: {
       x: {
