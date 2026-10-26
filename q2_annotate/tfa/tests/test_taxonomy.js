@@ -7,7 +7,7 @@ const data = require("./data/taxonomy-collapse.json");
 const plain = value => JSON.parse(JSON.stringify(value));
 // Compare original pair summaries independently of heatmap display annotations.
 const originalPairs = values => plain(values.filter(pair => pair.present).map(
-  ({present, top_link, state, nonzero_samples, load, tooltip, ...pair}) => pair
+  ({present, top_link, load, tooltip, ...pair}) => pair
 ));
 const expectedCollapse = require("./data/expected-taxonomy-collapse.json");
 
@@ -97,7 +97,7 @@ test("changing the level refreshes the dropdown and every plot, including heatma
   const fullHeatmap = specs.get("#heatmap-plot");
   assert.equal(fullHeatmap.data.values.length, 4);
   const absent = fullHeatmap.data.values.find(pair => !pair.present);
-  assert.equal(absent.state, "No estimated load");
+  assert.equal(absent.tooltip["Sum load"], "No estimated load");
   clicks.get("#heatmap-plot")({}, {datum: absent});
   assert.equal(element("taxon").value, "");
   assert.equal(element("function").value, "");
@@ -289,15 +289,13 @@ test("changing the level refreshes the dropdown and every plot, including heatma
   assert.equal(matrix.sum.data.values.length, 4);
   assert.equal(cell(matrix.sum, "A", "Y").total, 2);
   assert.equal(cell(matrix.sum, "A", "Y").top_link, false);
-  assert.equal(cell(matrix.sum, "A", "Y").nonzero_samples, 1);
   assert.equal(cell(matrix.sum, "B", "X").present, false);
   assert.equal(cell(matrix.sum, "B", "X").total, undefined);
   assert.equal(cell(matrix.sum, "C", "Z"), undefined);
   assert.deepEqual(matrix.sum.data.values.filter(pair => pair.top_link).map(
     pair => [pair.taxon, pair.function]), [["A", "X"], ["B", "Y"]]);
-  assert.equal(cell(matrix.median, "A", "X").state, "Zero summary");
+  assert.equal(cell(matrix.median, "A", "X").load, 0);
   assert.equal(cell(matrix.median, "A", "X").total, 10);
-  assert.equal(cell(matrix.median, "A", "X").nonzero_samples, 1);
   assert.equal(matrix.filtered.data.values.length, 1);
   assert.equal(cell(matrix.filtered, "A", "Y").present, true);
   assert.equal(matrix.all.data.values.length, 9);

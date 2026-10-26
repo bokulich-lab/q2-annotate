@@ -180,16 +180,13 @@ function heatmapSpec(indices) {
     cells.push({
       ...pair,
       present: true,
-      top_link: topIndices.has(index),
-      state: pair[field] === 0 ? "Zero summary" : "Positive summary",
-      nonzero_samples: (loadsByPair[index] || []).filter(load => load[2] > 0).length
+      top_link: topIndices.has(index)
     });
   }
   for (const taxon of taxaOrder) {
     for (const func of functionOrder) {
       if (!seen.get(taxon).has(func)) {
-        cells.push({taxon, function: func, present: false, top_link: false,
-                    state: "No estimated load"});
+        cells.push({taxon, function: func, present: false, top_link: false});
       }
     }
   }
@@ -203,7 +200,7 @@ function heatmapSpec(indices) {
       "Top N link": cell.top_link ? "Yes" : "No"
     };
   }
-  const spec = plotSpec("heatmap", cells, "heatmap");
+  const spec = plotSpec("heatmap", cells);
   // Bind the same category order and labels to every layer sharing the axes.
   for (const encoding of [spec.encoding, ...spec.layer.map(layer => layer.encoding).filter(encoding => encoding.x && encoding.y)]) {
     encoding.x.sort = functionOrder;
@@ -217,10 +214,10 @@ function heatmapSpec(indices) {
 }
 
 /** Clone templates so changing filters never mutates the loaded definitions. */
-function plotSpec(name, values, container) {
+function plotSpec(name, values) {
   const spec = JSON.parse(JSON.stringify(plotTemplates[name]));
   spec.data.values = values;
-  spec.width = plotWidth(container);
+  spec.width = plotWidth(name);
   return spec;
 }
 
@@ -230,7 +227,7 @@ function sampleGroupDomain(samples) {
 }
 
 function boxplotSpec(samples) {
-  const spec = plotSpec("boxplot", samples, "boxplot");
+  const spec = plotSpec("boxplot", samples);
   const domain = sampleGroupDomain(samples);
   spec.encoding.x.title = groupSelect.value || "Samples";
   spec.encoding.x.sort = domain;
@@ -240,7 +237,7 @@ function boxplotSpec(samples) {
 
 function sampleSpec(samples) {
   const top = [...samples].sort((a, b) => b.load - a.load).slice(0, 100);
-  const spec = plotSpec("samples", top, "samples");
+  const spec = plotSpec("samples", top);
   spec.encoding.x.axis.labels = top.length <= 30;
   spec.encoding.color.scale.domain = sampleGroupDomain(samples);
   spec.encoding.tooltip.find(field => field.field === "group").title = groupSelect.value || "Group";

@@ -95,11 +95,6 @@ button:focus-visible {
   width: 100%;
 }
 
-#heatmap-plot {
-  flex: 0 0 auto;
-  margin-inline: auto;
-}
-
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
