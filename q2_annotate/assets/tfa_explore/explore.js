@@ -245,7 +245,7 @@ function heatmapSpec(indices) {
         mark: {type: "point", filled: true, color: "#800000", size: 12,
                opacity: 1, strokeWidth: 0, cursor: "pointer", tooltip: mark.tooltip},
         encoding: {
-          x: {...position.x, bandPosition: 0.87},
+          x: {...position.x, bandPosition: 0.90},
           y: {...position.y, bandPosition: 0.20}
         }
       }
