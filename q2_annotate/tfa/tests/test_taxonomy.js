@@ -202,7 +202,7 @@ test("changing the level refreshes the dropdown and every plot, including heatma
   assert.deepEqual({selected:element("taxon").value, options:element("taxon").options.map(option => option.value)}, {
     selected:"", options:["", "d__Bacteria"]
   });
-  element("limit").value = "Infinity";
+  element("limit").value = "1000";
   element("limit").listeners.change();
   await vm.runInContext("renderQueue", context);
   assert.deepEqual(originalPairs(specs.get("#heatmap-plot").data.values), expectedCollapse["1"].pairs);
@@ -275,7 +275,7 @@ test("changing the level refreshes the dropdown and every plot, including heatma
       metricSelect.value = "median";
       const median = heatmapSpec([0, 1, 2, 3]);
       const filtered = heatmapSpec([2]);
-      limitSelect.value = "Infinity";
+      limitSelect.value = "1000";
       const all = heatmapSpec([0, 1, 2, 3]);
       return {sum, median, filtered, all};
     } finally {
@@ -306,7 +306,7 @@ test("changing the level refreshes the dropdown and every plot, including heatma
     const original = current;
     const originalLimit = limitSelect.value;
     try {
-      return [[30, "Infinity"], [31, "Infinity"], [31, "20"]].map(([count, limit]) => {
+      return [[30, "1000"], [31, "1000"], [31, "20"]].map(([count, limit]) => {
         current = {pairs: Array.from({length:count * 2}, (_, index) => ({
           ...original.pairs[0], taxon: "taxon" + index % 2,
           function: "gene" + Math.floor(index / 2), total: count - Math.floor(index / 2)
