@@ -177,3 +177,23 @@ footer {
   opacity: .6;
   cursor: default;
 }
+
+/* Let grid items and embedded charts shrink with the available content width. */
+.card,
+.plot,
+#heatmap-plot {
+  min-width: 0;
+}
+
+#heatmap-plot {
+  flex: 1 1 0;
+  width: 100%;
+  margin-inline: 0;
+}
+
+.plot > .vega-embed,
+#heatmap-plot > .vega-embed {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+}

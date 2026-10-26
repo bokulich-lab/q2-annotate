@@ -148,8 +148,8 @@ function sampleValues(pairIndices) {
 }
 
 function plotWidth(id) {
-  const gutter = {heatmap: 170, boxplot: 90, samples: 180}[id];
-  return Math.max(240, document.getElementById(id).parentElement.clientWidth - gutter);
+  // Vega's fit-x sizing includes axes, legends, and padding in this width.
+  return Math.max(1, Math.floor(document.getElementById(id).clientWidth));
 }
 
 /** Rank links by the chosen metric and build a Vega-Lite heatmap specification. */
@@ -190,7 +190,8 @@ function heatmapSpec(indices) {
   return {
     $schema: schema,
     data: {values: cells},
-    width: Math.min(plotWidth("heatmap"), Math.max(300, functionOrder.length * 52)),
+    width: plotWidth("heatmap"),
+    autosize: {type: "fit-x", contains: "padding", resize: true},
     height: {step: 29},
     // Keep absent pairs visible even though their numeric summaries are missing.
     mark: {
@@ -211,7 +212,7 @@ function heatmapSpec(indices) {
       },
       y: {
         field: "taxon", type: "nominal", sort: taxaOrder, title: "Taxon",
-        axis: {labelLimit: 0, labelExpr: `${JSON.stringify(axisLabels)}[datum.label]`}
+        axis: {labelLimit: Math.floor(plotWidth("heatmap") * 0.3), labelExpr: `${JSON.stringify(axisLabels)}[datum.label]`}
       },
       color: {
         condition: [
@@ -224,7 +225,7 @@ function heatmapSpec(indices) {
       stroke: {condition: {test: "datum.top_link", value: "#800000"}, value: "#bdbdbd"},
       strokeWidth: {condition: {test: "datum.top_link", value: 1}, value: 0.5},
     },
-    config: {view: {stroke: null}}
+    config: {view: {stroke: null}, legend: {orient: "bottom"}}
   };
 }
 
@@ -241,6 +242,7 @@ function boxplotSpec(samples) {
     $schema: schema,
     data: {values: samples},
     width: plotWidth("boxplot"),
+    autosize: {type: "fit-x", contains: "padding", resize: true},
     height: 300,
     mark: {type: "boxplot", extent: 1.5},
     encoding: {
@@ -258,6 +260,7 @@ function sampleSpec(samples) {
     $schema: schema,
     data: {values: top},
     width: plotWidth("samples"),
+    autosize: {type: "fit-x", contains: "padding", resize: true},
     height: 300,
     mark: {type: "bar"},
     encoding: {
