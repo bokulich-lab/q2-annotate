@@ -14,16 +14,20 @@
 <body>
   <main>
     <section class="controls" aria-label="Explorer controls">
-      <label>Taxonomy level <select id="level"></select></label>
-      <label class="taxon-control">Search taxa <input id="taxon-search" type="search" placeholder="Type a name or lineage…" aria-controls="taxon" autocomplete="off"></label>
-      <label class="taxon-control">Taxon <select id="taxon" aria-describedby="selected-taxonomy"></select></label>
-      <label class="function-control">Search functions <input id="function-search" type="search" placeholder="Type a function name or ID…" aria-controls="function" autocomplete="off"></label>
-      <label class="function-control">Function <select id="function" aria-describedby="selected-function"></select></label>
-      <label>Group samples by <select id="group"></select></label>
-      <label>Heatmap metric <select id="metric"><option value="sum">Sum</option><option value="mean">Mean</option><option value="median">Median</option></select></label>
-      <label>Select axes from top N links <select id="limit"><option value="20">Top 20</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="200">Top 200</option><option value="500">Top 500</option><option value="1000">Top 1000</option></select></label>
-      <label class="checkbox-control"><input id="show-unclassified" type="checkbox"> Show unclassified taxa</label>
-      <button id="clear-selections" type="button">Clear selections</button>
+      <div class="control-row taxonomy-controls" role="group" aria-label="Taxonomy filters">
+        <label>Taxonomy level <select id="level"></select></label>
+        <label>Search taxa <input id="taxon-search" type="search" placeholder="Type a name or lineage…" aria-controls="taxon" autocomplete="off"></label>
+        <label>Taxon <select id="taxon" aria-describedby="selected-taxonomy"></select></label>
+        <label class="checkbox-control"><input id="show-unclassified" type="checkbox"> Show unclassified taxa</label>
+      </div>
+      <div class="control-row display-controls" role="group" aria-label="Function and display filters">
+        <label>Search functions <input id="function-search" type="search" placeholder="Type a function name or ID…" aria-controls="function" autocomplete="off"></label>
+        <label>Function <select id="function" aria-describedby="selected-function"></select></label>
+        <label>Group samples by <select id="group"></select></label>
+        <label>Heatmap metric <select id="metric"><option value="sum">Sum</option><option value="mean">Mean</option><option value="median">Median</option></select></label>
+        <label>Select axes from top N links <select id="limit"><option value="20">Top 20</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="200">Top 200</option><option value="500">Top 500</option><option value="1000">Top 1000</option></select></label>
+        <button id="clear-selections" type="button">Clear selections</button>
+      </div>
     </section>
 
     <p id="selected-taxonomy" aria-live="polite"></p>
