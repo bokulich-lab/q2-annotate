@@ -201,7 +201,7 @@ function heatmapSpec(indices) {
           'Taxon': datum.taxon,
           'Function': datum.function,
           ${JSON.stringify(`${label} load`)}:
-            datum.present ? datum.${field} : 'No estimated load'
+            datum.present ? format(datum.${field}, '.2f') : 'No estimated load'
         }`
       }
     },
