@@ -1,8 +1,10 @@
 "use strict";
 
-// Browser controls and Vega plots; taxonomy aggregation lives in taxonomy.js.
+// Browser controls and rendering; Vega-Lite templates are in plots.json.
+// Taxonomy aggregation lives in taxonomy.js.
 // data.json stores nonzero loads as [pair index, sample index, load] triplets.
 let tfa;
+let plotTemplates;
 const showUnclassified = document.getElementById("show-unclassified");
 const levelSelect = document.getElementById("level");
 const taxonSearch = document.getElementById("taxon-search");
@@ -14,7 +16,6 @@ const metricSelect = document.getElementById("metric");
 const limitSelect = document.getElementById("limit");
 const clearSelections = document.getElementById("clear-selections");
 const status = document.getElementById("status");
-const schema = "https://vega.github.io/schema/vega-lite/v5.json";
 let activeViews = [];
 let renderQueue = Promise.resolve();
 
@@ -41,9 +42,14 @@ for (const control of controls) control.disabled = true;
 
 /** Load data and populate controls before drawing the first plots. */
 async function initializeExplorer() {
-  const response = await fetch("data.json");
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  tfa = await response.json();
+  async function readJson(filename) {
+    const response = await fetch(filename);
+    if (!response.ok) throw new Error(`${filename}: HTTP ${response.status}`);
+    return response.json();
+  }
+  [tfa, plotTemplates] = await Promise.all([
+    readJson("data.json"), readJson("plots.json")
+  ]);
   const functions = [...new Set(tfa.pairs.map(pair => pair.function))].sort();
   deepestLevel = tfa.pairs.reduce((depth, pair) => Math.max(depth, pair.lineage.length), 1);
   for (let level = 1; level <= deepestLevel; level++) {
@@ -187,118 +193,58 @@ function heatmapSpec(indices) {
       }
     }
   }
-  const spec = {
-    $schema: schema,
-    data: {values: cells},
-    width: plotWidth("heatmap"),
-    autosize: {type: "fit-x", contains: "padding", resize: true},
-    height: {step: 29},
-    // Keep absent pairs visible even though their numeric summaries are missing.
-    mark: {
-      type: "rect", cursor: "pointer", invalid: null,
-      tooltip: {
-      expr: `{
-        'Taxon': datum.taxon,
-        'Function': datum.function,
-        ${JSON.stringify(`${label} load`)}:
-          datum.present ? format(datum.${field}, '.2f') : 'No estimated load',
-        'Top N link': datum.top_link ? 'Yes' : 'No'
-      }`
-}
-    },
-    encoding: {
-      x: {
-        field: "function", type: "nominal", sort: functionOrder, title: "Function",
-        scale: {paddingInner: 0, paddingOuter: 0},
-        axis: {labels: functionOrder.length <= 30}
-      },
-      y: {
-        field: "taxon", type: "nominal", sort: taxaOrder, title: "Taxon",
-        scale: {paddingInner: 0, paddingOuter: 0},
-        axis: {labelLimit: Math.floor(plotWidth("heatmap") * 0.3), labelExpr: `${JSON.stringify(axisLabels)}[datum.label]`}
-      },
-      color: {
-        condition: [
-          {test: "!datum.present", value: "#f3f3f3"},
-          {test: `datum.${field} === 0`, value: "#ffffff"}
-        ],
-        field, type: "quantitative", title: `${label} load`,
-        scale: {scheme: "blues", zero: true}
-      },
-    },
-    config: {view: {stroke: null}, legend: {orient: "bottom"}}
-  };
-  // Keep all cell borders identical; corner dots identify the top-ranked links.
-  const {mark, encoding, ...frame} = spec;
-  const {color, ...position} = encoding;
-  return {
-    ...frame,
-    encoding: position,
-    layer: [
-      {mark, encoding: {
-        color,
-        stroke: {value: "#bdbdbd"},
-        strokeWidth: {value: 0.5}
-      }},
-      {
-        transform: [{filter: "datum.top_link"}],
-        mark: {type: "point", filled: true, color: "#800000", size: 12,
-               opacity: 1, strokeWidth: 0, cursor: "pointer", tooltip: mark.tooltip},
-        encoding: {
-          x: {...position.x, bandPosition: 0.90},
-          y: {...position.y, bandPosition: 0.20}
-        }
-      }
-    ]
-  };
+  // Tooltip content and the selected load are data supplied to the template.
+  for (const cell of cells) {
+    cell.load = cell.present ? cell[field] : null;
+    cell.tooltip = {
+      "Taxon": cell.taxon,
+      "Function": cell.function,
+      [`${label} load`]: cell.present ? cell.load.toFixed(2) : "No estimated load",
+      "Top N link": cell.top_link ? "Yes" : "No"
+    };
+  }
+  const spec = plotSpec("heatmap", cells, "heatmap");
+  // Bind the same category order and labels to every layer sharing the axes.
+  for (const encoding of [spec.encoding, ...spec.layer.map(layer => layer.encoding).filter(encoding => encoding.x && encoding.y)]) {
+    encoding.x.sort = functionOrder;
+    encoding.y.sort = taxaOrder;
+    encoding.y.axis.labelLimit = Math.floor(spec.width * 0.3);
+    encoding.y.axis.labelExpr = `${JSON.stringify(axisLabels)}[datum.label]`;
+    encoding.x.axis.labels = functionOrder.length <= 30;
+  }
+  spec.layer[0].encoding.color.title = `${label} load`;
+  return spec;
 }
 
-function sampleGroupColor(samples) {
-  // Use every sample, including categories absent from the top 100 bars.
-  return {
-    field: "group", type: "nominal", legend: null,
-    scale: {domain: [...new Set(samples.map(sample => sample.group))].sort(), scheme: "tableau10"}
-  };
+/** Clone templates so changing filters never mutates the loaded definitions. */
+function plotSpec(name, values, container) {
+  const spec = JSON.parse(JSON.stringify(plotTemplates[name]));
+  spec.data.values = values;
+  spec.width = plotWidth(container);
+  return spec;
+}
+
+function sampleGroupDomain(samples) {
+  // Include categories omitted from the top 100 bars to keep colors consistent.
+  return [...new Set(samples.map(sample => sample.group))].sort();
 }
 
 function boxplotSpec(samples) {
-  return {
-    $schema: schema,
-    data: {values: samples},
-    width: plotWidth("boxplot"),
-    autosize: {type: "fit-x", contains: "padding", resize: true},
-    height: 300,
-    mark: {type: "boxplot", extent: 1.5},
-    encoding: {
-      x: {field: "group", type: "nominal", sort: sampleGroupColor(samples).scale.domain, title: groupSelect.value || "Samples"},
-      y: {field: "load", type: "quantitative", title: "TFA load", scale: {zero: true}},
-      color: sampleGroupColor(samples)
-    },
-    config: {view: {stroke: null}}
-  };
+  const spec = plotSpec("boxplot", samples, "boxplot");
+  const domain = sampleGroupDomain(samples);
+  spec.encoding.x.title = groupSelect.value || "Samples";
+  spec.encoding.x.sort = domain;
+  spec.encoding.color.scale.domain = domain;
+  return spec;
 }
 
 function sampleSpec(samples) {
   const top = [...samples].sort((a, b) => b.load - a.load).slice(0, 100);
-  return {
-    $schema: schema,
-    data: {values: top},
-    width: plotWidth("samples"),
-    autosize: {type: "fit-x", contains: "padding", resize: true},
-    height: 300,
-    mark: {type: "bar"},
-    encoding: {
-      x: {field: "sample", type: "nominal", sort: "-y", title: "Sample", axis: {labels: top.length <= 30}},
-      y: {field: "load", type: "quantitative", title: "TFA load", scale: {zero: true}},
-      color: sampleGroupColor(samples),
-      tooltip: [
-        {field: "sample", type: "nominal", title: "Sample"},
-        {field: "group", type: "nominal", title: groupSelect.value || "Group"},
-        {field: "load", type: "quantitative", title: "TFA load", format: ".4g"}
-      ]
-    },
-    config: {view: {stroke: null}}
-  };
+  const spec = plotSpec("samples", top, "samples");
+  spec.encoding.x.axis.labels = top.length <= 30;
+  spec.encoding.color.scale.domain = sampleGroupDomain(samples);
+  spec.encoding.tooltip.find(field => field.field === "group").title = groupSelect.value || "Group";
+  return spec;
 }
 
 /** Dispose of old Vega views and redraw all three plots for the current selection. */

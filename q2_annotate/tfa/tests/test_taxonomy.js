@@ -7,7 +7,7 @@ const data = require("./data/taxonomy-collapse.json");
 const plain = value => JSON.parse(JSON.stringify(value));
 // Compare original pair summaries independently of heatmap display annotations.
 const originalPairs = values => plain(values.filter(pair => pair.present).map(
-  ({present, top_link, state, nonzero_samples, ...pair}) => pair
+  ({present, top_link, state, nonzero_samples, load, tooltip, ...pair}) => pair
 ));
 const expectedCollapse = require("./data/expected-taxonomy-collapse.json");
 
@@ -39,7 +39,7 @@ test("changing the level refreshes the dropdown and every plot, including heatma
     if (!elements.has(id)) elements.set(id, {
       value: ({level: "0", metric: "sum", limit: "20"})[id] || "",
       textContent: "",
-      checked: true, parentElement: {clientWidth: 1000}, options: [], listeners: {},
+      checked: true, clientWidth: 1000, parentElement: {clientWidth: 1000}, options: [], listeners: {},
       add(option) { this.options.push(option); },
       appendChild(option) { this.options.push(option); },
       replaceChildren() { this.options = []; this.value = ""; },
@@ -49,6 +49,9 @@ test("changing the level refreshes the dropdown and every plot, including heatma
   };
   const context = vm.createContext({
     fetch: async url => {
+      if (url === "plots.json") return {
+        ok: true, json: async () => require("../../assets/tfa_explore/plots.json")
+      };
       assert.equal(url, "data.json");
       return {ok:true, json:async () => data};
     },
@@ -171,7 +174,7 @@ test("changing the level refreshes the dropdown and every plot, including heatma
     lineage:element("selected-taxonomy").textContent
   }, {taxon:shared.taxon, search:"", lineage:`Selected lineage: ${shared.taxon}`});
   assert.equal(specs.get("#heatmap-plot").encoding.y.field, "taxon");
-  assert.equal(specs.get("#heatmap-plot").encoding.y.axis.labelLimit, 0);
+  assert.equal(specs.get("#heatmap-plot").encoding.y.axis.labelLimit, 300);
   const expectedSamples = [
     {sample:"S1", group:"All samples", load:3},
     {sample:"S2", group:"All samples", load:5},
@@ -184,9 +187,9 @@ test("changing the level refreshes the dropdown and every plot, including heatma
   element("metric").value = "median";
   element("metric").listeners.change();
   await vm.runInContext("renderQueue", context);
-  assert.deepEqual(JSON.parse(JSON.stringify(specs.get("#heatmap-plot").encoding.color)), {
-    condition:[{test:"!datum.present", value:"#e0e0e0"}, {test:"datum.median === 0", value:"#ffffff"}],
-    field:"median", type:"quantitative", title:"Median load", scale:{scheme:"blues", zero:true}
+  assert.deepEqual(JSON.parse(JSON.stringify(specs.get("#heatmap-plot").layer[0].encoding.color)), {
+    condition:[{test:"!datum.present", value:"#f3f3f3"}, {test:"datum.load === 0", value:"#ffffff"}],
+    field:"load", type:"quantitative", title:"Median load", scale:{scheme:"blues", zero:true}
   });
   assert.deepEqual(originalPairs(specs.get("#heatmap-plot").data.values), [expectedCollapse["3"].pairs[0]]);
   element("function").value = "";
@@ -320,7 +323,7 @@ test("changing the level refreshes the dropdown and every plot, including heatma
   })()`, context));
   assert.deepEqual(heatmapAxes, [30, 31, 10].map(count => ({
     field:"function", type:"nominal", sort:Array.from({length:count}, (_, index) => "gene" + index),
-    title:"Function", axis:{labels:count <= 30}
+    title:"Function", scale:{paddingInner:0, paddingOuter:0}, axis:{labels:count <= 30}
   })));
 });
 
@@ -371,7 +374,13 @@ test("JSON loading failures show a message and keep controls disabled", async ()
   const vm = require("node:vm");
   const source = fs.readFileSync(path.join(__dirname, "../../assets/tfa_explore/explore.js"), "utf8");
   for (const [fetch, message] of [
-    [async () => ({ok:false, status:404}), "HTTP 404"],
+    [async () => ({ok:false, status:404}), "data.json: HTTP 404"],
+    [async url => url === "plots.json"
+      ? {ok:false, status:404} : {ok:true, json:async () => data}, "plots.json: HTTP 404"],
+    [async url => ({ok:true, json:async () => {
+      if (url === "plots.json") throw new Error("Invalid plot JSON");
+      return data;
+    }}), "Invalid plot JSON"],
     [async () => { throw new Error("Network unavailable"); }, "Network unavailable"],
     [async () => ({ok:true, json:async () => { throw new Error("Invalid JSON"); }}), "Invalid JSON"]
   ]) {
