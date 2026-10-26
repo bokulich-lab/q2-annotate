@@ -191,9 +191,11 @@ footer {
   margin-inline: 0;
 }
 
+.plot.vega-embed,
 .plot > .vega-embed,
 #heatmap-plot > .vega-embed {
   display: block;
+  width: 100%;
   max-width: 100%;
   padding: 0;
 }
