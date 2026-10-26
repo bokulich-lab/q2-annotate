@@ -196,15 +196,12 @@ function heatmapSpec(indices) {
     mark: {
       type: "rect", cursor: "pointer", invalid: null,
       tooltip: {
-        expr: `datum.present ? {
+        expr: `{
           'Taxon': datum.taxon,
-          'Taxon ID': datum.taxon_id,
           'Function': datum.function,
-          ${JSON.stringify(`${label} load`)}: datum.${field},
-          'Top-ranked link': datum.top_link,
-          'Total load': datum.total,
-          'Samples with nonzero load': datum.nonzero_samples
-        } : 'No data available'`
+          ${JSON.stringify(`${label} load`)}:
+            datum.present ? datum.${field} : 'No estimated load'
+        }`
       }
     },
     encoding: {
