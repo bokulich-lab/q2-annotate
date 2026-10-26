@@ -153,19 +153,47 @@ test("changing the level refreshes the dropdown and every plot, including heatma
       {value:"d__Bacteria; p__A; g__Shared", label:"g__Shared"}
     ]
   });
-  // Search matches the full lineage, irrespective of case.
+  // Search filters all plots by full lineage, irrespective of case and whitespace.
   element("function").value = "";
   element("function").listeners.change();
-  element("taxon-search").value = "P__b";
+  element("taxon-search").value = "  P__b  ";
   element("taxon-search").listeners.input();
   await vm.runInContext("renderQueue", context);
   assert.deepEqual(element("taxon").options.map(option => option.value), [
     "", "d__Bacteria; p__B; Unclassified (level 3)", "d__Bacteria; p__B; g__Shared"
   ]);
+  assert.equal(element("taxon").options[0].textContent, "All matching taxa");
+  assert.deepEqual(originalPairs(specs.get("#heatmap-plot").data.values), [
+    expectedCollapse["3"].pairs[2], expectedCollapse["3"].pairs[4]
+  ]);
+  assert.deepEqual(plain(specs.get("#boxplot").data.values).map(sample => sample.load), [7, 4, 0]);
+  assert.deepEqual(plain(specs.get("#samples").data.values).map(sample => sample.load), [7, 4, 0]);
+  // Rank within search results: the globally highest link is outside p__B.
+  element("limit").value = "1";
+  element("limit").listeners.change();
+  await vm.runInContext("renderQueue", context);
+  assert.deepEqual(originalPairs(specs.get("#heatmap-plot").data.values), [expectedCollapse["3"].pairs[2]]);
+  element("limit").value = "20";
+  element("limit").listeners.change();
+  element("function").value = "geneB";
+  element("function").listeners.change();
+  await vm.runInContext("renderQueue", context);
+  assert.deepEqual(element("taxon").options.map(option => option.value), [""]);
+  assert.equal(element("heatmap-plot").textContent, "No values to plot for this selection.");
+  element("function").value = "";
+  element("function").listeners.change();
   element("taxon-search").value = "no matching taxon";
   element("taxon-search").listeners.input();
   await vm.runInContext("renderQueue", context);
   assert.deepEqual(element("taxon").options.map(option => option.value), [""]);
+  for (const id of ["heatmap-plot", "boxplot", "samples"]) {
+    assert.equal(element(id).textContent, "No values to plot for this selection.");
+  }
+  // Clearing search restores all taxa and permits drilling into a heatmap cell.
+  element("taxon-search").value = "";
+  element("taxon-search").listeners.input();
+  await vm.runInContext("renderQueue", context);
+  assert.equal(specs.get("#heatmap-plot").data.values.filter(pair => pair.present).length, 5);
   const shared = specs.get("#heatmap-plot").data.values.find(pair => pair.taxon === "d__Bacteria; p__A; g__Shared" && pair.function === "geneA");
   clicks.get("#heatmap-plot")({}, {datum: shared});
   await vm.runInContext("renderQueue", context);

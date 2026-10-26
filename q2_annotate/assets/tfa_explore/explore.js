@@ -83,6 +83,10 @@ function pairLabel(pair) {
   return pair.taxon_label || latestTaxonLabel(pair.lineage || [], pair.taxon_id);
 }
 
+function taxonMatchesSearch(taxon) {
+  return taxon.toLocaleLowerCase().includes(taxonSearch.value.trim().toLocaleLowerCase());
+}
+
 /** Rebuild the taxon list from search and function filters, keeping valid selections. */
 function refreshTaxa() {
   const previous = taxonSelect.value;
@@ -91,9 +95,9 @@ function refreshTaxa() {
     .filter(pairVisible)
     .filter(pair => !functionSelect.value || pair.function === functionSelect.value)
     .map(pair => pair.taxon))]
-    .filter(taxon => taxon.toLocaleLowerCase().includes(query)).sort();
+    .filter(taxonMatchesSearch).sort();
   taxonSelect.replaceChildren();
-  addOptions(taxonSelect, taxa, query ? "Select a matching taxon" : "All taxa");
+  addOptions(taxonSelect, taxa, query ? "All matching taxa" : "All taxa");
   const labelByTaxon = new Map(current.pairs.map(pair => [pair.taxon, pairLabel(pair)]));
   const terminal = taxon => labelByTaxon.get(taxon);
   const counts = new Map();
@@ -110,10 +114,10 @@ function refreshTaxa() {
 }
 
 function showSelectedTaxonomy() {
-  taxonSelect.title = taxonSelect.value || "All taxa";
+  taxonSelect.title = taxonSelect.value || (taxonSearch.value.trim() ? "All matching taxa" : "All taxa");
   selectedTaxonomy.textContent = taxonSelect.value
     ? `Selected lineage: ${taxonSelect.value}`
-    : taxonSearch.value.trim() ? "Search filters the taxon list. Select a taxon to filter the plots." : "";
+    : taxonSearch.value.trim() ? "Search filters the taxon list and plots. Select a taxon to narrow the results further." : "";
 }
 
 /** Collapse to the chosen level and index sparse loads for repeated filtering. */
@@ -125,11 +129,12 @@ function changeLevel() {
   refreshTaxa();
 }
 
-/** Find pair indices matching the current taxon, function, and visibility choices. */
+/** Find pair indices matching the search, taxon, function, and visibility choices. */
 function matchedPairs() {
   const indices = [];
   current.pairs.forEach((pair, index) => {
-    if (pairVisible(pair) && (!taxonSelect.value || pair.taxon === taxonSelect.value) &&
+    if (pairVisible(pair) && taxonMatchesSearch(pair.taxon) &&
+        (!taxonSelect.value || pair.taxon === taxonSelect.value) &&
         (!functionSelect.value || pair.function === functionSelect.value)) {
       indices.push(index);
     }
