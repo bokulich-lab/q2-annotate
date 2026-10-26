@@ -152,6 +152,32 @@ function plotWidth(id) {
   return Math.max(1, Math.floor(document.getElementById(id).clientWidth));
 }
 
+/** Assign each highlighted grid edge to exactly one cell. */
+function topLinkEdges(cells, taxaOrder, functionOrder) {
+  const rows = new Map(taxaOrder.map((taxon, index) => [taxon, index]));
+  const columns = new Map(functionOrder.map((func, index) => [func, index]));
+  const seen = new Set();
+  const sides = [
+    {horizontal: true, bandPosition: 0, values: []},
+    {horizontal: true, bandPosition: 1, values: []},
+    {horizontal: false, bandPosition: 0, values: []},
+    {horizontal: false, bandPosition: 1, values: []}
+  ];
+  for (const cell of cells) {
+    if (!cell.top_link) continue;
+    const row = rows.get(cell.taxon), column = columns.get(cell.function);
+    for (const side of sides) {
+      const key = side.horizontal
+        ? `h:${row + side.bandPosition}:${column}`
+        : `v:${row}:${column + side.bandPosition}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      side.values.push(cell);
+    }
+  }
+  return sides.filter(side => side.values.length);
+}
+
 /** Rank links by the chosen metric and build a Vega-Lite heatmap specification. */
 function heatmapSpec(indices) {
   const field = {sum: "total", mean: "mean", median: "median"}[metricSelect.value];
@@ -187,7 +213,7 @@ function heatmapSpec(indices) {
       }
     }
   }
-  return {
+  const spec = {
     $schema: schema,
     data: {values: cells},
     width: plotWidth("heatmap"),
@@ -208,10 +234,12 @@ function heatmapSpec(indices) {
     encoding: {
       x: {
         field: "function", type: "nominal", sort: functionOrder, title: "Function",
+        scale: {paddingInner: 0, paddingOuter: 0},
         axis: {labels: functionOrder.length <= 30}
       },
       y: {
         field: "taxon", type: "nominal", sort: taxaOrder, title: "Taxon",
+        scale: {paddingInner: 0, paddingOuter: 0},
         axis: {labelLimit: Math.floor(plotWidth("heatmap") * 0.3), labelExpr: `${JSON.stringify(axisLabels)}[datum.label]`}
       },
       color: {
@@ -222,10 +250,34 @@ function heatmapSpec(indices) {
         field, type: "quantitative", title: `${label} load`,
         scale: {scheme: "blues", zero: true}
       },
-      stroke: {condition: {test: "datum.top_link", value: "#800000"}, value: "#bdbdbd"},
-      strokeWidth: {condition: {test: "datum.top_link", value: 1}, value: 0.5},
     },
     config: {view: {stroke: null}, legend: {orient: "bottom"}}
+  };
+  // Cell fills and gray grid lines are separate from the unique maroon edges.
+  const {mark, encoding, ...frame} = spec;
+  const {color, ...position} = encoding;
+  return {
+    ...frame,
+    encoding: position,
+    layer: [
+      {mark, encoding: {
+        color,
+        stroke: {value: "#bdbdbd"},
+        strokeWidth: {value: 0.5}
+      }},
+      ...topLinkEdges(cells, taxaOrder, functionOrder).map(side => ({
+        data: {values: side.values},
+        mark: {type: "rule", stroke: "#800000", strokeWidth: 1,
+               cursor: "pointer", tooltip: mark.tooltip},
+        encoding: {
+          x: {...position.x, bandPosition: side.horizontal ? 0 : side.bandPosition},
+          y: {...position.y, bandPosition: side.horizontal ? side.bandPosition : 0},
+          ...(side.horizontal
+            ? {x2: {field: "function", bandPosition: 1}}
+            : {y2: {field: "taxon", bandPosition: 1}})
+        }
+      }))
+    ]
   };
 }
 
