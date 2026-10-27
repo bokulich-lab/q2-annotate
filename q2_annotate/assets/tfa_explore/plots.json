@@ -45,8 +45,7 @@
           "paddingOuter": 0
         },
         "axis": {
-          "labelLimit": 180,
-          "labelExpr": "{}[datum.label]"
+          "labelLimit": 180
         }
       }
     },
@@ -131,8 +130,7 @@
               "paddingOuter": 0
             },
             "axis": {
-              "labelLimit": 180,
-              "labelExpr": "{}[datum.label]"
+              "labelLimit": 180
             },
             "bandPosition": 0.2
           }
