@@ -130,8 +130,9 @@ function refreshSelectors() {
   while (true) {
     const previousTaxon = taxonSelect.value;
     const previousFunction = functionSelect.value;
-    const {topIndices} = rankedLinks(matchedPairs());
-    const pairs = [...topIndices].map(index => current.pairs[index]);
+    refreshLimitOptions();
+    const {ranked} = heatmapLinks(matchedPairs());
+    const pairs = ranked.map(index => current.pairs[index]);
     refreshFunctions(pairs);
     refreshTaxa(pairs);
     if (taxonSelect.value === previousTaxon && functionSelect.value === previousFunction) break;
@@ -161,12 +162,12 @@ function changeLevel() {
 }
 
 /** Find pair indices matching the search, taxon, function, and visibility choices. */
-function matchedPairs() {
+function matchedPairs(ignoreSelections = false) {
   const indices = [];
   current.pairs.forEach((pair, index) => {
     if (pairVisible(pair) && taxonMatchesSearch(pair.taxon) && functionMatchesSearch(pair.function) &&
-        (!taxonSelect.value || pair.taxon === taxonSelect.value) &&
-        (!functionSelect.value || pair.function === functionSelect.value)) {
+        (ignoreSelections || !taxonSelect.value || pair.taxon === taxonSelect.value) &&
+        (ignoreSelections || !functionSelect.value || pair.function === functionSelect.value)) {
       indices.push(index);
     }
   });
@@ -202,16 +203,62 @@ function rankedLinks(indices) {
   return {ranked, topIndices};
 }
 
+/** Disable cutoffs that would remove a selected taxon or function from the axes. */
+function refreshLimitOptions() {
+  const {ranked} = rankedLinks(matchedPairs(true));
+  const firstTaxonRank = new Map(), firstFunctionRank = new Map();
+  ranked.forEach((index, rank) => {
+    const pair = current.pairs[index];
+    if (!firstTaxonRank.has(pair.taxon)) firstTaxonRank.set(pair.taxon, rank + 1);
+    if (!firstFunctionRank.has(pair.function)) firstFunctionRank.set(pair.function, rank + 1);
+  });
+  // Searches or taxonomy changes can remove a selection from the context entirely.
+  if (taxonSelect.value && !firstTaxonRank.has(taxonSelect.value)) taxonSelect.value = "";
+  if (functionSelect.value && !firstFunctionRank.has(functionSelect.value)) functionSelect.value = "";
+  const requiredRank = Math.max(
+    firstTaxonRank.get(taxonSelect.value) || 0,
+    firstFunctionRank.get(functionSelect.value) || 0
+  );
+  for (const option of limitSelect.options) {
+    option.disabled = Number(option.value) < requiredRank;
+    option.title = option.disabled ? `The current selection requires at least the top ${requiredRank} links.` : "";
+  }
+  const selected = [...limitSelect.options].find(option => option.value === limitSelect.value);
+  if (selected && selected.disabled) {
+    const next = [...limitSelect.options].find(option => !option.disabled);
+    if (next) limitSelect.value = next.value;
+  }
+}
+
+/** Keep the reference ranking fixed while dropdown selections narrow its axes. */
+function heatmapLinks(indices) {
+  const {ranked, topIndices} = rankedLinks(matchedPairs(true));
+  const top = [...topIndices].map(index => current.pairs[index]);
+  const taxaOrder = [...new Set(top.map(pair => pair.taxon))];
+  const functionOrder = [...new Set(top.map(pair => pair.function))];
+  const taxa = new Set(taxaOrder), functions = new Set(functionOrder);
+  const matched = new Set(indices);
+  const visible = ranked.filter(index => {
+    const pair = current.pairs[index];
+    return matched.has(index) && taxa.has(pair.taxon) && functions.has(pair.function);
+  });
+  const visibleTaxa = new Set(visible.map(index => current.pairs[index].taxon));
+  const visibleFunctions = new Set(visible.map(index => current.pairs[index].function));
+  return {
+    ranked: visible, topIndices,
+    taxaOrder: taxaOrder.filter(taxon => visibleTaxa.has(taxon)),
+    functionOrder: functionOrder.filter(func => visibleFunctions.has(func))
+  };
+}
+
 /** Rank links by the chosen metric and build a Vega-Lite heatmap specification. */
 function heatmapSpec(indices) {
   const field = {sum: "total", mean: "mean", median: "median"}[metricSelect.value];
   const label = {sum: "Sum", mean: "Mean", median: "Median"}[metricSelect.value];
-  const {ranked, topIndices} = rankedLinks(indices);
-  const top = [...topIndices].map(index => current.pairs[index]);
-  const taxaOrder = [...new Set(top.map(pair => pair.taxon))];
-  const functionOrder = [...new Set(top.map(pair => pair.function))];
+  const {ranked, topIndices, taxaOrder, functionOrder} = heatmapLinks(indices);
   // Full lineages identify rows; short labels must not merge taxa with identical names.
-  const axisLabels = Object.fromEntries(top.map(pair => [pair.taxon, pairLabel(pair)]));
+  const axisLabels = Object.fromEntries(ranked.map(index => current.pairs[index])
+    .map(pair => [pair.taxon, pairLabel(pair)]));
   const taxa = new Set(taxaOrder);
   const functions = new Set(functionOrder);
   const seen = new Map(taxaOrder.map(taxon => [taxon, new Set()]));
@@ -296,7 +343,7 @@ async function draw() {
   const method = metricSelect.value;
   status.textContent = `${indices.length} matching taxon–function pairs · ${samples.length} samples`;
   document.getElementById("heatmap-caption").textContent =
-    `Each square is one pair at the selected taxonomy level; color shows its ${method} load across all samples, including zeros. The top links by this metric select the axes; all intersections are shown. Dots in the upper-right corners mark the top links, white cells have a zero summary, and gray cells have no estimated load in the TFA table. Taxa are summed within each sample before this summary. Click a taxon or function axis label to select it, or click a square to inspect that pair.`;
+    `Each square is one pair at the selected taxonomy level; color shows its ${method} load across all samples, including zeros. The top links are ranked before taxon/function dropdown selections; those selections narrow the axes. All intersections between the remaining axes are shown. Dots in the upper-right corners mark the top links, white cells have a zero summary, and gray cells have no estimated load in the TFA table. Taxa are summed within each sample before this summary. Click a taxon or function axis label to select it, or click a square to inspect that pair.`;
   document.getElementById("group-caption").textContent = groupSelect.value
     ? `Each box compares sample loads for one ${groupSelect.value} category. Zeros are included.`
     : "One box summarizes all samples. Add categorical metadata to compare groups.";
