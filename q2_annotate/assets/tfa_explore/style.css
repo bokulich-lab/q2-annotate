@@ -206,3 +206,9 @@ footer {
   max-width: 100%;
   padding: 0;
 }
+
+/* Axis labels offer the same filtering action as the corresponding dropdown. */
+#heatmap-plot .role-axis-label text {
+  pointer-events: all;
+  cursor: pointer;
+}

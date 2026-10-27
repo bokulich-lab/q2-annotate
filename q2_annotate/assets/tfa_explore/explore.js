@@ -296,7 +296,7 @@ async function draw() {
   const method = metricSelect.value;
   status.textContent = `${indices.length} matching taxon–function pairs · ${samples.length} samples`;
   document.getElementById("heatmap-caption").textContent =
-    `Each square is one pair at the selected taxonomy level; color shows its ${{sum: "sum", mean: "mean", median: "median"}[method]} load across all samples, including zeros. The top links by this metric select the axes; all intersections are shown. Dots in the upper-right corners mark the top links, white cells have a zero summary, and gray cells have no estimated load in the TFA table. Taxa are summed within each sample before this summary. Click a square to inspect that pair.`;
+    `Each square is one pair at the selected taxonomy level; color shows its ${{sum: "sum", mean: "mean", median: "median"}[method]} load across all samples, including zeros. The top links by this metric select the axes; all intersections are shown. Dots in the upper-right corners mark the top links, white cells have a zero summary, and gray cells have no estimated load in the TFA table. Taxa are summed within each sample before this summary. Click a taxon or function axis label to select it, or click a square to inspect that pair.`;
   document.getElementById("group-caption").textContent = groupSelect.value
     ? `Each box compares sample loads for one ${groupSelect.value} category. Zeros are included.`
     : "One box summarizes all samples. Add categorical metadata to compare groups.";
@@ -327,6 +327,17 @@ async function draw() {
     ]);
     activeViews = [heatmap.view, boxplot.view, samplePlot.view];
     heatmap.view.addEventListener("click", (_, item) => {
+      if (item && item.mark && item.mark.role === "axis-label") {
+        const scale = item.mark.group.datum.scale;
+        const select = scale === "x" ? functionSelect : scale === "y" ? taxonSelect : null;
+        // Use the underlying category, not the shortened or truncated label.
+        const value = String(item.datum.value);
+        if (select && [...select.options].some(option => option.value === value)) {
+          select.value = value;
+          select.dispatchEvent(new Event("change"));
+        }
+        return;
+      }
       const pair = item && item.datum;
       if (pair && pair.present && pair.taxon && pair.function) {
         taxonSearch.value = "";
