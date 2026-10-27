@@ -72,7 +72,6 @@ function resetSelections() {
   metricSelect.value = "sum";
   limitSelect.value = "100";
   showUnclassified.checked = false;
-  refreshFunctions();
   changeLevel();
   update();
 }
@@ -93,26 +92,20 @@ function functionMatchesSearch(func) {
   return func.toLocaleLowerCase().includes(functionSearch.value.trim().toLocaleLowerCase());
 }
 
-/** Rebuild the function list from search, keeping a valid selection. */
-function refreshFunctions() {
+/** Rebuild the function list from visible heatmap links. */
+function refreshFunctions(pairs) {
   const previous = functionSelect.value;
-  const functions = [...new Set(tfa.pairs.map(pair => pair.function))]
-    .filter(functionMatchesSearch).sort();
+  const functions = [...new Set(pairs.map(pair => pair.function))].sort();
   functionSelect.replaceChildren();
   addOptions(functionSelect, functions, functionSearch.value.trim() ? "All matching functions" : "All functions");
   functionSelect.value = functions.includes(previous) ? previous : "";
 }
 
-/** Rebuild the taxon list from search and function filters, keeping valid selections. */
-function refreshTaxa() {
+/** Rebuild the taxon list from visible heatmap links. */
+function refreshTaxa(pairs) {
   const previous = taxonSelect.value;
   const query = taxonSearch.value.trim().toLocaleLowerCase();
-  const taxa = [...new Set(current.pairs
-    .filter(pairVisible)
-    .filter(pair => functionMatchesSearch(pair.function))
-    .filter(pair => !functionSelect.value || pair.function === functionSelect.value)
-    .map(pair => pair.taxon))]
-    .filter(taxonMatchesSearch).sort();
+  const taxa = [...new Set(pairs.map(pair => pair.taxon))].sort();
   taxonSelect.replaceChildren();
   addOptions(taxonSelect, taxa, query ? "All matching taxa" : "All taxa");
   const labelByTaxon = new Map(current.pairs.map(pair => [pair.taxon, pairLabel(pair)]));
@@ -128,6 +121,21 @@ function refreshTaxa() {
   }
   taxonSelect.value = taxa.includes(previous) ? previous : "";
   showSelectedTaxonomy();
+}
+
+/** Use the same top links for dropdown domains and heatmap axes. */
+function refreshSelectors() {
+  // Clearing an invalid selection can expose other matching links. Recompute
+  // until both selections are stable; selections are only retained or cleared.
+  while (true) {
+    const previousTaxon = taxonSelect.value;
+    const previousFunction = functionSelect.value;
+    const {topIndices} = rankedLinks(matchedPairs());
+    const pairs = [...topIndices].map(index => current.pairs[index]);
+    refreshFunctions(pairs);
+    refreshTaxa(pairs);
+    if (taxonSelect.value === previousTaxon && functionSelect.value === previousFunction) break;
+  }
 }
 
 function showSelectedTaxonomy() {
@@ -150,7 +158,6 @@ function changeLevel() {
   loadsByPair = current.pairs.map(() => []);
   for (const load of current.loads) loadsByPair[load[0]].push(load);
   taxonSelect.value = "";
-  refreshTaxa();
 }
 
 /** Find pair indices matching the search, taxon, function, and visibility choices. */
@@ -187,12 +194,19 @@ function plotWidth(id) {
   return Math.max(1, Math.floor(document.getElementById(id).clientWidth));
 }
 
+/** Rank matching links once using the metric and limit selected in the UI. */
+function rankedLinks(indices) {
+  const field = {sum: "total", mean: "mean", median: "median"}[metricSelect.value];
+  const ranked = [...indices].sort((a, b) => current.pairs[b][field] - current.pairs[a][field]);
+  const topIndices = new Set(ranked.slice(0, Number(limitSelect.value)));
+  return {ranked, topIndices};
+}
+
 /** Rank links by the chosen metric and build a Vega-Lite heatmap specification. */
 function heatmapSpec(indices) {
   const field = {sum: "total", mean: "mean", median: "median"}[metricSelect.value];
   const label = {sum: "Sum", mean: "Mean", median: "Median"}[metricSelect.value];
-  const ranked = [...indices].sort((a, b) => current.pairs[b][field] - current.pairs[a][field]);
-  const topIndices = new Set(ranked.slice(0, Number(limitSelect.value)));
+  const {ranked, topIndices} = rankedLinks(indices);
   const top = [...topIndices].map(index => current.pairs[index]);
   const taxaOrder = [...new Set(top.map(pair => pair.taxon))];
   const functionOrder = [...new Set(top.map(pair => pair.function))];
@@ -317,9 +331,7 @@ async function draw() {
       if (pair && pair.present && pair.taxon && pair.function) {
         taxonSearch.value = "";
         functionSearch.value = "";
-        refreshFunctions();
         functionSelect.value = pair.function;
-        refreshTaxa();
         taxonSelect.value = pair.taxon;
         update();
       }
@@ -331,6 +343,7 @@ async function draw() {
 
 function update() {
   if (!tfa) return;
+  refreshSelectors();
   showSelectedTaxonomy();
   showSelectedFunction();
   // Serialize asynchronous redraws so an older render cannot overwrite a newer one.
@@ -340,9 +353,8 @@ function update() {
 }
 
 clearSelections.addEventListener("click", resetSelections);
-// Rebuild the taxon choices whenever a control changes which taxa are available.
+// Rebuild both dropdowns and plots whenever a filter or display limit changes.
 showUnclassified.addEventListener("change", () => {
-  refreshTaxa();
   update();
 });
 levelSelect.addEventListener("change", () => {
@@ -350,16 +362,12 @@ levelSelect.addEventListener("change", () => {
   update();
 });
 taxonSearch.addEventListener("input", () => {
-  refreshTaxa();
   update();
 });
 functionSearch.addEventListener("input", () => {
-  refreshFunctions();
-  refreshTaxa();
   update();
 });
 functionSelect.addEventListener("change", () => {
-  refreshTaxa();
   update();
 });
 for (const select of [taxonSelect, groupSelect, metricSelect, limitSelect]) {
