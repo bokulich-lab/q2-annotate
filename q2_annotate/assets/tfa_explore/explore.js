@@ -296,7 +296,7 @@ async function draw() {
   const method = metricSelect.value;
   status.textContent = `${indices.length} matching taxon–function pairs · ${samples.length} samples`;
   document.getElementById("heatmap-caption").textContent =
-    `Each square is one pair at the selected taxonomy level; color shows its ${{sum: "sum", mean: "mean", median: "median"}[method]} load across all samples, including zeros. The top links by this metric select the axes; all intersections are shown. Dots in the upper-right corners mark the top links, white cells have a zero summary, and gray cells have no estimated load in the TFA table. Taxa are summed within each sample before this summary. Click a taxon or function axis label to select it, or click a square to inspect that pair.`;
+    `Each square is one pair at the selected taxonomy level; color shows its ${method} load across all samples, including zeros. The top links by this metric select the axes; all intersections are shown. Dots in the upper-right corners mark the top links, white cells have a zero summary, and gray cells have no estimated load in the TFA table. Taxa are summed within each sample before this summary. Click a taxon or function axis label to select it, or click a square to inspect that pair.`;
   document.getElementById("group-caption").textContent = groupSelect.value
     ? `Each box compares sample loads for one ${groupSelect.value} category. Zeros are included.`
     : "One box summarizes all samples. Add categorical metadata to compare groups.";
