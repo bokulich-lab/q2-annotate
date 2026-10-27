@@ -77,8 +77,12 @@ class TestTFAVisualizer(TestPluginBase):
         self.assertEqual(
             {file.name for file in output.iterdir()},
             {
-                "index.html", "data.json", "explore.js", "plots.json",
-                "style.css", "taxonomy.js",
+                "index.html",
+                "data.json",
+                "explore.js",
+                "plots.json",
+                "style.css",
+                "taxonomy.js",
             },
         )
         self.assertIn('id="level"', html)
