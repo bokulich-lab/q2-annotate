@@ -9,12 +9,14 @@ $(document).ready(function () {
     const samples = window.samples || [];
     const vegaAbundanceHistogramSpec = window.vegaAbundanceHistogramSpec || {};
     const meanAbundancesData = window.meanAbundances || {};
+    const allTaxa = Object.keys(meanAbundancesData); // Complete set across all samples
 
     // State variables
     let vegaViews = {}; // Store views for each taxon
     let abundanceDataBySample = {}; // Cache the loaded data per sample
     let taxaList = []; // List of unique taxa (sorted by mean abundance)
     let taxaMap = {}; // Map from taxon short name to full taxon name
+    let requestedTaxaLimit = 20; // Preserve the user's limit across smaller samples
 
     // ============================================
     // 2. DOM ELEMENT REFERENCES
@@ -358,12 +360,12 @@ $(document).ready(function () {
 
     function resortTaxaByMeanAbundance(selectedSample) {
         // Resort taxa by mean abundance or contig count based on user selection
-        if (!meanAbundancesData || taxaList.length === 0) return;
+        if (allTaxa.length === 0) return;
 
         const sortBy = document.querySelector('input[name="sortBy"]:checked')?.value || 'abundance';
 
         // Sort taxa using shared helper
-        const newTaxaList = sortTaxaByValue(taxaList, selectedSample, sortBy);
+        const newTaxaList = sortTaxaByValue(allTaxa, selectedSample, sortBy);
 
         // Reorder DOM elements to match new sort order
         const histogramItems = Array.from(document.querySelectorAll('.histogram-item'));
@@ -376,16 +378,23 @@ $(document).ready(function () {
         // appendChild automatically moves elements if they're already in the DOM
         const fragment = document.createDocumentFragment();
         newTaxaList.forEach(taxon => {
-            if (itemsByTaxon[taxon]) {
-                fragment.appendChild(itemsByTaxon[taxon]);
-            }
+            const item = itemsByTaxon[taxon] || createHistogramForTaxon(taxon, getTaxonShort(taxon));
+            fragment.appendChild(item);
         });
 
-        // Clear grid and append fragment (this preserves plot containers)
-        histogramGrid.innerHTML = '';
+        // Keep other samples' containers so they can be reused when switching back.
+        // updateVisualization hides them and finalizes their views.
         histogramGrid.appendChild(fragment);
 
         taxaList = newTaxaList;
+
+        if (taxaLimitSlider) {
+            taxaLimitSlider.max = Math.max(1, taxaList.length);
+            taxaLimitSlider.value = Math.min(requestedTaxaLimit, taxaLimitSlider.max);
+            if (taxaLimitValue) {
+                taxaLimitValue.textContent = taxaLimitSlider.value;
+            }
+        }
     }
 
     // ============================================
@@ -422,6 +431,7 @@ $(document).ready(function () {
 
         // Don't create plots here - let updateVisualization() handle it lazily
         // This ensures we only create plots for visible items
+        return containerDiv;
     }
 
     function createVegaPlot(taxon, plotDiv, spinner, selectedSample) {
@@ -570,11 +580,19 @@ $(document).ready(function () {
             }
         });
 
-        // Hide any items in DOM that are not in taxaList (shouldn't happen, but safety check)
+        // Hide and release plots for taxa absent from the selected sample.
         histogramItems.forEach(item => {
             const taxon = item.dataset.taxon;
             if (taxon && !taxaList.includes(taxon)) {
                 item.style.display = 'none';
+                if (vegaViews[taxon]) {
+                    try {
+                        vegaViews[taxon].finalize();
+                    } catch (e) {
+                        // Ignore errors during finalization
+                    }
+                    delete vegaViews[taxon];
+                }
             }
         });
     }
@@ -588,8 +606,11 @@ $(document).ready(function () {
         const selectedSample = sampleDropdown.value || '';
         // Load the new sample data first, then update everything
         loadSampleData(selectedSample).then(() => {
-            updateTaxonDropdown(selectedSample);
+            // A slower request for a previous selection must not replace the current one.
+            if (selectedSample !== sampleDropdown.value) return;
             resortTaxaByMeanAbundance(selectedSample);
+            updateTaxonDropdown(selectedSample);
+            document.getElementById('spinner-histogram')?.remove();
             debouncedUpdateVisualization();
             updateSelectionStats();
         }).catch(error => {
@@ -604,6 +625,7 @@ $(document).ready(function () {
     if (taxaLimitSlider) {
         taxaLimitSlider.addEventListener('input', () => {
             const value = parseInt(taxaLimitSlider.value);
+            requestedTaxaLimit = value;
             if (taxaLimitValue) {
                 taxaLimitValue.textContent = value;
             }
@@ -655,6 +677,7 @@ $(document).ready(function () {
 
     loadSampleData(initialSample)
         .then(() => {
+            if (initialSample !== sampleDropdown.value) return;
             // Verify data is loaded
             if (!abundanceDataBySample[initialSample] || abundanceDataBySample[initialSample].length === 0) {
                 console.error('No data loaded for initial sample:', initialSample);
@@ -663,32 +686,11 @@ $(document).ready(function () {
                 return;
             }
 
-            // Extract unique taxa from the data
-            const taxaSet = new Set();
-            for (const sampleId in abundanceDataBySample) {
-                const sampleData = abundanceDataBySample[sampleId];
-                for (const row of sampleData) {
-                    if (row.taxon) {
-                        taxaSet.add(row.taxon);
-                    }
-                }
-            }
-
             // Get selected sample for sorting
             const selectedSample = sampleDropdown.value || '';
-            const sortBy = document.querySelector('input[name="sortBy"]:checked')?.value || 'abundance';
 
-            // Sort taxa using shared helper
-            taxaList = sortTaxaByValue(Array.from(taxaSet), selectedSample, sortBy);
-
-            // Set slider max value if it exists
-            if (taxaLimitSlider) {
-                taxaLimitSlider.max = taxaList.length;
-                taxaLimitSlider.value = Math.min(20, taxaList.length);
-                if (taxaLimitValue) {
-                    taxaLimitValue.textContent = taxaLimitSlider.value;
-                }
-            }
+            // Use the complete taxon set and create containers for this sample.
+            resortTaxaByMeanAbundance(selectedSample);
 
             // Populate taxon dropdown based on selected sample
             // (will be filtered to only show taxa with data for selected sample)
@@ -697,13 +699,8 @@ $(document).ready(function () {
             // Remove spinner
             document.getElementById('spinner-histogram')?.remove();
 
-            // Create a histogram for each taxon (only create DOM elements, plots will be created lazily)
+            // Containers are ready; plots will be created lazily.
             if (Object.keys(vegaAbundanceHistogramSpec).length > 0 && taxaList.length > 0) {
-                taxaList.forEach(taxon => {
-                    const taxonShort = getTaxonShort(taxon);
-                    createHistogramForTaxon(taxon, taxonShort);
-                });
-
                 // Wait for DOM to finish layout before creating plots
                 // This ensures containers have correct dimensions
                 setTimeout(() => {
