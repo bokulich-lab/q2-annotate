@@ -26,7 +26,7 @@ from q2_types.sample_data import SampleData
 from q2_types.feature_data import FeatureData
 from q2_annotate._utils import run_command, _process_common_input_params
 from q2_annotate.kraken2.utils import _process_kraken2_arg
-from q2_types.feature_data_mag import MAGSequencesDirFmt, MAG
+from q2_types.feature_data_mag import MAGSequencesDirFmt, MAG, Contig
 from q2_types.kraken2 import (
     Kraken2ReportDirectoryFormat,
     Kraken2OutputDirectoryFormat,
@@ -71,10 +71,11 @@ def classify_kraken2(
         types SampleData[SequencesWithQuality],
         SampleData[PairedEndSequencesWithQuality],
         SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
-        FeatureData[MAGs], SampleData[MAGs]. Note that the list must consist
-        entirely of only contigs, MAGs, or read types.
+        FeatureData[Contig], FeatureData[MAG], SampleData[MAGs]. Note that
+        the list must consist entirely of reads or one contig/MAG type.
+        Contig IDs must be unique across coassembly artifacts.
     ...
-        See plugin_setup.py for an expalanation of the remainder of the
+        See plugin_setup.py for an explanation of the remainder of the
         parameters.
 
     Returns
@@ -156,7 +157,7 @@ def _classify_single_artifact(ctx, seqs, db, num_partitions, kwargs):
         An artifact of type SampleData[SequencesWithQualtiy],
         SampleData[PairedEndSequencesWithQuality],
         SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
-        or SampleData[MAGs].
+        SampleData[MAGs], FeatureData[MAG], or FeatureData[Contig].
     db : Kraken2DBDirectoryFormat
         The kraken2 database.
     num_partitions : int | None
@@ -173,8 +174,8 @@ def _classify_single_artifact(ctx, seqs, db, num_partitions, kwargs):
     collate_kraken2_reports = ctx.get_action("annotate", "collate_kraken2_reports")
     collate_kraken2_outputs = ctx.get_action("annotate", "collate_kraken2_outputs")
 
-    if seqs.type <= FeatureData[MAG]:
-        # FeatureData[MAG] is not parallelized
+    if seqs.type <= FeatureData[MAG] or seqs.type <= FeatureData[Contig]:
+        # FeatureData[MAG | Contig] is not parallelized
         return _classify_kraken2(seqs, db, **kwargs)
     else:
         partition_action = _get_partition_action(ctx, seqs)

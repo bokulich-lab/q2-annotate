@@ -16,4 +16,12 @@ overlapping. The ba-mm-mixed_contigs are also 75/25 ba/mm.
 
 ## mags/
 Simulated MAGs constructed from the contigs by copying most contigs for each
-sample. 
+sample.
+
+## coassembled-contigs/
+Two coassembly artifacts, each containing a single `pooled.fasta`. Artifact 1
+contains the first contig from `contigs/ba_contigs.fasta` and
+`contigs/mm_contigs.fasta`; artifact 2 contains the first contig from
+`contigs/sa_contigs.fasta` and `contigs/se_contigs.fasta`. Sequences are unchanged,
+and IDs are prefixed with their source sample (`ba_contig0`, `mm_contig0`,
+`sa_contig0`, `se_contig0`) to keep them unique across artifacts.

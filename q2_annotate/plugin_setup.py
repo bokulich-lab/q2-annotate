@@ -55,7 +55,7 @@ from qiime2.core.type import (
 )
 from qiime2.plugin import Plugin, Citations
 import q2_annotate
-from q2_types.feature_data_mag import MAG
+from q2_types.feature_data_mag import MAG, Contig
 from q2_types.genome_data import NOG, Orthologs, GenomeData, Loci, Genes, Proteins
 from q2_types.kaiju import KaijuDB
 from q2_types.kraken2 import Kraken2Reports, Kraken2Outputs, Kraken2DB, Kraken2DBReport
@@ -148,6 +148,10 @@ T_kraken_in_list, T_kraken_out_rep, T_kraken_out_hits = TypeMap(
             SampleData[Kraken2Reports % Properties("mags")],
             SampleData[Kraken2Outputs % Properties("mags")],
         ),
+        List[FeatureData[Contig]]: (
+            FeatureData[Kraken2Reports % Properties("contigs")],
+            FeatureData[Kraken2Outputs % Properties("contigs")],
+        ),
     }
 )
 
@@ -164,8 +168,10 @@ plugin.pipelines.register_function(
     ],
     input_descriptions={
         "seqs": (
-            "Sequences to be classified. Single-/paired-end reads,"
-            "contigs, or assembled MAGs, can be provided."
+            "Sequences to be classified. Provide a list containing only reads, "
+            "per-sample contigs, coassembled contigs, per-sample MAGs, or "
+            "dereplicated MAGs. Contig IDs must be unique across coassembly "
+            "artifacts."
         ),
         "db": "Kraken 2 database.",
     },
@@ -206,6 +212,10 @@ T_kraken_in, T_kraken_out_rep, T_kraken_out_hits = TypeMap(
         SampleData[MAGs]: (
             SampleData[Kraken2Reports % Properties("mags")],
             SampleData[Kraken2Outputs % Properties("mags")],
+        ),
+        FeatureData[Contig]: (
+            FeatureData[Kraken2Reports % Properties("contigs")],
+            FeatureData[Kraken2Outputs % Properties("contigs")],
         ),
     }
 )
@@ -453,7 +463,10 @@ select_features_description = (
 
 plugin.methods.register_function(
     function=q2_annotate.kraken2.kraken2_to_features,
-    inputs={"reports": SampleData[Kraken2Reports]},
+    inputs={
+        "reports": SampleData[Kraken2Reports]
+        | FeatureData[Kraken2Reports % Properties("contigs")]
+    },
     parameters={"coverage_threshold": Float % Range(0, 100, inclusive_end=True)},
     outputs=[
         ("table", FeatureTable[PresenceAbsence]),
@@ -509,8 +522,10 @@ plugin.methods.register_function(
 plugin.pipelines.register_function(
     function=q2_annotate.kraken2.map_taxonomy_to_contigs,
     inputs={
-        "reports": SampleData[Kraken2Reports % Properties("contigs")],
-        "outputs": SampleData[Kraken2Outputs % Properties("contigs")],
+        "reports": SampleData[Kraken2Reports % Properties("contigs")]
+        | FeatureData[Kraken2Reports % Properties("contigs")],
+        "outputs": SampleData[Kraken2Outputs % Properties("contigs")]
+        | FeatureData[Kraken2Outputs % Properties("contigs")],
     },
     parameters={
         "coverage_threshold": Float % Range(0, 100, inclusive_end=True),
@@ -1553,6 +1568,7 @@ KRAKEN2_REPORTS_T = TypeMatch(
         SampleData[Kraken2Reports % Properties("contigs")],
         SampleData[Kraken2Reports % Properties("mags")],
         FeatureData[Kraken2Reports % Properties("mags")],
+        FeatureData[Kraken2Reports % Properties("contigs")],
     ]
 )
 KRAKEN2_OUTPUTS_T = TypeMatch(
@@ -1561,6 +1577,7 @@ KRAKEN2_OUTPUTS_T = TypeMatch(
         SampleData[Kraken2Outputs % Properties("contigs")],
         SampleData[Kraken2Outputs % Properties("mags")],
         FeatureData[Kraken2Outputs % Properties("mags")],
+        FeatureData[Kraken2Outputs % Properties("contigs")],
     ]
 )
 plugin.methods.register_function(

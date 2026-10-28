@@ -810,6 +810,72 @@ class TestClassifyKraken2Contigs(TestPluginBase):
             self.assertFalse(exp_missing & obs)
 
 
+class TestClassifyKraken2CoassembledContigs(TestPluginBase):
+    package = "q2_annotate.kraken2.tests"
+
+    def setUp(self):
+        super().setUp()
+        self.contigs = Artifact.import_data(
+            "FeatureData[Contig]",
+            self.get_data_path("simulated-sequences/coassembled-contigs/artifact-1"),
+        )
+        self.db = Artifact.import_data(
+            "Kraken2DB", self.get_data_path("simulated-sequences/kraken2-db")
+        )
+        self.expected_taxa = {"ba_contig0": 1392, "mm_contig0": 10090}
+
+    def _assert_classifications(self, reports, outputs, expected_taxa):
+        outputs_format = outputs.view(Kraken2OutputDirectoryFormat)
+        outputs_format.validate()
+        self.assertEqual(set(outputs_format.file_dict()), {"pooled"})
+        ((_, output_df),) = outputs_format.outputs.iter_views(pd.DataFrame)
+        self.assertEqual(len(output_df), len(expected_taxa))
+        self.assertEqual(set(output_df["classification"]), {"C"})
+        self.assertEqual(
+            output_df.set_index("sequence_id")["taxon_id"].to_dict(), expected_taxa
+        )
+
+        reports_format = reports.view(Kraken2ReportDirectoryFormat)
+        reports_format.validate()
+        self.assertEqual(set(reports_format.file_dict()), {"pooled"})
+        ((_, report_df),) = reports_format.reports.iter_views(pd.DataFrame)
+        root = report_df.loc[report_df["taxon_id"] == 1].iloc[0]
+        self.assertEqual(root["n_frags_covered"], len(expected_taxa))
+        self.assertEqual(root["perc_frags_covered"], 100.0)
+        species_counts = (
+            report_df.loc[report_df["taxon_id"].isin(expected_taxa.values())]
+            .set_index("taxon_id")["n_frags_assigned"]
+            .to_dict()
+        )
+        self.assertEqual(species_counts, {taxon: 1 for taxon in expected_taxa.values()})
+
+    def test_method(self):
+        reports, outputs = self.plugin.methods["_classify_kraken2"](
+            self.contigs, self.db
+        )
+        self._assert_classifications(reports, outputs, self.expected_taxa)
+
+    def test_pipeline(self):
+        reports, outputs = self.plugin.pipelines["classify_kraken2"](
+            [self.contigs], self.db, num_partitions=2
+        )
+        self._assert_classifications(reports, outputs, self.expected_taxa)
+
+    def test_multiple_coassemblies(self):
+        other_contigs = Artifact.import_data(
+            "FeatureData[Contig]",
+            self.get_data_path("simulated-sequences/coassembled-contigs/artifact-2"),
+        )
+        reports, outputs = self.plugin.pipelines["classify_kraken2"](
+            [self.contigs, other_contigs], self.db
+        )
+        self._assert_classifications(
+            reports,
+            outputs,
+            {**self.expected_taxa, "sa_contig0": 1280, "se_contig0": 1282},
+        )
+
+
 class TestClassifyKraken2MAGsDerep(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
