@@ -14,18 +14,24 @@
 <body>
   <main>
     <section class="controls" aria-label="Explorer controls">
-      <label>Taxonomy level <select id="level"></select></label>
-      <label class="taxon-control">Search taxa <input id="taxon-search" type="search" placeholder="Type a name or lineage…" aria-controls="taxon" autocomplete="off"></label>
-      <label class="taxon-control">Taxon <select id="taxon" aria-describedby="selected-taxonomy"></select></label>
-      <label>Function <select id="function"></select></label>
-      <label>Group samples by <select id="group"></select></label>
-      <label>Heatmap metric <select id="metric"><option value="sum">Sum</option><option value="mean">Mean</option><option value="median">Median</option></select></label>
-      <label>Heatmap links <select id="limit"><option value="20">Top 20</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="200">Top 200</option><option value="500">Top 500</option><option value="1000">Top 1000</option><option value="Infinity">All links</option></select></label>
-      <label class="checkbox-control"><input id="show-unclassified" type="checkbox"> Show unclassified taxa</label>
-      <button id="clear-selections" type="button">Clear selections</button>
+      <div class="control-row taxonomy-controls" role="group" aria-label="Taxonomy filters">
+        <label>Taxonomy level <select id="level"></select></label>
+        <label>Search taxa <input id="taxon-search" type="search" placeholder="Type a name or lineage…" aria-controls="taxon" autocomplete="off"></label>
+        <label>Taxon <select id="taxon" aria-describedby="selected-taxonomy"></select></label>
+        <label class="checkbox-control"><input id="show-unclassified" type="checkbox"> Show unclassified taxa</label>
+      </div>
+      <div class="control-row display-controls" role="group" aria-label="Function and display filters">
+        <label>Search functions <input id="function-search" type="search" placeholder="Type a function name or ID…" aria-controls="function" autocomplete="off"></label>
+        <label>Function <select id="function" aria-describedby="selected-function"></select></label>
+        <label>Group samples by <select id="group"></select></label>
+        <label>Heatmap metric <select id="metric"><option value="sum">Sum</option><option value="mean">Mean</option><option value="median">Median</option></select></label>
+        <label>Select axes from top N links <select id="limit"><option value="20">Top 20</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="200">Top 200</option><option value="500">Top 500</option><option value="1000">Top 1000</option><option value="Infinity">All links</option></select></label>
+        <button id="clear-selections" type="button">Clear selections</button>
+      </div>
     </section>
 
     <p id="selected-taxonomy" aria-live="polite"></p>
+    <p id="selected-function" aria-live="polite"></p>
     <p id="status" role="status">Loading data…</p>
 
     <section class="card">
@@ -48,7 +54,7 @@
     </section>
     <footer>
       <p><strong>TFA (Taxonomic Functional Attribution) load</strong> estimates how much of a function is attributed to a taxon in a sample. For each contig assigned to that taxon, the function copy count is multiplied by the contig's abundance in that sample. These contributions are summed across the taxon's contigs. Unclassified taxa are hidden by default; toggle the "Show unclassified taxa" checkbox to include them.</p>
-      <p><strong>Heatmap:</strong> Each cell shows the sum, mean, or median load for one taxon–function pair across all samples, including zeros. At a selected taxonomy level, taxa sharing a lineage are summed within each sample before this summary is calculated. Labels use the last classified rank when deeper ranks are missing.</p>
+      <p><strong>Heatmap:</strong> Each cell shows the sum, mean, or median load for one taxon–function pair across all samples, including zeros. At a selected taxonomy level, taxa sharing a lineage are summed within each sample before this summary is calculated. Top links are ranked before applying the Taxon and Function dropdown selections. These selections narrow the axes; limits that would hide either selection are disabled. All links keeps selections available beyond the finite cutoffs. All intersections between the remaining taxa and functions are shown, including links below the cutoff. Dots in the upper-right corners mark the top N links; white cells have a zero summary and gray cells indicate a pair absent from the TFA table. Hover for details; click an existing pair to inspect its sample loads. Labels use the last classified rank when deeper ranks are missing.</p>
       <p><strong>Bottom plots:</strong> Each sample contributes one value: the sum of loads for all taxon–function pairs matching the current filters. Selecting one function and all taxa therefore sums that function's load across the displayed taxa within each sample. Each box shows the distribution of these per-sample values within a metadata group; each bar shows one sample's value. Zero loads are included. Metadata only groups samples in these plots; it does not change the loads or the heatmap summaries. Samples with missing metadata form a separate group.</p>
       <p><strong>Box plots (Tukey):</strong> The line inside each box marks the median. The box spans the 25th to 75th percentiles (Q1–Q3), and the interquartile range is IQR = Q3 − Q1. Whiskers extend to the smallest and largest observed sample values within the range Q1 − 1.5 × IQR to Q3 + 1.5 × IQR. Values beyond the whiskers are shown as individual outlier points.</p>
     </footer>

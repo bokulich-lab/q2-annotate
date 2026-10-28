@@ -76,9 +76,20 @@ class TestTFAVisualizer(TestPluginBase):
         self.assertNotIn("__TFA_DATA__", html)
         self.assertEqual(
             {file.name for file in output.iterdir()},
-            {"index.html", "data.json", "explore.js", "style.css", "taxonomy.js"},
+            {
+                "index.html",
+                "data.json",
+                "explore.js",
+                "plots.json",
+                "style.css",
+                "taxonomy.js",
+            },
         )
         self.assertIn('id="level"', html)
+        self.assertEqual(
+            set(json.loads((output / "plots.json").read_text())),
+            {"heatmap", "boxplot", "samples"},
+        )
 
     def test_estimated_zero_load_pairs_are_absent_from_explorer(self):
         """Show only taxon-gene pairs with a load in the explorer."""

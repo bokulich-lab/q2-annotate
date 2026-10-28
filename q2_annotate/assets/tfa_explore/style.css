@@ -29,18 +29,30 @@ p {
 }
 
 .controls {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.control-row {
+  display: grid;
   gap: 16px;
   align-items: end;
-  padding: 20px 0;
+  min-width: 0;
+}
+
+.taxonomy-controls {
+  grid-template-columns: minmax(0, 1fr) repeat(2, minmax(0, 2fr)) minmax(0, 1.5fr);
+}
+
+.display-controls {
+  grid-template-columns: repeat(2, minmax(0, 2fr)) repeat(3, minmax(0, 1.5fr)) auto;
 }
 
 .controls label {
   display: grid;
   gap: 6px;
-  min-width: 180px;
-  flex: 1;
+  min-width: 0;
   font-weight: 650;
 }
 
@@ -48,6 +60,7 @@ select,
 input[type="search"],
 button {
   width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid #b6cbd5;
   border-radius: 8px;
@@ -95,11 +108,6 @@ button:focus-visible {
   width: 100%;
 }
 
-#heatmap-plot {
-  flex: 0 0 auto;
-  margin-inline: auto;
-}
-
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -125,25 +133,26 @@ footer {
     padding: 12px;
   }
 
+  .control-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.controls .taxon-control {
-  flex: 2;
-  min-width: min(300px, 100%);
+@media (max-width: 520px) {
+  .control-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-.controls label {
-  min-width: 0;
-  flex-basis: 180px;
-}
-
-#selected-taxonomy {
+#selected-taxonomy,
+#selected-function {
   overflow-wrap: anywhere;
   color: #36576b;
   margin: 0 0 12px;
 }
 
-#selected-taxonomy:empty {
+#selected-taxonomy:empty,
+#selected-function:empty {
   display: none;
 }
 
@@ -152,7 +161,6 @@ footer {
   min-height: 42px;
   align-items: center;
   gap: 8px;
-  flex-basis: 230px;
 }
 
 .checkbox-control input {
@@ -164,7 +172,6 @@ footer {
 #clear-selections {
   width: auto;
   min-height: 42px;
-  flex-shrink: 0;
   cursor: pointer;
   font-weight: 650;
 }
@@ -176,4 +183,32 @@ footer {
 #clear-selections:disabled {
   opacity: .6;
   cursor: default;
+}
+
+/* Let grid items and embedded charts shrink with the available content width. */
+.card,
+.plot,
+#heatmap-plot {
+  min-width: 0;
+}
+
+#heatmap-plot {
+  flex: 1 1 0;
+  width: 100%;
+  margin-inline: 0;
+}
+
+.plot.vega-embed,
+.plot > .vega-embed,
+#heatmap-plot > .vega-embed {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+}
+
+/* Axis labels offer the same filtering action as the corresponding dropdown. */
+#heatmap-plot .role-axis-label text {
+  pointer-events: all;
+  cursor: pointer;
 }

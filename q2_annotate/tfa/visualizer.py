@@ -161,5 +161,5 @@ def _visualize_tfa(
     )
     (output / "data.json").write_text(payload, encoding="utf-8")
     shutil.copyfile(assets / "index.html", output / "index.html")
-    for filename in ("explore.js", "taxonomy.js", "style.css"):
+    for filename in ("explore.js", "plots.json", "taxonomy.js", "style.css"):
         shutil.copyfile(assets / filename, output / filename)
