@@ -6,6 +6,8 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import json
+from pathlib import Path
+import qiime2
 import biom
 import numpy as np
 import pandas as pd
@@ -16,10 +18,10 @@ from ..tfa import (
     _align_contig_matrices,
     _gene_taxonomy_id,
     _map_contigs_to_taxa,
-    estimate_tfa,
     tfa_by_taxon,
     tfa_by_function,
     tfa_collapse_samples,
+    _estimate_tfa,
 )
 
 
@@ -56,7 +58,7 @@ class TestTFA(TestPluginBase):
         taxonomy = self.taxonomy if taxonomy is None else taxonomy
         mapping = self.mapping if mapping is None else mapping
         abundance, inventory = abundance.T, inventory.T
-        return estimate_tfa(
+        return _estimate_tfa(
             biom.Table(
                 abundance.values,
                 observation_ids=abundance.index,
@@ -123,10 +125,13 @@ class TestTFA(TestPluginBase):
         abundance = self.abundance.copy()
         abundance[["C2", "C4", "C6"]] = 0
         observed, gene_taxonomy = self._estimate(abundance=abundance)
-        self.assertEqual(
-            list(observed.ids(axis="observation")), ["T1|bla_TEM", "T1|vanA"]
+        pd.testing.assert_frame_equal(
+            observed.to_dataframe(dense=True).rename_axis("Feature ID"),
+            self.expected_tfa.iloc[:2],
         )
-        self.assertEqual(list(gene_taxonomy.index), ["T1|bla_TEM", "T1|vanA"])
+        pd.testing.assert_frame_equal(
+            gene_taxonomy, self.expected_gene_taxonomy.iloc[:2]
+        )
 
     def test_extreme_abundances(self):
         """Preserve very small and very large abundance values."""
@@ -134,24 +139,19 @@ class TestTFA(TestPluginBase):
         abundance.loc["S1", "C1"] = 1e-9
         abundance.loc["S1", "C2"] = 1e12
         observed, gene_taxonomy = self._estimate(abundance=abundance)
-        loads = {
-            tuple(gene_taxonomy.loc[pair_id, ["Taxon ID", "Gene ID"]]): values
-            for pair_id, values in zip(
-                observed.ids(axis="observation"), observed.matrix_data.toarray()
-            )
-        }
-        np.testing.assert_allclose(
-            loads[("T1", "bla_TEM")],
-            [2e-9, 0, 0],
+        expected = pd.DataFrame(
+            [[2e-9, 0, 0], [1e-9, 0, 0], [1e12, 0, 0], [3e12, 0, 0]],
+            index=self.expected_tfa.index,
+            columns=self.expected_tfa.columns,
+            dtype=float,
+        )
+        pd.testing.assert_frame_equal(
+            observed.to_dataframe(dense=True).rename_axis("Feature ID"),
+            expected,
             rtol=1e-12,
             atol=0,
         )
-        np.testing.assert_allclose(
-            loads[("T2", "mecA")],
-            [3e12, 0, 0],
-            rtol=1e-12,
-            atol=0,
-        )
+        pd.testing.assert_frame_equal(gene_taxonomy, self.expected_gene_taxonomy)
 
     def test_mapping_preserves_ambiguous_characters(self):
         """Preserve punctuation in taxon and gene IDs through estimation."""
@@ -161,10 +161,22 @@ class TestTFA(TestPluginBase):
         observed, gene_taxonomy = self._estimate(
             inventory=inventory, taxonomy=taxonomy, mapping=mapping
         )
-        pairs = set(
-            gene_taxonomy[["Taxon ID", "Gene ID"]].itertuples(index=False, name=None)
+        ids = {
+            "T1|bla_TEM": "t%2C%221|a%2C%22b",
+            "T1|vanA": "t%2C%221|vanA",
+            "T2|bla_TEM": "T2|a%2C%22b",
+            "T2|mecA": "T2|mecA",
+        }
+        expected_mapping = self.expected_gene_taxonomy.replace(
+            {"Taxon ID": {"T1": 't,"1'}, "Gene ID": {"bla_TEM": 'a,"b'}}
+        ).rename(index=ids)
+        pd.testing.assert_frame_equal(
+            gene_taxonomy.sort_index(), expected_mapping.sort_index()
         )
-        self.assertIn(('t,"1', 'a,"b'), pairs)
+        pd.testing.assert_frame_equal(
+            observed.to_dataframe(dense=True).rename_axis("Feature ID").sort_index(),
+            self.expected_tfa.rename(index=ids).sort_index(),
+        )
 
     def test_ambiguous_taxon_assignment_rejected(self):
         """Reject a contig assigned to more than one taxon."""
@@ -338,3 +350,84 @@ class TestTFA(TestPluginBase):
         np.testing.assert_array_equal(
             observed.matrix_data.toarray(), expected.matrix_data.toarray()
         )
+
+    def _pipeline_inputs(self):
+        """Import the same readable fixtures used for estimator tests."""
+        abundance, inventory = self.abundance.T, self.inventory.T
+        return {
+            "contig_abundance": qiime2.Artifact.import_data(
+                "FeatureTable[Frequency]",
+                biom.Table(abundance.values, abundance.index, abundance.columns),
+            ),
+            "feature_inventory": qiime2.Artifact.import_data(
+                "FeatureTable[Frequency]",
+                biom.Table(inventory.values, inventory.index, inventory.columns),
+            ),
+            "taxonomy": qiime2.Artifact.import_data(
+                "FeatureData[Taxonomy]", self.taxonomy
+            ),
+            "taxon_to_contig_map": qiime2.Artifact.import_data(
+                "FeatureMap[TaxonomyToContigs]", self.mapping
+            ),
+        }
+
+    def test_pipeline_outputs_with_optional_metadata(self):
+        """Return matching tables and an explorer with optional sample groups."""
+        inputs = self._pipeline_inputs()
+        metadata = qiime2.Metadata.load(self.get_data_path("sample-metadata.tsv"))
+        for grouping in (None, metadata):
+            with self.subTest(metadata=grouping is not None):
+                result = self.plugin.pipelines["estimate_tfa"](
+                    **inputs, metadata=grouping
+                )
+                self.assertEqual(
+                    {
+                        name: str(artifact.type)
+                        for name, artifact in result._asdict().items()
+                    },
+                    {
+                        "tfa": "FeatureTable[Frequency % Properties('tfa')]",
+                        "gene_taxonomy": "FeatureData[Taxonomy % Properties('tfa')]",
+                        "visualization": "Visualization",
+                    },
+                )
+                pd.testing.assert_frame_equal(
+                    result.tfa.view(biom.Table)
+                    .to_dataframe(dense=True)
+                    .rename_axis("Feature ID"),
+                    self.expected_tfa,
+                )
+                pd.testing.assert_frame_equal(
+                    result.gene_taxonomy.view(pd.DataFrame), self.expected_gene_taxonomy
+                )
+                self.assertIsInstance(result.visualization, qiime2.Visualization)
+                result.visualization.export_data(self.temp_dir.name)
+                payload = json.loads(
+                    (Path(self.temp_dir.name) / "data.json").read_text()
+                )
+                expected = json.loads(
+                    Path(self.get_data_path("expected-pipeline-data.json")).read_text()
+                )
+                if grouping is not None:
+                    expected["groups"] = {
+                        "group": ["case", "control", "case"],
+                        "batch": ["B1", "B2", "B1"],
+                    }
+                self.assertEqual(payload, expected)
+
+    def test_pipeline_rejects_unobserved_pairs(self):
+        """Propagate the estimator error when all sample loads are zero."""
+        inputs = self._pipeline_inputs()
+        table = inputs["contig_abundance"].view(biom.Table)
+        inputs["contig_abundance"] = qiime2.Artifact.import_data(
+            "FeatureTable[Frequency]",
+            biom.Table(
+                sp.csr_matrix(table.shape),
+                table.ids(axis="observation"),
+                table.ids(axis="sample"),
+            ),
+        )
+        with self.assertRaisesRegex(
+            ValueError, "No taxon/gene pairs have nonzero loads"
+        ):
+            self.plugin.pipelines["estimate_tfa"](**inputs)

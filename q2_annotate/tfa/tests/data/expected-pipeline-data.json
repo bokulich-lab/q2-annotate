@@ -1,0 +1,120 @@
+{
+  "samples": [
+    "S1",
+    "S2",
+    "S3"
+  ],
+  "pairs": [
+    {
+      "taxon": "Escherichia coli",
+      "taxon_short": "Escherichia coli",
+      "taxon_id": "T1",
+      "lineage": [
+        "Escherichia coli"
+      ],
+      "function": "bla_TEM",
+      "total": 620,
+      "mean": 206.66666666666666,
+      "median": 200
+    },
+    {
+      "taxon": "Escherichia coli",
+      "taxon_short": "Escherichia coli",
+      "taxon_id": "T1",
+      "lineage": [
+        "Escherichia coli"
+      ],
+      "function": "vanA",
+      "total": 310,
+      "mean": 103.33333333333333,
+      "median": 100
+    },
+    {
+      "taxon": "Klebsiella pneumoniae",
+      "taxon_short": "Klebsiella pneumoniae",
+      "taxon_id": "T2",
+      "lineage": [
+        "Klebsiella pneumoniae"
+      ],
+      "function": "bla_TEM",
+      "total": 150,
+      "mean": 50,
+      "median": 50
+    },
+    {
+      "taxon": "Klebsiella pneumoniae",
+      "taxon_short": "Klebsiella pneumoniae",
+      "taxon_id": "T2",
+      "lineage": [
+        "Klebsiella pneumoniae"
+      ],
+      "function": "mecA",
+      "total": 450,
+      "mean": 150,
+      "median": 150
+    }
+  ],
+  "loads": [
+    [
+      0,
+      0,
+      200
+    ],
+    [
+      0,
+      1,
+      240
+    ],
+    [
+      0,
+      2,
+      180
+    ],
+    [
+      1,
+      0,
+      100
+    ],
+    [
+      1,
+      1,
+      120
+    ],
+    [
+      1,
+      2,
+      90
+    ],
+    [
+      2,
+      0,
+      50
+    ],
+    [
+      2,
+      1,
+      40
+    ],
+    [
+      2,
+      2,
+      60
+    ],
+    [
+      3,
+      0,
+      150
+    ],
+    [
+      3,
+      1,
+      120
+    ],
+    [
+      3,
+      2,
+      180
+    ]
+  ],
+  "groups": {}
+}

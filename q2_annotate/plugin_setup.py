@@ -25,6 +25,7 @@ from q2_types.feature_table import FeatureTable, Frequency, PresenceAbsence
 
 from q2_annotate.examples import estimate_tfa_example
 from q2_annotate.tfa.tfa import estimate_tfa
+from q2_annotate.tfa.visualizer import _visualize_tfa
 from q2_types.per_sample_sequences import (
     SequencesWithQuality,
     PairedEndSequencesWithQuality,
@@ -1740,28 +1741,30 @@ plugin.pipelines.register_function(
 
 importlib.import_module("q2_annotate.tfa.types._validators")
 
-tfa_inputs = {
-    "contig_abundance": FeatureTable[Frequency],
-    "feature_inventory": FeatureTable[Frequency],
-    "taxonomy": FeatureData[Taxonomy],
-    "taxon_to_contig_map": FeatureMap[TaxonomyToContigs],
-}
-tfa_input_descriptions = {
-    "contig_abundance": (
-        "Nonnegative contig abundances across samples, with contig IDs "
-        "as feature IDs."
+plugin.visualizers.register_function(
+    function=_visualize_tfa,
+    inputs={
+        "feature_load": FeatureTable[Frequency % Properties("tfa")],
+        "gene_taxonomy": FeatureData[Taxonomy % Properties("tfa")],
+    },
+    parameters={"metadata": Metadata},
+    input_descriptions={
+        "feature_load": "Sample-resolved taxon/function loads to explore.",
+        "gene_taxonomy": "Map feature IDs to taxon IDs, gene IDs, and taxonomy labels.",
+    },
+    parameter_descriptions={
+        "metadata": (
+            "Optional sample metadata. Categorical columns can be used to "
+            "group samples in the boxplot."
+        )
+    },
+    name="Explore taxonomic functional attribution.",
+    description=(
+        "Interactively browse taxon/function links and compare their loads "
+        "across samples or categorical sample groups."
     ),
-    "feature_inventory": (
-        "Counts of each functional feature on each contig, with contig "
-        "IDs as sample IDs."
-    ),
-    "taxonomy": (
-        "Taxonomic assignments indexed by the taxon IDs in `taxon_to_contig_map`."
-    ),
-    "taxon_to_contig_map": (
-        "Mapping of taxon IDs to the contig IDs assigned to each taxon."
-    ),
-}
+    citations=[],
+)
 
 plugin.methods.register_function(
     function=q2_annotate.tfa.tfa_by_taxon,
@@ -1834,17 +1837,43 @@ plugin.methods.register_function(
     citations=[],
 )
 
-plugin.methods.register_function(
+plugin.pipelines.register_function(
     function=estimate_tfa,
-    inputs=tfa_inputs,
-    parameters={},
+    inputs={
+        "contig_abundance": FeatureTable[Frequency],
+        "feature_inventory": FeatureTable[Frequency],
+        "taxonomy": FeatureData[Taxonomy],
+        "taxon_to_contig_map": FeatureMap[TaxonomyToContigs],
+    },
+    parameters={"metadata": Metadata},
     outputs=[
         ("tfa", FeatureTable[Frequency % Properties("tfa")]),
         ("gene_taxonomy", FeatureData[Taxonomy % Properties("tfa")]),
+        ("visualization", Visualization),
     ],
-    input_descriptions=tfa_input_descriptions,
-    parameter_descriptions={},
+    input_descriptions={
+        "contig_abundance": (
+            "Nonnegative contig abundances across samples, with contig IDs "
+            "as feature IDs."
+        ),
+        "feature_inventory": (
+            "Counts of each functional feature on each contig, with contig "
+            "IDs as sample IDs."
+        ),
+        "taxonomy": (
+            "Taxonomic assignments indexed by the taxon IDs in `taxon_to_contig_map`."
+        ),
+        "taxon_to_contig_map": (
+            "Mapping of taxon IDs to the contig IDs assigned to each taxon."
+        ),
+    },
+    parameter_descriptions={
+        "metadata": "Optional sample metadata for grouping samples in the explorer."
+    },
     output_descriptions={
+        "visualization": (
+            "Interactive exploration of taxon/function loads across samples."
+        ),
         "tfa": (
             "Sparse abundance-weighted loads for taxon/function pairs "
             "across the original samples."
@@ -1858,7 +1887,8 @@ plugin.methods.register_function(
         "Estimate sample-resolved functional loads for taxon/function pairs "
         "as a sparse frequency table and a gene taxonomy mapping. Only "
         "contigs shared by both input tables and assigned to a taxon with "
-        "taxonomy are included."
+        "taxonomy are included. The explorer uses optional sample metadata "
+        "for grouping."
     ),
     examples={"tfa_demo": estimate_tfa_example},
     citations=[],

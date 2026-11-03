@@ -105,7 +105,7 @@ def _calculate_taxon_gene_loads(
     return matrix, pairs
 
 
-def estimate_tfa(
+def _estimate_tfa(
     contig_abundance: biom.Table,
     feature_inventory: biom.Table,
     taxonomy: pd.DataFrame,
@@ -264,3 +264,31 @@ def tfa_collapse_samples(
         observation_ids=taxon_ids,
         sample_ids=function_ids,
     )
+
+
+def estimate_tfa(
+    ctx,
+    contig_abundance,
+    feature_inventory,
+    taxonomy,
+    taxon_to_contig_map,
+    metadata=None,
+):
+    """Estimate sample-resolved TFA and visualize it with optional metadata."""
+    tfa, gene_taxonomy = _estimate_tfa(
+        contig_abundance=contig_abundance.view(biom.Table),
+        feature_inventory=feature_inventory.view(biom.Table),
+        taxonomy=taxonomy.view(pd.DataFrame),
+        taxon_to_contig_map=taxon_to_contig_map.view(dict),
+    )
+
+    tfa = ctx.make_artifact("FeatureTable[Frequency % Properties('tfa')]", tfa)
+    gene_taxonomy = ctx.make_artifact(
+        "FeatureData[Taxonomy % Properties('tfa')]", gene_taxonomy
+    )
+
+    visualize = ctx.get_action("annotate", "_visualize_tfa")
+    (visualization,) = visualize(
+        feature_load=tfa, gene_taxonomy=gene_taxonomy, metadata=metadata
+    )
+    return tfa, gene_taxonomy, visualization

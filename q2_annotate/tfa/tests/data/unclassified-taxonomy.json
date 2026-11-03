@@ -1,0 +1,13 @@
+{
+  "samples": ["S1", "S2"],
+  "groups": {},
+  "pairs": [
+    {
+      "taxon_id": "T013",
+      "taxon": "d__Unclassified",
+      "lineage": ["d__Unclassified"],
+      "function": "geneA"
+    }
+  ],
+  "loads": [[0, 0, 3]]
+}

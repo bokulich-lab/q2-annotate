@@ -1,0 +1,160 @@
+{
+  "1": {
+    "samples": [
+      "S1",
+      "S2",
+      "S3"
+    ],
+    "groups": {
+      "treatment": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    "pairs": [
+      {
+        "taxon": "d__Bacteria",
+        "taxon_id": "T1, T2, T3, T4, T5",
+        "function": "geneA",
+        "taxon_label": "d__Bacteria",
+        "taxon_short": "d__Bacteria",
+        "unclassified": false,
+        "total": 20,
+        "mean": 6.666666666666667,
+        "median": 9
+      },
+      {
+        "taxon": "d__Bacteria",
+        "taxon_id": "T1, T2, T3, T4, T5",
+        "function": "geneB",
+        "taxon_label": "d__Bacteria",
+        "taxon_short": "d__Bacteria",
+        "unclassified": false,
+        "total": 2,
+        "mean": 0.6666666666666666,
+        "median": 0
+      }
+    ],
+    "loads": [
+      [
+        0,
+        0,
+        11
+      ],
+      [
+        0,
+        1,
+        9
+      ],
+      [
+        1,
+        2,
+        2
+      ]
+    ]
+  },
+  "3": {
+    "samples": [
+      "S1",
+      "S2",
+      "S3"
+    ],
+    "groups": {
+      "treatment": [
+        "A",
+        "B",
+        "A"
+      ]
+    },
+    "pairs": [
+      {
+        "taxon": "d__Bacteria; p__A; g__Shared",
+        "taxon_id": "T1, T2",
+        "function": "geneA",
+        "taxon_label": "g__Shared",
+        "taxon_short": "d__Bacteria; p__A; g__Shared",
+        "unclassified": false,
+        "total": 8,
+        "mean": 2.6666666666666665,
+        "median": 3
+      },
+      {
+        "taxon": "d__Bacteria; p__A; g__Shared",
+        "taxon_id": "T1, T2",
+        "function": "geneB",
+        "taxon_label": "g__Shared",
+        "taxon_short": "d__Bacteria; p__A; g__Shared",
+        "unclassified": false,
+        "total": 2,
+        "mean": 0.6666666666666666,
+        "median": 0
+      },
+      {
+        "taxon": "d__Bacteria; p__B; g__Shared",
+        "taxon_id": "T3",
+        "function": "geneA",
+        "taxon_label": "g__Shared",
+        "taxon_short": "d__Bacteria; p__B; g__Shared",
+        "unclassified": false,
+        "total": 7,
+        "mean": 2.3333333333333335,
+        "median": 0
+      },
+      {
+        "taxon": "d__Bacteria; p__A; Unclassified (level 3)",
+        "taxon_id": "T4",
+        "function": "geneA",
+        "taxon_label": "p__A",
+        "taxon_short": "d__Bacteria; p__A; Unclassified (level 3)",
+        "unclassified": true,
+        "total": 1,
+        "mean": 0.3333333333333333,
+        "median": 0
+      },
+      {
+        "taxon": "d__Bacteria; p__B; Unclassified (level 3)",
+        "taxon_id": "T5",
+        "function": "geneA",
+        "taxon_label": "p__B",
+        "taxon_short": "d__Bacteria; p__B; Unclassified (level 3)",
+        "unclassified": true,
+        "total": 4,
+        "mean": 1.3333333333333333,
+        "median": 0
+      }
+    ],
+    "loads": [
+      [
+        0,
+        0,
+        3
+      ],
+      [
+        0,
+        1,
+        5
+      ],
+      [
+        1,
+        2,
+        2
+      ],
+      [
+        2,
+        0,
+        7
+      ],
+      [
+        3,
+        0,
+        1
+      ],
+      [
+        4,
+        1,
+        4
+      ]
+    ]
+  }
+}

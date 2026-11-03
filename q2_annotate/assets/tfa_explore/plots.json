@@ -1,0 +1,255 @@
+{
+  "heatmap": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "data": {
+      "values": []
+    },
+    "width": 600,
+    "autosize": {
+      "type": "fit-x",
+      "contains": "padding",
+      "resize": true
+    },
+    "height": {
+      "step": 29
+    },
+    "config": {
+      "view": {
+        "stroke": null
+      },
+      "legend": {
+        "orient": "bottom"
+      }
+    },
+    "encoding": {
+      "x": {
+        "field": "function",
+        "type": "nominal",
+        "sort": [],
+        "title": "Function",
+        "scale": {
+          "paddingInner": 0,
+          "paddingOuter": 0
+        },
+        "axis": {
+          "labels": true
+        }
+      },
+      "y": {
+        "field": "taxon",
+        "type": "nominal",
+        "sort": [],
+        "title": "Taxon",
+        "scale": {
+          "paddingInner": 0,
+          "paddingOuter": 0
+        },
+        "axis": {
+          "labelLimit": 180
+        }
+      }
+    },
+    "layer": [
+      {
+        "mark": {
+          "type": "rect",
+          "cursor": "pointer",
+          "invalid": null,
+          "tooltip": {
+            "expr": "datum.tooltip"
+          }
+        },
+        "encoding": {
+          "color": {
+            "condition": [
+              {
+                "test": "!datum.present",
+                "value": "#f3f3f3"
+              },
+              {
+                "test": "datum.load === 0",
+                "value": "#ffffff"
+              }
+            ],
+            "field": "load",
+            "type": "quantitative",
+            "title": "Load",
+            "scale": {
+              "scheme": "blues",
+              "zero": true
+            }
+          },
+          "stroke": {
+            "value": "#bdbdbd"
+          },
+          "strokeWidth": {
+            "value": 0.5
+          }
+        }
+      },
+      {
+        "transform": [
+          {
+            "filter": "datum.top_link"
+          }
+        ],
+        "mark": {
+          "type": "point",
+          "filled": true,
+          "color": "#800000",
+          "size": 12,
+          "opacity": 1,
+          "strokeWidth": 0,
+          "cursor": "pointer",
+          "tooltip": {
+            "expr": "datum.tooltip"
+          }
+        },
+        "encoding": {
+          "x": {
+            "field": "function",
+            "type": "nominal",
+            "sort": [],
+            "title": "Function",
+            "scale": {
+              "paddingInner": 0,
+              "paddingOuter": 0
+            },
+            "axis": {
+              "labels": true
+            },
+            "bandPosition": 0.9
+          },
+          "y": {
+            "field": "taxon",
+            "type": "nominal",
+            "sort": [],
+            "title": "Taxon",
+            "scale": {
+              "paddingInner": 0,
+              "paddingOuter": 0
+            },
+            "axis": {
+              "labelLimit": 180
+            },
+            "bandPosition": 0.2
+          }
+        }
+      }
+    ]
+  },
+  "boxplot": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "data": {
+      "values": []
+    },
+    "width": 600,
+    "autosize": {
+      "type": "fit-x",
+      "contains": "padding",
+      "resize": true
+    },
+    "height": 300,
+    "mark": {
+      "type": "boxplot",
+      "extent": 1.5
+    },
+    "encoding": {
+      "x": {
+        "field": "group",
+        "type": "nominal",
+        "sort": [],
+        "title": "Samples"
+      },
+      "y": {
+        "field": "load",
+        "type": "quantitative",
+        "title": "TFA load",
+        "scale": {
+          "zero": true
+        }
+      },
+      "color": {
+        "field": "group",
+        "type": "nominal",
+        "legend": null,
+        "scale": {
+          "domain": [],
+          "scheme": "tableau10"
+        }
+      }
+    },
+    "config": {
+      "view": {
+        "stroke": null
+      }
+    }
+  },
+  "samples": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "data": {
+      "values": []
+    },
+    "width": 600,
+    "autosize": {
+      "type": "fit-x",
+      "contains": "padding",
+      "resize": true
+    },
+    "height": 300,
+    "mark": {
+      "type": "bar"
+    },
+    "encoding": {
+      "x": {
+        "field": "sample",
+        "type": "nominal",
+        "sort": "-y",
+        "title": "Sample",
+        "axis": {
+          "labels": true
+        }
+      },
+      "y": {
+        "field": "load",
+        "type": "quantitative",
+        "title": "TFA load",
+        "scale": {
+          "zero": true
+        }
+      },
+      "color": {
+        "field": "group",
+        "type": "nominal",
+        "legend": null,
+        "scale": {
+          "domain": [],
+          "scheme": "tableau10"
+        }
+      },
+      "tooltip": [
+        {
+          "field": "sample",
+          "type": "nominal",
+          "title": "Sample"
+        },
+        {
+          "field": "group",
+          "type": "nominal",
+          "title": "Group"
+        },
+        {
+          "field": "load",
+          "type": "quantitative",
+          "title": "TFA load",
+          "format": ".4g"
+        }
+      ]
+    },
+    "config": {
+      "view": {
+        "stroke": null
+      }
+    }
+  }
+}

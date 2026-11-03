@@ -20,12 +20,13 @@ class TestTFAAction(TestPluginBase):
     package = "q2_annotate.tfa.tests"
 
     def test_action_registration(self):
-        self.assertIn("estimate_tfa", plugin.methods)
+        self.assertNotIn("estimate_tfa", plugin.methods)
         self.assertNotIn("_estimate_tfa_table", plugin.methods)
         self.assertIn("tfa_by_taxon", plugin.methods)
         self.assertIn("tfa_by_function", plugin.methods)
         self.assertIn("tfa_collapse_samples", plugin.methods)
-        self.assertNotIn("estimate_tfa", plugin.pipelines)
+        self.assertIn("estimate_tfa", plugin.pipelines)
+        self.assertIn("_visualize_tfa", plugin.visualizers)
         self.assertNotIn("TFA", plugin.type_fragments)
 
     def _inputs(self, inventory_contigs=("C1", "C2", "C3")):
@@ -63,9 +64,10 @@ class TestTFAAction(TestPluginBase):
             taxon_to_contig_map=mapping,
         )
 
-    def test_estimate_returns_frequency_and_gene_taxonomy(self):
-        result = plugin.methods["estimate_tfa"](**self._inputs())
-        self.assertEqual(len(result), 2)
+    def test_estimate_returns_frequency_gene_taxonomy_and_visualization(self):
+        result = self.plugin.pipelines["estimate_tfa"](**self._inputs())
+        self.assertEqual(len(result), 3)
+        self.assertIsInstance(result.visualization, qiime2.Visualization)
         self.assertEqual(
             str(result.tfa.type), "FeatureTable[Frequency % Properties('tfa')]"
         )
@@ -88,10 +90,11 @@ class TestTFAAction(TestPluginBase):
         with self.assertRaisesRegex(
             ValueError, "No taxon/gene pairs have nonzero loads"
         ):
-            plugin.methods["estimate_tfa"](**self._inputs(("C4",)))
+            self.plugin.pipelines["estimate_tfa"](**self._inputs(("C4",)))
 
     def test_tfa_actions_require_property(self):
-        feature_load, gene_taxonomy = plugin.methods["estimate_tfa"](**self._inputs())
+        result = self.plugin.pipelines["estimate_tfa"](**self._inputs())
+        feature_load, gene_taxonomy = result.tfa, result.gene_taxonomy
         unmarked = qiime2.Artifact.import_data(
             "FeatureTable[Frequency]", feature_load.view(biom.Table)
         )
@@ -106,7 +109,8 @@ class TestTFAAction(TestPluginBase):
                 )
 
     def test_public_selectors_return_requested_sparse_tables(self):
-        feature_load, gene_taxonomy = plugin.methods["estimate_tfa"](**self._inputs())
+        result = self.plugin.pipelines["estimate_tfa"](**self._inputs())
+        feature_load, gene_taxonomy = result.tfa, result.gene_taxonomy
         by_taxon = plugin.methods["tfa_by_taxon"](
             feature_load=feature_load,
             gene_taxonomy=gene_taxonomy,
@@ -130,7 +134,8 @@ class TestTFAAction(TestPluginBase):
         self.assertEqual(by_function.matrix_data.nnz, 3)
 
     def test_collapse_samples_returns_taxon_by_function_artifact(self):
-        feature_load, gene_taxonomy = plugin.methods["estimate_tfa"](**self._inputs())
+        result = self.plugin.pipelines["estimate_tfa"](**self._inputs())
+        feature_load, gene_taxonomy = result.tfa, result.gene_taxonomy
         result = plugin.methods["tfa_collapse_samples"](
             feature_load=feature_load, gene_taxonomy=gene_taxonomy
         )
@@ -147,6 +152,46 @@ class TestTFAAction(TestPluginBase):
             feature_load=feature_load, gene_taxonomy=gene_taxonomy, aggregation="median"
         ).table.view(biom.Table)
         np.testing.assert_array_equal(median.matrix_data.toarray(), [[4, 2], [0, 6]])
+
+    def test_follow_up_actions_preserve_fractional_pipeline_loads_with_metadata(self):
+        """Use metadata-aware pipeline outputs directly in all follow-up actions."""
+        inputs = self._inputs()
+        abundance = inputs["contig_abundance"].view(biom.Table)
+        inputs["contig_abundance"] = qiime2.Artifact.import_data(
+            "FeatureTable[Frequency]",
+            biom.Table(
+                abundance.matrix_data / 4,
+                abundance.ids(axis="observation"),
+                abundance.ids(axis="sample"),
+            ),
+        )
+        metadata = qiime2.Metadata.load(self.get_data_path("sample-metadata.tsv"))
+        result = self.plugin.pipelines["estimate_tfa"](**inputs, metadata=metadata)
+        follow_up_inputs = dict(
+            feature_load=result.tfa, gene_taxonomy=result.gene_taxonomy
+        )
+        by_taxon = self.plugin.methods["tfa_by_taxon"](
+            **follow_up_inputs, taxon_ids=["T1"]
+        ).tables["T1"].view(biom.Table)
+        np.testing.assert_array_equal(
+            by_taxon.matrix_data.toarray(), [[1.25, 0.75], [0.25, 0.75]]
+        )
+        by_function = self.plugin.methods["tfa_by_function"](
+            **follow_up_inputs, function_ids=["gene B"]
+        ).tables[_collection_key("gene B")].view(biom.Table)
+        np.testing.assert_array_equal(
+            by_function.matrix_data.toarray(), [[0.25, 0.75], [0, 3]]
+        )
+        for aggregation, expected in (
+            ("sum", [[2, 1], [0, 3]]),
+            ("mean", [[1, 0.5], [0, 1.5]]),
+            ("median", [[1, 0.5], [0, 1.5]]),
+        ):
+            with self.subTest(aggregation=aggregation):
+                collapsed = self.plugin.methods["tfa_collapse_samples"](
+                    **follow_up_inputs, aggregation=aggregation
+                ).table.view(biom.Table)
+                np.testing.assert_array_equal(collapsed.matrix_data.toarray(), expected)
 
     def test_collection_keys_are_safe_and_distinct(self):
         self.assertEqual(_collection_key("T1"), "T1")
