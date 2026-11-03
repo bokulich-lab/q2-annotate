@@ -6,10 +6,12 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import filecmp
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pandas.testing as pdt
 import qiime2
+from qiime2.plugin import Properties
 from qiime2.plugin.testing import TestPluginBase
 
 from q2_annotate.eggnog import _eggnog_annotate, extract_annotations
@@ -18,9 +20,12 @@ from q2_annotate.eggnog.annotation import (
     extraction_methods,
     _extract_generic,
     _merge_maps,
+    map_eggnog,
 )
 
 from q2_types.genome_data import (
+    GenomeData,
+    NOG,
     OrthologAnnotationDirFmt,
     SeedOrthologDirFmt,
     OrthologFileFmt,
@@ -75,6 +80,49 @@ class TestAnnotate(TestPluginBase):
         self.assertEqual(len(compare_dir.common), 1)
 
         # TODO: add exact file comparison
+
+    def test_genome_hits_bypass_partitioning(self):
+        orthologs = qiime2.Artifact.import_data(
+            "GenomeData[Orthologs % Properties('contigs')]",
+            self.get_data_path("good_hits/"),
+        )
+        annotate_action = MagicMock(return_value=("annotations",))
+        ctx = MagicMock()
+        ctx.get_action.return_value = annotate_action
+
+        annotations = map_eggnog(
+            ctx,
+            orthologs,
+            self.eggnog_db_artifact,
+            db_in_memory=True,
+            num_cpus=3,
+            num_partitions=2,
+        )
+
+        self.assertEqual(annotations, "annotations")
+        ctx.get_action.assert_called_once_with("annotate", "_eggnog_annotate")
+        annotate_action.assert_called_once_with(
+            orthologs, self.eggnog_db_artifact, True, 3
+        )
+
+    def test_genome_hits_pipeline(self):
+        orthologs = qiime2.Artifact.import_data(
+            "GenomeData[Orthologs % Properties('contigs')]",
+            self.get_data_path("good_hits/"),
+        )
+        (annotations,) = self.eggnog_annotate(
+            orthologs, self.eggnog_db_artifact, num_partitions=2
+        )
+
+        self.assertEqual(annotations.type, GenomeData[NOG % Properties("contigs")])
+        result = annotations.view(OrthologAnnotationDirFmt)
+        result.validate()
+        outputs = list(result.annotations.iter_views(OrthologFileFmt))
+        self.assertEqual(len(outputs), 1)
+        expected = OrthologFileFmt(
+            self.get_data_path("expected/test_output.emapper.annotations"), "r"
+        ).view(pd.DataFrame)
+        pdt.assert_frame_equal(outputs[0][1].view(pd.DataFrame), expected)
 
 
 class TestAnnotationExtraction(TestPluginBase):

@@ -15,7 +15,7 @@ import qiime2.util
 from qiime2.sdk import Context
 
 from q2_types.feature_data import FeatureData
-from q2_types.feature_data_mag import MAG, MAGSequencesDirFmt
+from q2_types.feature_data_mag import MAG, MAGSequencesDirFmt, Contig
 from q2_types.genome_data import (
     SeedOrthologDirFmt,
     OrthologFileFmt,
@@ -77,17 +77,21 @@ def _run_eggnog_search_pipeline(
     - collated_hits: The results_all ortholog hits.
     - collated_tables: The results_all feature tables.
     """
+    _eggnog_search = ctx.get_action("annotate", search_action)
+
     if sequences.type <= FeatureData[MAG]:
         plugin, action_name = "types", "partition_feature_data_mags"
     elif sequences.type <= SampleData[Contigs]:
         plugin, action_name = "types", "partition_contigs"
     elif sequences.type <= SampleData[MAGs]:
         plugin, action_name = "types", "partition_sample_data_mags"
+    elif sequences.type <= FeatureData[Contig]:
+        # we will not partition those contigs (they are contained in a single file)
+        return _eggnog_search(sequences, *db, num_cpus, db_in_memory)
     else:
         raise NotImplementedError()
 
     partition_method = ctx.get_action(plugin, action_name)
-    _eggnog_search = ctx.get_action("annotate", search_action)
     collate_hits = ctx.get_action("types", "collate_orthologs")
     _eggnog_feature_table = ctx.get_action("annotate", "_eggnog_feature_table")
     collate_loci = ctx.get_action("types", "collate_loci")
