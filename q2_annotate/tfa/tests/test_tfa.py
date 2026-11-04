@@ -18,6 +18,9 @@ from ..tfa import (
     _align_contig_matrices,
     _gene_taxonomy_id,
     _map_contigs_to_taxa,
+    tfa_by_taxon,
+    tfa_by_function,
+    tfa_collapse_samples,
     _estimate_tfa,
 )
 
@@ -241,6 +244,121 @@ class TestTFA(TestPluginBase):
         ]
         self.assertEqual(observed, list(cases["Feature ID"]))
         self.assertEqual(len(observed), len(set(observed)))
+
+    def test_taxon_projection(self):
+        observed, gene_taxonomy = self._estimate()
+        by_taxon = tfa_by_taxon(observed, gene_taxonomy, ["T1"])["T1"]
+        pd.testing.assert_frame_equal(
+            by_taxon.to_dataframe(dense=True),
+            pd.DataFrame(
+                [[200, 240, 180], [100, 120, 90]],
+                index=["bla_TEM", "vanA"],
+                columns=["S1", "S2", "S3"],
+            ),
+            check_dtype=False,
+        )
+        self.assertTrue(sp.issparse(by_taxon.matrix_data))
+        with self.assertRaisesRegex(ValueError, "No TFA rows"):
+            tfa_by_taxon(observed, gene_taxonomy, ["unknown"])
+
+    def test_function_projection(self):
+        observed, gene_taxonomy = self._estimate()
+        by_function = tfa_by_function(observed, gene_taxonomy, ["bla_TEM"])["bla_TEM"]
+        pd.testing.assert_frame_equal(
+            by_function.to_dataframe(dense=True),
+            pd.DataFrame(
+                [[200, 240, 180], [50, 40, 60]],
+                index=["T1", "T2"],
+                columns=["S1", "S2", "S3"],
+            ),
+            check_dtype=False,
+        )
+        self.assertTrue(sp.issparse(by_function.matrix_data))
+        with self.assertRaisesRegex(ValueError, "No TFA rows"):
+            tfa_by_function(observed, gene_taxonomy, ["unknown"])
+
+    def test_collapse_samples_sum_mean_median(self):
+        observed, gene_taxonomy = self._estimate()
+        expected = np.array([[620, 310, 0], [150, 0, 450]])
+        for aggregation, values in (
+            ("sum", expected),
+            ("mean", expected / 3),
+            ("median", np.array([[200, 100, 0], [50, 0, 150]])),
+        ):
+            collapsed = tfa_collapse_samples(observed, gene_taxonomy, aggregation)
+            self.assertTrue(sp.issparse(collapsed.matrix_data))
+            self.assertEqual(list(collapsed.ids(axis="observation")), ["T1", "T2"])
+            self.assertEqual(
+                list(collapsed.ids(axis="sample")), ["bla_TEM", "vanA", "mecA"]
+            )
+            np.testing.assert_allclose(collapsed.matrix_data.toarray(), values)
+        np.testing.assert_array_equal(
+            tfa_collapse_samples(observed, gene_taxonomy).matrix_data.toarray(),
+            expected,
+        )
+
+    def test_collapse_median_includes_implicit_zeros(self):
+        abundance = self.abundance.copy()
+        abundance.loc[["S2", "S3"], :] = 0
+        observed, gene_taxonomy = self._estimate(abundance=abundance)
+        collapsed = tfa_collapse_samples(observed, gene_taxonomy, "median")
+        self.assertEqual(collapsed.matrix_data.nnz, 0)
+        self.assertEqual(collapsed.shape, (2, 3))
+        with self.assertRaisesRegex(ValueError, "Unsupported sample aggregation"):
+            tfa_collapse_samples(observed, gene_taxonomy, "maximum")
+
+    def test_collapse_empty_tfa(self):
+        table, gene_taxonomy = self._estimate()
+        empty = table.filter([], axis="observation", inplace=False)
+        gene_taxonomy = gene_taxonomy.iloc[:0]
+        self.assertEqual(tfa_collapse_samples(empty, gene_taxonomy).shape, (0, 0))
+        self.assertEqual(
+            tfa_collapse_samples(empty, gene_taxonomy, "median").shape, (0, 0)
+        )
+
+    def test_collapse_mean_requires_samples(self):
+        original, gene_taxonomy = self._estimate()
+        empty_samples = biom.Table(
+            sp.csr_matrix((original.shape[0], 0)),
+            observation_ids=original.ids(axis="observation"),
+            sample_ids=[],
+        )
+        with self.assertRaisesRegex(ValueError, "without samples"):
+            tfa_collapse_samples(empty_samples, gene_taxonomy, "mean")
+
+    def test_multiple_taxon_selections_only_return_requested_ids(self):
+        observed, gene_taxonomy = self._estimate()
+        by_taxon = tfa_by_taxon(observed, gene_taxonomy, ["T2", "T1", "T2"])
+        self.assertEqual(list(by_taxon), ["T2", "T1"])
+        self.assertEqual(
+            list(by_taxon["T2"].ids(axis="observation")), ["bla_TEM", "mecA"]
+        )
+        with self.assertRaisesRegex(ValueError, "at least one taxon"):
+            tfa_by_taxon(observed, gene_taxonomy, [])
+
+    def test_multiple_function_selections_only_return_requested_ids(self):
+        observed, gene_taxonomy = self._estimate()
+        by_function = tfa_by_function(observed, gene_taxonomy, ["vanA", "mecA"])
+        self.assertEqual(list(by_function), ["vanA", "mecA"])
+        self.assertEqual(list(by_function["vanA"].ids(axis="observation")), ["T1"])
+        with self.assertRaisesRegex(ValueError, "unknown"):
+            tfa_by_function(observed, gene_taxonomy, ["vanA", "unknown"])
+
+    def test_missing_feature_mapping_rejected(self):
+        table, gene_taxonomy = self._estimate()
+        missing = gene_taxonomy.iloc[1:]
+        with self.assertRaisesRegex(ValueError, "Missing gene taxonomy mappings"):
+            tfa_by_taxon(table, missing, ["T1"])
+        with self.assertRaisesRegex(ValueError, "Missing gene taxonomy mappings"):
+            tfa_collapse_samples(table, missing)
+
+    def test_mapping_rows_are_joined_by_feature_id(self):
+        table, gene_taxonomy = self._estimate()
+        expected = tfa_by_taxon(table, gene_taxonomy, ["T1"])["T1"]
+        observed = tfa_by_taxon(table, gene_taxonomy.iloc[::-1], ["T1"])["T1"]
+        np.testing.assert_array_equal(
+            observed.matrix_data.toarray(), expected.matrix_data.toarray()
+        )
 
     def _pipeline_inputs(self):
         """Import the same readable fixtures used for estimator tests."""
