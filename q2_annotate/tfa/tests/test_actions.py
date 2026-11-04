@@ -108,7 +108,7 @@ class TestTFAAction(TestPluginBase):
                     feature_load=unmarked, gene_taxonomy=gene_taxonomy, **parameters
                 )
 
-    def test_public_selectors_return_requested_sparse_tables(self):
+    def test_by_taxon_returns_requested_sparse_tables(self):
         result = self.plugin.pipelines["estimate_tfa"](**self._inputs())
         feature_load, gene_taxonomy = result.tfa, result.gene_taxonomy
         by_taxon = plugin.methods["tfa_by_taxon"](
@@ -120,6 +120,10 @@ class TestTFAAction(TestPluginBase):
         by_taxon = by_taxon["T1"].view(biom.Table)
         self.assertEqual(list(by_taxon.ids(axis="observation")), ["geneA", "gene B"])
         np.testing.assert_array_equal(by_taxon.matrix_data.toarray(), [[5, 3], [1, 3]])
+
+    def test_by_function_returns_requested_sparse_tables(self):
+        result = self.plugin.pipelines["estimate_tfa"](**self._inputs())
+        feature_load, gene_taxonomy = result.tfa, result.gene_taxonomy
         by_function = plugin.methods["tfa_by_function"](
             feature_load=feature_load,
             gene_taxonomy=gene_taxonomy,

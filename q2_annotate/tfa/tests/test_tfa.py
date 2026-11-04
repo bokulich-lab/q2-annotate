@@ -245,7 +245,7 @@ class TestTFA(TestPluginBase):
         self.assertEqual(observed, list(cases["Feature ID"]))
         self.assertEqual(len(observed), len(set(observed)))
 
-    def test_taxon_and_function_projections(self):
+    def test_taxon_projection(self):
         observed, gene_taxonomy = self._estimate()
         by_taxon = tfa_by_taxon(observed, gene_taxonomy, ["T1"])["T1"]
         pd.testing.assert_frame_equal(
@@ -257,6 +257,12 @@ class TestTFA(TestPluginBase):
             ),
             check_dtype=False,
         )
+        self.assertTrue(sp.issparse(by_taxon.matrix_data))
+        with self.assertRaisesRegex(ValueError, "No TFA rows"):
+            tfa_by_taxon(observed, gene_taxonomy, ["unknown"])
+
+    def test_function_projection(self):
+        observed, gene_taxonomy = self._estimate()
         by_function = tfa_by_function(observed, gene_taxonomy, ["bla_TEM"])["bla_TEM"]
         pd.testing.assert_frame_equal(
             by_function.to_dataframe(dense=True),
@@ -267,9 +273,9 @@ class TestTFA(TestPluginBase):
             ),
             check_dtype=False,
         )
-        self.assertTrue(sp.issparse(by_taxon.matrix_data))
+        self.assertTrue(sp.issparse(by_function.matrix_data))
         with self.assertRaisesRegex(ValueError, "No TFA rows"):
-            tfa_by_taxon(observed, gene_taxonomy, ["unknown"])
+            tfa_by_function(observed, gene_taxonomy, ["unknown"])
 
     def test_collapse_samples_sum_mean_median(self):
         observed, gene_taxonomy = self._estimate()
@@ -320,18 +326,21 @@ class TestTFA(TestPluginBase):
         with self.assertRaisesRegex(ValueError, "without samples"):
             tfa_collapse_samples(empty_samples, gene_taxonomy, "mean")
 
-    def test_multiple_selections_only_return_requested_ids(self):
+    def test_multiple_taxon_selections_only_return_requested_ids(self):
         observed, gene_taxonomy = self._estimate()
         by_taxon = tfa_by_taxon(observed, gene_taxonomy, ["T2", "T1", "T2"])
         self.assertEqual(list(by_taxon), ["T2", "T1"])
         self.assertEqual(
             list(by_taxon["T2"].ids(axis="observation")), ["bla_TEM", "mecA"]
         )
+        with self.assertRaisesRegex(ValueError, "at least one taxon"):
+            tfa_by_taxon(observed, gene_taxonomy, [])
+
+    def test_multiple_function_selections_only_return_requested_ids(self):
+        observed, gene_taxonomy = self._estimate()
         by_function = tfa_by_function(observed, gene_taxonomy, ["vanA", "mecA"])
         self.assertEqual(list(by_function), ["vanA", "mecA"])
         self.assertEqual(list(by_function["vanA"].ids(axis="observation")), ["T1"])
-        with self.assertRaisesRegex(ValueError, "at least one taxon"):
-            tfa_by_taxon(observed, gene_taxonomy, [])
         with self.assertRaisesRegex(ValueError, "unknown"):
             tfa_by_function(observed, gene_taxonomy, ["vanA", "unknown"])
 

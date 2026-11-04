@@ -164,11 +164,11 @@ def _collection_key(identifier: str) -> str:
 def _select_tfa(
     feature_load: biom.Table,
     gene_taxonomy: pd.DataFrame,
-    identifiers: list[str],
+    ids: list[str],
     dimension: int,
 ) -> dict[str, biom.Table]:
     label = "taxon" if dimension == 0 else "function"
-    selected = {identifier: ([], []) for identifier in identifiers}
+    selected = {_id: ([], []) for _id in ids}
     if not selected:
         raise ValueError(f"Select at least one {label} ID.")
 
@@ -180,17 +180,17 @@ def _select_tfa(
             rows.append(index)
             other_ids.append(pair[1 - dimension])
 
-    missing = [identifier for identifier, (rows, _) in selected.items() if not rows]
+    missing = [_id for _id, (rows, _) in selected.items() if not rows]
     if missing:
         raise ValueError(f"No TFA rows found for {label} IDs: {missing!r}.")
 
     matrix = feature_load.matrix_data.tocsr()
     sample_ids = feature_load.ids(axis="sample")
     return {
-        _collection_key(identifier): biom.Table(
+        _collection_key(_id): biom.Table(
             matrix[rows, :], observation_ids=other_ids, sample_ids=sample_ids
         )
-        for identifier, (rows, other_ids) in selected.items()
+        for _id, (rows, other_ids) in selected.items()
     }
 
 
