@@ -822,7 +822,7 @@ class TestClassifyKraken2CoassembledContigs(TestPluginBase):
         self.db = Artifact.import_data(
             "Kraken2DB", self.get_data_path("simulated-sequences/kraken2-db")
         )
-        self.expected_taxa = {"ba_contig0": 1392, "mm_contig0": 10090}
+        self.expected_taxa = {"pooled:ba_contig0": 1392, "pooled:mm_contig0": 10090}
 
     def _assert_classifications(self, reports, outputs, expected_taxa):
         outputs_format = outputs.view(Kraken2OutputDirectoryFormat)
@@ -872,7 +872,11 @@ class TestClassifyKraken2CoassembledContigs(TestPluginBase):
         self._assert_classifications(
             reports,
             outputs,
-            {**self.expected_taxa, "sa_contig0": 1280, "se_contig0": 1282},
+            {
+                **self.expected_taxa,
+                "pooled:sa_contig0": 1280,
+                "pooled:se_contig0": 1282,
+            },
         )
 
 
