@@ -13,6 +13,7 @@ from collections import defaultdict
 import pandas as pd
 
 from q2_types.genome_data import (
+    GenomeData,
     OrthologAnnotationDirFmt,
     Orthologs,
     SeedOrthologDirFmt,
@@ -80,6 +81,14 @@ def map_eggnog(
     ctx, eggnog_hits, db, db_in_memory=False, num_cpus=1, num_partitions=None
 ):
     _eggnog_annotate = ctx.get_action("annotate", "_eggnog_annotate")
+
+    # GenomeData[Orthologs] results from ortholog search on coassembled contigs
+    # so there is no need to partition; in the future, when we support annotation
+    # of GenomeData[DNASequence], we should consider parallelizing this too
+    if eggnog_hits.type <= GenomeData[Orthologs]:
+        (annotation,) = _eggnog_annotate(eggnog_hits, db, db_in_memory, num_cpus)
+        return annotation
+
     collate_annotations = ctx.get_action("types", "collate_ortholog_annotations")
 
     if eggnog_hits.type <= SampleData[Orthologs]:
