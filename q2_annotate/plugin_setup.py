@@ -168,10 +168,11 @@ plugin.pipelines.register_function(
     ],
     input_descriptions={
         "seqs": (
-            "Sequences to be classified. Provide a list containing only reads, "
-            "per-sample contigs, coassembled contigs, per-sample MAGs, or "
-            "dereplicated MAGs. Contig IDs must be unique across coassembly "
-            "artifacts."
+            "Sequences to be classified. Provide a list of one or more "
+            "artifacts containing either reads, per-sample contigs, "
+            "co-assembled contigs, per-sample MAGs, or dereplicated MAGs. "
+            "All artifacts must be of the same type and contig IDs must "
+            "be unique across all co-assembly artifacts."
         ),
         "db": "Kraken 2 database.",
     },

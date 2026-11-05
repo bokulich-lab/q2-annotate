@@ -154,7 +154,7 @@ def _classify_single_artifact(ctx, seqs, db, num_partitions, kwargs):
     ctx : qiime2.sdk.Context
         The pipeline context object.
     seqs : qiime2.Artifact
-        An artifact of type SampleData[SequencesWithQualtiy],
+        An artifact of type SampleData[SequencesWithQuality],
         SampleData[PairedEndSequencesWithQuality],
         SampleData[JoinedSequencesWithQuality], SampleData[Contigs],
         SampleData[MAGs], FeatureData[MAG], or FeatureData[Contig].
