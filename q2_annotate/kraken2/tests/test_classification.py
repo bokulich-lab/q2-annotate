@@ -34,6 +34,7 @@ from q2_annotate.kraken2.classification import (
 )
 
 from qiime2 import Artifact
+from qiime2.sdk.parallel_config import ParallelConfig
 from qiime2.plugin.testing import TestPluginBase
 from qiime2.plugins import annotate
 
@@ -601,7 +602,7 @@ class TestClassifyKraken2Reads(TestPluginBase):
             "SampleData[PairedEndSequencesWithQuality]", samples
         )
 
-        with self.test_config:
+        with ParallelConfig():
             reports, outputs = self.classify_kraken2.parallel([samples], db)._result()
 
         reports = reports.view(Kraken2ReportDirectoryFormat)
@@ -762,7 +763,7 @@ class TestClassifyKraken2Contigs(TestPluginBase):
         db = Artifact.import_data("Kraken2DB", self.db)
         samples = Artifact.import_data("SampleData[Contigs]", self.samples)
 
-        with self.test_config:
+        with ParallelConfig():
             reports, outputs = self.classify_kraken2.parallel([samples], db)._result()
 
         reports = reports.view(Kraken2ReportDirectoryFormat)
@@ -1023,7 +1024,7 @@ class TestClassifyKraken2MAGs(TestPluginBase):
         db = Artifact.import_data("Kraken2DB", self.db)
         samples = Artifact.import_data("SampleData[MAGs]", self.samples)
 
-        with self.test_config:
+        with ParallelConfig():
             reports, outputs = self.classify_kraken2.parallel([samples], db)._result()
 
         reports = reports.view(Kraken2ReportDirectoryFormat)
