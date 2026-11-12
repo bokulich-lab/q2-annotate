@@ -8,7 +8,7 @@
 import shutil
 import tempfile
 from filecmp import dircmp
-from unittest.mock import MagicMock, patch, ANY, call
+from unittest.mock import MagicMock, patch, ANY, call, sentinel
 
 import pandas as pd
 import pandas.testing as pdt
@@ -24,6 +24,7 @@ from q2_annotate.eggnog.orthologs.common import (
     _eggnog_search,
     _search_runner,
     _create_symlinks,
+    _run_eggnog_search_pipeline,
 )
 from q2_annotate.eggnog.types import EggnogHmmerIdmapDirectoryFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
@@ -31,6 +32,44 @@ from q2_types.genome_data import ProteinsDirectoryFormat
 from q2_types.per_sample_sequences import ContigSequencesDirFmt, MultiMAGSequencesDirFmt
 from q2_types.profile_hmms import PressedProfileHmmsDirectoryFmt
 from q2_types.reference_db import DiamondDatabaseDirFmt
+
+
+class TestSearchPipeline(TestPluginBase):
+    package = "q2_annotate.eggnog.tests"
+
+    def test_coassembled_contigs_bypass_partitioning(self):
+        contigs = ContigSequencesDirFmt()
+        shutil.copyfile(
+            self.get_data_path("contig-sequences-1/s1_contigs.fa"),
+            contigs.path / "pooled_contigs.fasta",
+        )
+        sequences = qiime2.Artifact.import_data("FeatureData[Contig]", contigs)
+
+        for action, db in (
+            ("_eggnog_diamond_search", [sentinel.diamond_db]),
+            (
+                "_eggnog_hmmer_search",
+                [sentinel.idmap, sentinel.pressed_hmm_db, sentinel.seed_alignments],
+            ),
+        ):
+            with self.subTest(search_action=action):
+                search = MagicMock(return_value=sentinel.search_results)
+                ctx = MagicMock()
+                ctx.get_action.return_value = search
+
+                result = _run_eggnog_search_pipeline(
+                    ctx=ctx,
+                    sequences=sequences,
+                    db=db,
+                    num_cpus=3,
+                    db_in_memory=True,
+                    num_partitions=2,
+                    search_action=action,
+                )
+
+                ctx.get_action.assert_called_once_with("annotate", action)
+                search.assert_called_once_with(sequences, *db, 3, True)
+                self.assertIs(result, sentinel.search_results)
 
 
 class TestHMMER(TestPluginBase):
