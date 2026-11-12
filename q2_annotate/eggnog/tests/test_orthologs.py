@@ -349,7 +349,7 @@ class TestDiamond(TestPluginBase):
             "SampleData[Contigs]", self.get_data_path("contig-sequences-1")
         )
 
-        with self.test_config:
+        with qiime2.sdk.parallel_config.ParallelConfig():
             _, parallel, _ = self.eggnog_diamond_search.parallel(
                 contigs, self.diamond_db_artifact
             )._result()
@@ -368,7 +368,7 @@ class TestDiamond(TestPluginBase):
             "FeatureData[MAG]", self.get_data_path("mag-sequences")
         )
 
-        with self.test_config:
+        with qiime2.sdk.parallel_config.ParallelConfig():
             _, parallel, _ = self.eggnog_diamond_search.parallel(
                 mags, self.diamond_db_artifact
             )._result()
@@ -387,7 +387,7 @@ class TestDiamond(TestPluginBase):
             "SampleData[MAGs]", self.get_data_path("mag-sequences-per-sample")
         )
 
-        with self.test_config:
+        with qiime2.sdk.parallel_config.ParallelConfig():
             _, parallel, _ = self.eggnog_diamond_search.parallel(
                 mags, self.diamond_db_artifact
             )._result()

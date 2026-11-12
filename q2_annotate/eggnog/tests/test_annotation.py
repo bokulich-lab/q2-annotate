@@ -64,7 +64,7 @@ class TestAnnotate(TestPluginBase):
             self.get_data_path("good_hits/"),
         )
 
-        with self.test_config:
+        with qiime2.sdk.parallel_config.ParallelConfig():
             (parallel,) = self.eggnog_annotate.parallel(
                 orthologs, self.eggnog_db_artifact
             )._result()
