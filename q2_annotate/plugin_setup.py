@@ -777,11 +777,12 @@ plugin.methods.register_function(
     ],
 )
 
-T_orthologs_in, P_orthologs_out = TypeMap(
+T_orthologs_in, T_orthologs_out = TypeMap(
     {
-        SampleData[Contigs]: Properties("contigs"),
-        SampleData[MAGs]: Properties("mags"),
-        FeatureData[MAG]: Properties("mags"),
+        SampleData[Contigs]: SampleData[Orthologs % Properties("contigs")],
+        SampleData[MAGs]: SampleData[Orthologs % Properties("mags")],
+        FeatureData[MAG]: SampleData[Orthologs % Properties("mags")],
+        FeatureData[Contig]: GenomeData[Orthologs % Properties("contigs")],
     }
 )
 
@@ -804,9 +805,14 @@ plugin.pipelines.register_function(
             "machines with enough memory."
         ),
         **partition_param_descriptions,
+        "num_partitions": (
+            "Number of partitions for contigs or MAGs. Ignored for coassembled "
+            "contigs (FeatureData[Contig]), which are searched directly without "
+            "partitioning."
+        ),
     },
     outputs=[
-        ("eggnog_hits", SampleData[Orthologs % P_orthologs_out]),
+        ("eggnog_hits", T_orthologs_out),
         ("table", FeatureTable[Frequency]),
         ("loci", GenomeData[Loci]),
     ],
@@ -848,9 +854,14 @@ plugin.pipelines.register_function(
             "machines with enough memory."
         ),
         **partition_param_descriptions,
+        "num_partitions": (
+            "Number of partitions for contigs or MAGs. Ignored for coassembled "
+            "contigs (FeatureData[Contig]), which are searched directly without "
+            "partitioning."
+        ),
     },
     outputs=[
-        ("eggnog_hits", SampleData[Orthologs % P_orthologs_out]),
+        ("eggnog_hits", T_orthologs_out),
         ("table", FeatureTable[Frequency]),
         ("loci", GenomeData[Loci]),
     ],
@@ -885,7 +896,7 @@ plugin.methods.register_function(
         ),
     },
     outputs=[
-        ("eggnog_hits", SampleData[Orthologs % P_orthologs_out]),
+        ("eggnog_hits", T_orthologs_out),
         ("table", FeatureTable[Frequency]),
         ("loci", GenomeData[Loci]),
     ],
@@ -940,7 +951,7 @@ plugin.methods.register_function(
         ),
     },
     outputs=[
-        ("eggnog_hits", SampleData[Orthologs % P_orthologs_out]),
+        ("eggnog_hits", T_orthologs_out),
         ("table", FeatureTable[Frequency]),
         ("loci", GenomeData[Loci]),
     ],
@@ -966,7 +977,7 @@ plugin.methods.register_function(
 
 plugin.methods.register_function(
     function=q2_annotate.eggnog._eggnog_feature_table,
-    inputs={"seed_orthologs": SampleData[Orthologs]},
+    inputs={"seed_orthologs": SampleData[Orthologs] | GenomeData[Orthologs]},
     parameters={},
     input_descriptions={
         "seed_orthologs": ("Sequence data to be turned into an eggnog feature table.")
@@ -979,17 +990,33 @@ plugin.methods.register_function(
 
 I_orthologs, O_eggnog = TypeMap(
     {
-        Orthologs % Properties("contigs", "mags"): NOG % Properties("contigs", "mags"),
-        Orthologs % Properties("contigs"): NOG % Properties("contigs"),
-        Orthologs % Properties("mags"): NOG % Properties("mags"),
-        Orthologs: NOG,
+        SampleData[Orthologs % Properties("contigs", "mags")]: GenomeData[
+            NOG % Properties("contigs", "mags")
+        ],
+        SampleData[Orthologs % Properties("contigs")]: GenomeData[
+            NOG % Properties("contigs")
+        ],
+        SampleData[Orthologs % Properties("mags")]: GenomeData[
+            NOG % Properties("mags")
+        ],
+        SampleData[Orthologs]: GenomeData[NOG],
+        GenomeData[Orthologs % Properties("contigs", "mags")]: GenomeData[
+            NOG % Properties("contigs", "mags")
+        ],
+        GenomeData[Orthologs % Properties("contigs")]: GenomeData[
+            NOG % Properties("contigs")
+        ],
+        GenomeData[Orthologs % Properties("mags")]: GenomeData[
+            NOG % Properties("mags")
+        ],
+        GenomeData[Orthologs]: GenomeData[NOG],
     }
 )
 
 plugin.pipelines.register_function(
     function=q2_annotate.eggnog.map_eggnog,
     inputs={
-        "eggnog_hits": SampleData[I_orthologs],
+        "eggnog_hits": I_orthologs,
         "db": ReferenceDB[Eggnog],
     },
     input_descriptions={
@@ -1009,8 +1036,12 @@ plugin.pipelines.register_function(
         ),
         "num_cpus": ("Number of CPUs to utilize. '0' will use all available."),
         **partition_param_descriptions,
+        "num_partitions": (
+            "Number of partitions for sample-level ortholog hits. Genome-level "
+            "hits are annotated directly without partitioning."
+        ),
     },
-    outputs=[("ortholog_annotations", GenomeData[O_eggnog])],
+    outputs=[("ortholog_annotations", O_eggnog)],
     output_descriptions={"ortholog_annotations": "Annotated hits."},
     name="Annotate orthologs against eggNOG database.",
     description="Apply eggnog mapper to annotate seed orthologs.",
@@ -1020,7 +1051,7 @@ plugin.pipelines.register_function(
 plugin.methods.register_function(
     function=q2_annotate.eggnog._eggnog_annotate,
     inputs={
-        "eggnog_hits": SampleData[I_orthologs],
+        "eggnog_hits": I_orthologs,
         "db": ReferenceDB[Eggnog],
     },
     parameters={"db_in_memory": Bool, "num_cpus": Int % Range(0, None)},
@@ -1032,7 +1063,7 @@ plugin.methods.register_function(
         ),
         "num_cpus": ("Number of CPUs to utilize. '0' will use all available."),
     },
-    outputs=[("ortholog_annotations", GenomeData[O_eggnog])],
+    outputs=[("ortholog_annotations", O_eggnog)],
     name="Annotate orthologs against eggNOG database.",
     description="Apply eggnog mapper to annotate seed orthologs.",
     citations=[citations["huerta_cepas_eggnog_2019"]],
@@ -1040,7 +1071,12 @@ plugin.methods.register_function(
 
 plugin.methods.register_function(
     function=q2_annotate.prodigal.predict_genes_prodigal,
-    inputs={"seqs": FeatureData[MAG] | SampleData[MAGs] | SampleData[Contigs]},
+    inputs={
+        "seqs": FeatureData[MAG]
+        | SampleData[MAGs]
+        | SampleData[Contigs]
+        | FeatureData[Contig]
+    },
     input_descriptions={
         "seqs": "MAGs or contigs for which one wishes to predict genes."
     },

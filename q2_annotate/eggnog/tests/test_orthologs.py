@@ -8,7 +8,7 @@
 import shutil
 import tempfile
 from filecmp import dircmp
-from unittest.mock import MagicMock, patch, ANY, call
+from unittest.mock import MagicMock, patch, ANY, call, sentinel
 
 import pandas as pd
 import pandas.testing as pdt
@@ -24,6 +24,7 @@ from q2_annotate.eggnog.orthologs.common import (
     _eggnog_search,
     _search_runner,
     _create_symlinks,
+    _run_eggnog_search_pipeline,
 )
 from q2_annotate.eggnog.types import EggnogHmmerIdmapDirectoryFmt
 from q2_types.feature_data_mag import MAGSequencesDirFmt
@@ -31,6 +32,44 @@ from q2_types.genome_data import ProteinsDirectoryFormat
 from q2_types.per_sample_sequences import ContigSequencesDirFmt, MultiMAGSequencesDirFmt
 from q2_types.profile_hmms import PressedProfileHmmsDirectoryFmt
 from q2_types.reference_db import DiamondDatabaseDirFmt
+
+
+class TestSearchPipeline(TestPluginBase):
+    package = "q2_annotate.eggnog.tests"
+
+    def test_coassembled_contigs_bypass_partitioning(self):
+        contigs = ContigSequencesDirFmt()
+        shutil.copyfile(
+            self.get_data_path("contig-sequences-1/s1_contigs.fa"),
+            contigs.path / "pooled_contigs.fasta",
+        )
+        sequences = qiime2.Artifact.import_data("FeatureData[Contig]", contigs)
+
+        for action, db in (
+            ("_eggnog_diamond_search", [sentinel.diamond_db]),
+            (
+                "_eggnog_hmmer_search",
+                [sentinel.idmap, sentinel.pressed_hmm_db, sentinel.seed_alignments],
+            ),
+        ):
+            with self.subTest(search_action=action):
+                search = MagicMock(return_value=sentinel.search_results)
+                ctx = MagicMock()
+                ctx.get_action.return_value = search
+
+                result = _run_eggnog_search_pipeline(
+                    ctx=ctx,
+                    sequences=sequences,
+                    db=db,
+                    num_cpus=3,
+                    db_in_memory=True,
+                    num_partitions=2,
+                    search_action=action,
+                )
+
+                ctx.get_action.assert_called_once_with("annotate", action)
+                search.assert_called_once_with(sequences, *db, 3, True)
+                self.assertIs(result, sentinel.search_results)
 
 
 class TestHMMER(TestPluginBase):
@@ -65,25 +104,59 @@ class TestHMMER(TestPluginBase):
         self._eggnog_annotate = self.plugin.methods["_eggnog_annotate"]
 
     def test_eggnog_hmmer_search_pipeline(self):
-        mock_action = MagicMock(
-            side_effect=[
-                lambda sequences, num_partitions: ({"mag1": {}, "mag2": {}},),
-                lambda seq, pressed, idmap, fastas, num_cpus, db_in_memory: (0, 0, 0),
-                lambda hits: ("collated_hits",),
-                lambda collated_hits: ("collated_tables",),
-                lambda collated_loci: ("collated_loci",),
-            ]
+        partition = MagicMock(
+            return_value=({"mag1": "partition1", "mag2": "partition2"},)
         )
-        mock_ctx = MagicMock(get_action=mock_action)
+        search = MagicMock(
+            side_effect=[("hits1", "table1", "loci1"), ("hits2", "table2", "loci2")]
+        )
+        collate_hits = MagicMock(return_value=("collated_hits",))
+        feature_table = MagicMock(return_value=("collated_tables",))
+        collate_loci = MagicMock(return_value=("collated_loci",))
+        actions = {
+            ("types", "partition_sample_data_mags"): partition,
+            ("annotate", "_eggnog_hmmer_search"): search,
+            ("types", "collate_orthologs"): collate_hits,
+            ("annotate", "_eggnog_feature_table"): feature_table,
+            ("types", "collate_loci"): collate_loci,
+        }
+        mock_ctx = MagicMock()
+        mock_ctx.get_action.side_effect = lambda plugin, action: actions[
+            (plugin, action)
+        ]
         obs = search_orthologs_hmmer(
             ctx=mock_ctx,
             seqs=self.mags_artifact,
             pressed_hmm_db=self.pressed_hmm_artifact,
             idmap=self.idmap_artifact,
             seed_alignments=self.fastas_artifact,
+            num_cpus=3,
+            db_in_memory=True,
+            num_partitions=2,
         )
         exp = ("collated_hits", "collated_tables", "collated_loci")
         self.assertTupleEqual(obs, exp)
+        self.assertCountEqual(
+            mock_ctx.get_action.call_args_list, [call(*key) for key in actions]
+        )
+        partition.assert_called_once_with(self.mags_artifact, 2)
+        self.assertEqual(
+            search.call_args_list,
+            [
+                call(
+                    seq,
+                    self.idmap_artifact,
+                    self.pressed_hmm_artifact,
+                    self.fastas_artifact,
+                    3,
+                    True,
+                )
+                for seq in ("partition1", "partition2")
+            ],
+        )
+        collate_hits.assert_called_once_with(["hits1", "hits2"])
+        feature_table.assert_called_once_with("collated_hits")
+        collate_loci.assert_called_once_with(["loci1", "loci2"])
 
     def test_symlink_files_to_target_dir(self):
         with tempfile.TemporaryDirectory() as tmp1:
