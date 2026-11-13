@@ -18,22 +18,7 @@ import numpy as np
 import pandas as pd
 from qiime2 import Metadata
 
-
-def _align_gene_taxonomy(
-    feature_load: biom.Table, gene_taxonomy: pd.DataFrame
-) -> pd.DataFrame:
-    """Join a mapping to table rows, allowing mappings for filtered-out rows."""
-    feature_ids = list(feature_load.ids(axis="observation"))
-    missing = [
-        identifier
-        for identifier in feature_ids
-        if identifier not in gene_taxonomy.index
-    ]
-    if missing:
-        raise ValueError(
-            f"Missing gene taxonomy mappings for feature IDs: {missing!r}."
-        )
-    return gene_taxonomy.loc[feature_ids]
+from ._mapping import _align_gene_taxonomy
 
 
 def _taxon_labels(pairs: list[tuple[str, str]], taxonomy: pd.DataFrame):

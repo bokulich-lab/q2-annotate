@@ -4,6 +4,58 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 QIIME 2 plugin for functional annotation and taxonomic classification of shotgun metagenomes.
+
+## Taxonomic functional attribution
+
+`estimate-tfa` returns three outputs: a sparse
+`FeatureTable[Frequency % Properties("tfa")]` artifact named `tfa`, a
+`FeatureData[Taxonomy % Properties("tfa")]` artifact named `gene_taxonomy`,
+and an interactive `visualization`. Optional sample metadata can be supplied
+to group samples in the explorer.
+
+The TFA table retains the original sample IDs as columns. Each row identifies
+one observed taxon and functional feature pair, with readable IDs such as
+`T1|bla_TEM`. Components are URL-escaped to preserve spaces, separator
+characters, and literal percent signs. The gene taxonomy mapping links each
+row to its `Taxon`, `Taxon ID`, and `Gene ID`.
+
+The value for taxon *t*, function *f*, and sample *s* is the sum, over contigs
+assigned to *t*, of the contig's abundance in *s* multiplied by its count of
+*f*. Only pairs with nonzero loads in at least one sample are stored as rows;
+zero sample values remain sparse.
+
+This example uses the same small inputs and values as the action tests. The
+shaded headers show which identifiers belong to each axis. All three
+follow-up actions take both the `tfa` output (as `feature_load`) and the
+`gene_taxonomy` output. The explorer is produced by `estimate-tfa`; the
+follow-up actions can be run later.
+
+![Example input tables, TFA output, and selected tables with rows, columns, and values](tfa-data-flow.svg)
+
+Run `tfa-by-taxon` with a list of taxon IDs to obtain a collection containing
+one function-by-sample table for each selected taxon. Run `tfa-by-function`
+with a list of functional feature IDs to obtain one taxon-by-sample table per
+selected function. These methods create artifacts only for requested IDs and
+report unknown IDs as errors. Every collection member is a sparse
+`FeatureTable[Frequency]`, preserving the abundance-weighted loads. Collection
+keys use the original ID when it is a safe filename.
+Other IDs use URL-safe base64 with an `id_` prefix; very long IDs use a
+`hash_` prefix. The original IDs remain in the gene taxonomy mapping and
+table axes.
+
+Run `tfa-collapse-samples` to make one sparse `FeatureTable[Frequency]`
+with taxon IDs as rows and functional feature IDs as columns. The
+`aggregation` parameter accepts `sum` (the default), `mean`, or `median`.
+All samples count toward the mean and median, including those with zero load.
+`sum` recreates the earlier taxon-by-function values for pairs present in
+`tfa`; functions with no TFA pair cannot be recovered from it. The
+figure shows the summed table for the same example.
+
+The sample-resolved output replaces the older `estimate-tfa` layout, which
+summed abundances across samples and used functional feature IDs as sample IDs.
+Run `estimate-tfa` again from the original inputs to obtain per-sample loads;
+the original layout cannot recover them.
+
 ## Installation
 _q2-annotate_ is available as part of the QIIME 2 moshpit distribution. For installation and usage instructions please consult the official [QIIME 2 documentation](https://docs.qiime2.org).
 
@@ -19,7 +71,7 @@ This QIIME 2 plugin contains actions used to annotate and classify (meta)genomes
 | classify-kraken2          | Classify reads/MAGs using Kraken 2.                                                    | [Kraken 2](https://ccb.jhu.edu/software/kraken2/)      |
 | construct-pangenome-index | Construct the human pangenome Bowtie 2 index.                                          | [Bowtie 2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml) |
 | estimate-bracken          | Perform read abundance re-estimation using Bracken.                                    | [Kraken 2](https://ccb.jhu.edu/software/bracken/) |
-| estimate-tfa              | Estimate a sparse load table and gene taxonomy mapping. | - |
+| estimate-tfa              | Estimate sample-resolved TFA, its gene taxonomy mapping, and an interactive explorer. | - |
 | extract-annotations       | Extract annotation frequencies from all annotations.                                   | - |
 | fetch-diamond-db          | Fetch the complete Diamond database necessary to run the eggnog-diamond-search action. | [EggNOG mapper](https://github.com/eggnogdb/eggnog-mapper) |
 | fetch-eggnog-db           | Fetch the databases necessary to run the eggnog-annotate action.                       | [EggNOG mapper](https://github.com/eggnogdb/eggnog-mapper) |
@@ -31,6 +83,9 @@ This QIIME 2 plugin contains actions used to annotate and classify (meta)genomes
 | filter-kraken2-results    | Filter Kraken 2 reports and outputs by metadata and/or abundance                       | - |
 | filter-reads-pangenome    | Remove contaminating human reads.                                                      | [Bowtie 2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml) |
 | inspect-kraken2-db        | Inspect a Kraken 2 database.                                                           | - |
+| tfa-by-function           | Extract sparse taxon-by-sample tables for selected functions.                          | - |
+| tfa-by-taxon              | Extract sparse function-by-sample tables for selected taxa.                            | - |
+| tfa-collapse-samples      | Collapse TFA samples into a sparse taxon-by-function table.                            | - |
 | kraken2-to-features       | Select downstream features from Kraken 2.                                              | - |
 | kraken2-to-mag-features   | Select downstream MAG features from Kraken 2.                                          | - |
 | map-eggnog                | Annotate orthologs against eggNOG database.                                            | [EggNOG mapper](https://github.com/eggnogdb/eggnog-mapper) |

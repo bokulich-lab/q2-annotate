@@ -5,6 +5,6 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-from .tfa import estimate_tfa
+from .tfa import estimate_tfa, tfa_by_taxon, tfa_by_function, tfa_collapse_samples
 
-__all__ = ["estimate_tfa"]
+__all__ = ["estimate_tfa", "tfa_by_taxon", "tfa_by_function", "tfa_collapse_samples"]
